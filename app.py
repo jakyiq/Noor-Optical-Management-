@@ -6,12 +6,16 @@ app.py — All routes, session auth, Supabase DB
 import os
 import json
 import bcrypt
+import traceback
+import logging
 from datetime import datetime, timedelta, date
 from functools import wraps
 
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 from supabase import create_client, Client
+
+logging.basicConfig(level=logging.DEBUG)
 
 # ─────────────────────────────────────────────
 # APP INIT
@@ -1461,7 +1465,15 @@ def method_not_allowed(e):
 
 @app.errorhandler(500)
 def internal_error(e):
-    return err("Internal server error", 500)
+    tb = traceback.format_exc()
+    logging.error(tb)
+    return jsonify({"error": "Internal server error", "detail": str(e), "traceback": tb}), 500
+
+@app.errorhandler(Exception)
+def unhandled_exception(e):
+    tb = traceback.format_exc()
+    logging.error(tb)
+    return jsonify({"error": str(e), "traceback": tb}), 500
 
 
 # ─────────────────────────────────────────────────────────────
