@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, date
 from functools import wraps
 
 from flask import Flask, request, jsonify, session
+from flask_cors import CORS
 from supabase import create_client, Client
 
 # ─────────────────────────────────────────────
@@ -18,14 +19,28 @@ from supabase import create_client, Client
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-in-production")
 app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SAMESITE"] = "None"   # Required for cross-origin on Vercel
+app.config["SESSION_COOKIE_SECURE"] = True        # Required when SameSite=None
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
+
+# Allow the frontend to send cookies cross-origin on Vercel
+CORS(app, supports_credentials=True, origins=[
+    "https://noor-optical-management-n8tgntf5n-1jaky.vercel.app",
+    "http://localhost:5000",
+    "http://127.0.0.1:5000",
+])
 
 # ─────────────────────────────────────────────
 # SUPABASE CLIENT  (service_role key — backend only)
 # ─────────────────────────────────────────────
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")  # NEVER expose to frontend
+
+if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+    raise RuntimeError(
+        "SUPABASE_URL and SUPABASE_SERVICE_KEY must be set as environment variables. "
+        "Add them in Vercel: Project Settings → Environment Variables."
+    )
 
 db: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
