@@ -221,9 +221,45 @@ def login():
     # Build session
     session.permanent = True
     session["user_id"]   = user["id"]
-    session["clinic_id"] = clinic_id
     session["role"]      = role
     session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat()
+
+    # For super_admin: if no clinic_id, auto-assign the first clinic or create a default one
+    if role == "super_admin" and not clinic_id:
+        clinics_res = db.table("clinics").select("id").order("created_at").limit(1).execute()
+        if clinics_res.data:
+            clinic_id = clinics_res.data[0]["id"]
+        else:
+            # Create a default clinic for the super admin to work with
+            new_clinic = db.table("clinics").insert({
+                "name": "عيادة نور البصرية",
+                "created_at": now_iso(),
+            }).execute()
+            clinic_id = new_clinic.data[0]["id"]
+            # Create license for it
+            db.table("licenses").insert({
+                "clinic_id":  clinic_id,
+                "plan":       "lifetime",
+                "starts_at":  today_str(),
+                "expires_at": None,
+                "is_active":  True,
+            }).execute()
+            # Create default clinic_settings
+            db.table("clinic_settings").insert({
+                "clinic_id":               clinic_id,
+                "followup_months_default": 3,
+                "recept_view_patients":    True,
+                "recept_edit_patients":    True,
+                "recept_view_financials":  True,
+                "recept_edit_financials":  True,
+                "recept_access_inventory": True,
+                "recept_export_reports":   True,
+                "recept_view_audit":       True,
+            }).execute()
+        # Bind super_admin to this clinic in DB too
+        db.table("users").update({"clinic_id": clinic_id}).eq("id", user["id"]).execute()
+
+    session["clinic_id"] = clinic_id
 
     # Update last_login
     db.table("users").update({"last_login": now_iso()}).eq("id", user["id"]).execute()
@@ -435,8 +471,10 @@ def list_patients():
 @app.route("/api/patients", methods=["POST"])
 @_auth(roles=["doctor", "super_admin", "receptionist"], setting="recept_edit_patients")
 def create_patient():
-    cid  = session["clinic_id"]
-    uid  = session["user_id"]
+    cid  = session.get("clinic_id")
+    uid  = session.get("user_id")
+    if not cid:
+        return err("No clinic assigned to this account. Please contact the administrator.", 400)
     body = request.get_json() or {}
 
     full_name = (body.get("full_name") or "").strip()
