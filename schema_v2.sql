@@ -1,10 +1,50 @@
 -- ============================================================
--- Noor Optical Clinic SaaS — schema_v2.sql
+-- Noor Optical Clinic SaaS — schema_v2_fixed.sql
 -- Run this ONCE in Supabase SQL Editor
 -- ============================================================
 
 -- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- ─────────────────────────────────────────────
+-- ENUMS  (must come before any table that uses them)
+-- ─────────────────────────────────────────────
+DO $$ BEGIN
+  CREATE TYPE license_plan AS ENUM ('trial','monthly','quarterly','yearly','lifetime');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE user_role AS ENUM ('super_admin','doctor','receptionist');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE gender_type AS ENUM ('male','female');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE audit_action AS ENUM ('create','update','delete','login','logout');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE lens_type_enum AS ENUM (
+    'single_vision','bifocal','progressive','reading','plano'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE lens_material_enum AS ENUM ('plastic','glass','contact');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE lens_coating_enum AS ENUM (
+    'clear','blue_cut','green_cut','photochromic','photo_blue',
+    'photo_green','polarized','anti_reflective','tinted','uv400'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE frame_type_enum AS ENUM ('full_rim','half_rim','rimless');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ─────────────────────────────────────────────
 -- CLINICS
@@ -21,8 +61,6 @@ CREATE TABLE IF NOT EXISTS clinics (
 -- ─────────────────────────────────────────────
 -- LICENSES
 -- ─────────────────────────────────────────────
-CREATE TYPE license_plan AS ENUM ('trial','monthly','quarterly','yearly','lifetime');
-
 CREATE TABLE IF NOT EXISTS licenses (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id   UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
@@ -39,8 +77,6 @@ CREATE INDEX IF NOT EXISTS idx_licenses_clinic ON licenses(clinic_id);
 -- ─────────────────────────────────────────────
 -- USERS
 -- ─────────────────────────────────────────────
-CREATE TYPE user_role AS ENUM ('super_admin','doctor','receptionist');
-
 CREATE TABLE IF NOT EXISTS users (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id            UUID REFERENCES clinics(id) ON DELETE CASCADE, -- NULL for super_admin
@@ -83,8 +119,6 @@ CREATE TABLE IF NOT EXISTS clinic_settings (
 -- ─────────────────────────────────────────────
 -- PATIENTS
 -- ─────────────────────────────────────────────
-CREATE TYPE gender_type AS ENUM ('male','female');
-
 CREATE TABLE IF NOT EXISTS patients (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id   UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
@@ -98,23 +132,55 @@ CREATE TABLE IF NOT EXISTS patients (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_patients_clinic     ON patients(clinic_id);
-CREATE INDEX IF NOT EXISTS idx_patients_name       ON patients(clinic_id, full_name);
-CREATE INDEX IF NOT EXISTS idx_patients_phone      ON patients(clinic_id, phone);
+CREATE INDEX IF NOT EXISTS idx_patients_clinic ON patients(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_patients_name   ON patients(clinic_id, full_name);
+CREATE INDEX IF NOT EXISTS idx_patients_phone  ON patients(clinic_id, phone);
+
+-- ─────────────────────────────────────────────
+-- FRAMES INVENTORY
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS frames (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id       UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  brand           TEXT,
+  frame_type      frame_type_enum,
+  frame_material  TEXT,
+  color           TEXT,
+  quantity        INTEGER NOT NULL DEFAULT 0,
+  min_stock       INTEGER NOT NULL DEFAULT 2,
+  cost_price      NUMERIC(12,0) DEFAULT 0,
+  sell_price      NUMERIC(12,0) DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_frames_clinic ON frames(clinic_id);
+
+-- ─────────────────────────────────────────────
+-- LENSES INVENTORY
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS lenses (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id   UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  lens_type   lens_type_enum,
+  material    lens_material_enum,
+  coating     lens_coating_enum DEFAULT 'clear',
+  sphere      NUMERIC(5,2),
+  cylinder    NUMERIC(5,2) DEFAULT 0,
+  quantity    INTEGER NOT NULL DEFAULT 0,
+  min_stock   INTEGER NOT NULL DEFAULT 2,
+  cost_price  NUMERIC(12,0) DEFAULT 0,
+  sell_price  NUMERIC(12,0) DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_lenses_clinic ON lenses(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_lenses_power  ON lenses(clinic_id, sphere, cylinder);
 
 -- ─────────────────────────────────────────────
 -- VISITS (prescriptions)
 -- ─────────────────────────────────────────────
-CREATE TYPE lens_type_enum AS ENUM (
-  'single_vision','bifocal','progressive','reading','plano'
-);
-CREATE TYPE lens_material_enum AS ENUM ('plastic','glass','contact');
-CREATE TYPE lens_coating_enum AS ENUM (
-  'clear','blue_cut','green_cut','photochromic','photo_blue',
-  'photo_green','polarized','anti_reflective','tinted','uv400'
-);
-CREATE TYPE frame_type_enum AS ENUM ('full_rim','half_rim','rimless');
-
 CREATE TABLE IF NOT EXISTS visits (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id       UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
@@ -165,58 +231,14 @@ CREATE TABLE IF NOT EXISTS visits (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_visits_clinic      ON visits(clinic_id);
-CREATE INDEX IF NOT EXISTS idx_visits_patient     ON visits(clinic_id, patient_id);
-CREATE INDEX IF NOT EXISTS idx_visits_date        ON visits(clinic_id, visit_date);
-CREATE INDEX IF NOT EXISTS idx_visits_next        ON visits(clinic_id, next_visit_date);
-
--- ─────────────────────────────────────────────
--- LENSES INVENTORY
--- ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS lenses (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  clinic_id   UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
-  lens_type   lens_type_enum,
-  material    lens_material_enum,
-  coating     lens_coating_enum DEFAULT 'clear',
-  sphere      NUMERIC(5,2),
-  cylinder    NUMERIC(5,2) DEFAULT 0,
-  quantity    INTEGER NOT NULL DEFAULT 0,
-  min_stock   INTEGER NOT NULL DEFAULT 2,
-  cost_price  NUMERIC(12,0) DEFAULT 0,
-  sell_price  NUMERIC(12,0) DEFAULT 0,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_lenses_clinic  ON lenses(clinic_id);
-CREATE INDEX IF NOT EXISTS idx_lenses_power   ON lenses(clinic_id, sphere, cylinder);
-
--- ─────────────────────────────────────────────
--- FRAMES INVENTORY
--- ─────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS frames (
-  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  clinic_id       UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
-  brand           TEXT,
-  frame_type      frame_type_enum,
-  frame_material  TEXT,
-  color           TEXT,
-  quantity        INTEGER NOT NULL DEFAULT 0,
-  min_stock       INTEGER NOT NULL DEFAULT 2,
-  cost_price      NUMERIC(12,0) DEFAULT 0,
-  sell_price      NUMERIC(12,0) DEFAULT 0,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_frames_clinic ON frames(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_visits_clinic  ON visits(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_visits_patient ON visits(clinic_id, patient_id);
+CREATE INDEX IF NOT EXISTS idx_visits_date    ON visits(clinic_id, visit_date);
+CREATE INDEX IF NOT EXISTS idx_visits_next    ON visits(clinic_id, next_visit_date);
 
 -- ─────────────────────────────────────────────
 -- AUDIT LOG
 -- ─────────────────────────────────────────────
-CREATE TYPE audit_action AS ENUM ('create','update','delete','login','logout');
-
 CREATE TABLE IF NOT EXISTS audit_log (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id   UUID REFERENCES clinics(id) ON DELETE CASCADE,
@@ -232,14 +254,6 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 CREATE INDEX IF NOT EXISTS idx_audit_clinic ON audit_log(clinic_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_user   ON audit_log(user_id);
-
--- ─────────────────────────────────────────────
--- FIX: visits references frames, so frames must
--- exist before the FK. Re-declare FK here safely.
--- ─────────────────────────────────────────────
-ALTER TABLE visits
-  ADD CONSTRAINT IF NOT EXISTS fk_visits_frame
-  FOREIGN KEY (frame_id) REFERENCES frames(id) ON DELETE SET NULL;
 
 -- ─────────────────────────────────────────────
 -- SUPER ADMIN USER
@@ -267,10 +281,8 @@ VALUES (
 ON CONFLICT (username) DO NOTHING;
 
 -- ─────────────────────────────────────────────
--- ROW LEVEL SECURITY (optional but recommended)
--- Disable RLS since we use service_role key
--- exclusively in the Flask backend — all clinic
--- isolation is enforced in app.py via clinic_id.
+-- DISABLE ROW LEVEL SECURITY
+-- All clinic isolation enforced in app.py via clinic_id
 -- ─────────────────────────────────────────────
 ALTER TABLE clinics         DISABLE ROW LEVEL SECURITY;
 ALTER TABLE licenses        DISABLE ROW LEVEL SECURITY;
@@ -283,8 +295,7 @@ ALTER TABLE frames          DISABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log       DISABLE ROW LEVEL SECURITY;
 
 -- ─────────────────────────────────────────────
--- HELPER: count low-stock lenses for a clinic
--- Called by app.py dashboard stats
+-- HELPER FUNCTIONS
 -- ─────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION count_low_stock_lenses(p_clinic_id UUID)
 RETURNS INTEGER LANGUAGE sql STABLE AS $$
