@@ -434,13 +434,26 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   .sidebar-overlay.show{display:block}
   .main-content{margin-inline-start:0!important;padding-bottom:var(--bottom-nav-h)}
   .main-content.collapsed{margin-inline-start:0!important}
-  #sidebar-toggle{display:flex}
+  /* Bottom nav handles all navigation — hide topbar hamburger on tablet/mobile */
+  #sidebar-toggle{display:none!important}
   .bottom-nav{display:flex}
-  .topbar{padding:0 16px}
-  .search-wrap{width:100%;max-width:280px}
+  .topbar{padding:0 14px;gap:10px}
+  .topbar-title{font-size:1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .search-wrap{flex:1;min-width:0;max-width:260px}
   .page-content{padding:20px 16px}
   .stats-grid{grid-template-columns:repeat(2,1fr)}
   .form-grid{grid-template-columns:1fr 1fr}
+  /* Tables: proper horizontal scroll on tablet */
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-wrap table{min-width:0}
+  #section-patients .table-wrap table{min-width:520px}
+  #section-lenses .table-wrap table{min-width:580px}
+  #section-frames .table-wrap table{min-width:500px}
+  #section-followups .table-wrap table{min-width:440px}
+  #section-reports .table-wrap table{min-width:560px}
+  /* Page headers wrap nicely on tablet */
+  .page-header{flex-wrap:wrap;gap:12px}
+  .page-header>div:last-child{display:flex;gap:8px;flex-wrap:wrap}
 }
 
 @media(max-width:600px){
@@ -448,51 +461,110 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   .form-grid{grid-template-columns:1fr}
   .dash-grid{grid-template-columns:1fr}
   .page-content{padding:14px 12px}
-  .page-header{flex-direction:column;gap:12px}
+
+  /* Page headers: stack vertically, full-width action buttons */
+  .page-header{flex-direction:column;gap:10px;margin-bottom:18px}
+  .page-header>div:first-child{width:100%}
   .page-header>div:last-child{width:100%;display:flex;flex-wrap:wrap;gap:8px}
-  .page-header>div:last-child .btn{flex:1;justify-content:center;min-width:120px}
-  .topbar{padding:0 12px;gap:10px}
-  .topbar-title{font-size:1rem}
-  .search-wrap{width:auto;flex:1}
-  .search-wrap input{font-size:.8rem;padding:8px 12px 8px 34px}
-  html[dir=rtl] .search-wrap input{padding:8px 34px 8px 12px}
+  .page-header>div:last-child .btn{flex:1;justify-content:center;min-width:0;padding:9px 12px;font-size:.82rem}
+  .page-header-title{font-size:1.35rem}
+
+  /* Topbar: tighter, no wasted space */
+  .topbar{padding:0 12px;gap:8px;height:54px}
+  .topbar-title{font-size:.9rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px}
+  /* Hide sidebar-toggle: bottom nav handles all navigation on mobile */
+  #sidebar-toggle{display:none!important}
+  /* Search bar: compact but usable */
+  .search-wrap{flex:1;min-width:0;max-width:none}
+  .search-wrap input{font-size:.8rem;padding:8px 12px 8px 32px;border-radius:8px}
+  html[dir=rtl] .search-wrap input{padding:8px 32px 8px 12px}
+  .search-icon{inset-inline-start:10px}
+  /* Notification bell: smaller */
+  .icon-btn{width:32px;height:32px;flex-shrink:0}
+
+  /* Modals: slide up from bottom */
   .modal{border-radius:var(--radius-lg) var(--radius-lg) 0 0;width:100%}
   .modal-overlay{align-items:flex-end;padding:0}
   .modal-body{padding:16px 14px;max-height:72vh;overflow-y:auto}
-  .modal-header{padding:18px 14px 14px}
+  .modal-header{padding:16px 14px 12px}
   .modal-footer{padding:12px 14px 20px;flex-wrap:wrap}
   .modal-footer .btn{flex:1;justify-content:center}
-  .dash-hero{padding:20px 18px;border-radius:var(--radius-md)}
-  .dash-date{font-size:1.2rem}
-  .stat-card{padding:14px}
-  .stat-card-value{font-size:1.35rem}
-  .table-wrap{border-radius:var(--radius-sm)}
-  table{font-size:.78rem;min-width:500px}
-  th{padding:9px 8px;font-size:.62rem;white-space:nowrap}
-  td{padding:9px 8px;white-space:nowrap}
-  .td-actions{flex-wrap:wrap;gap:4px}
-  .td-actions .btn{padding:5px 8px;font-size:.72rem}
-  .rx-table{min-width:460px}
-  .rx-input{font-size:.78rem;padding:4px 6px}
-  .report-stat-grid{grid-template-columns:1fr 1fr}
-  .report-stat{padding:14px 10px}
-  .report-stat-val{font-size:1.2rem}
-  .section-filters{gap:8px}
-  .section-filters .filter-input{min-width:0;flex:1 1 140px}
+
+  /* Dashboard hero */
+  .dash-hero{padding:18px 16px;border-radius:var(--radius-md)}
+  .dash-date{font-size:1.15rem}
+  .stat-card{padding:12px}
+  .stat-card-value{font-size:1.3rem}
+  .stat-card-label{font-size:.66rem}
+
+  /* Tables: scrollable container, compact cells, NO forced min-width */
+  .table-wrap{border-radius:var(--radius-sm);overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-wrap table{font-size:.75rem;min-width:0;width:100%}
+  /* Patients table: hide less critical columns, show key ones */
+  #section-patients .table-wrap table{min-width:420px}
+  #section-lenses .table-wrap table{min-width:480px}
+  #section-frames .table-wrap table{min-width:440px}
+  #section-followups .table-wrap table{min-width:380px}
+  #section-reports .table-wrap table{min-width:460px}
+  th{padding:8px 7px;font-size:.6rem;white-space:nowrap}
+  td{padding:8px 7px;white-space:nowrap}
+  .td-actions{gap:4px}
+  .td-actions .btn{padding:5px 8px;font-size:.7rem;gap:3px}
+  .td-actions .btn svg{display:none}
+
+  /* RX prescription table */
+  .rx-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .rx-table{min-width:420px;font-size:.78rem}
+  .rx-input{font-size:.78rem;padding:4px 5px}
+
+  /* Reports stats grid */
+  .report-stat-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .report-stat{padding:12px 8px}
+  .report-stat-val{font-size:1.1rem}
+  .report-stat-label{font-size:.65rem}
+
+  /* Filters row */
+  .section-filters{gap:8px;flex-wrap:wrap}
+  .section-filters .filter-input{min-width:0;flex:1 1 130px}
   .section-filters .filter-select{flex:1 1 110px;min-width:0}
-  .filter-input,.filter-select{font-size:.82rem;padding:8px 10px}
-  .tabs{gap:0;-webkit-overflow-scrolling:touch}
-  .tab-btn{padding:8px 10px;font-size:.78rem}
+  .filter-input,.filter-select{font-size:.8rem;padding:8px 10px}
+
+  /* Tabs: horizontally scrollable */
+  .tabs{-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab-btn{padding:8px 12px;font-size:.78rem;white-space:nowrap}
+
+  /* Settings */
   .settings-section-body{padding:14px}
-  .toggle-row{gap:12px;flex-wrap:nowrap}
-  .toggle-label{font-size:.84rem;flex:1;min-width:0}
-  .visit-card-header{padding:12px 14px;flex-wrap:wrap;gap:8px}
-  .visit-card-body{padding:14px}
-  .fin-summary{padding:12px}
-  .fin-row{font-size:.82rem}
-  .breadcrumb{font-size:.75rem;flex-wrap:wrap}
-  .low-stock-banner{padding:12px 14px}
+  .toggle-row{gap:10px;flex-wrap:nowrap}
+  .toggle-label{font-size:.82rem;flex:1;min-width:0}
+  .settings-section-header{font-size:.72rem;padding:12px 16px}
+
+  /* Visit cards */
+  .visit-card-header{padding:11px 12px;flex-wrap:wrap;gap:6px}
+  .visit-card-body{padding:12px}
+
+  /* Financial summary */
+  .fin-summary{padding:10px}
+  .fin-row{font-size:.8rem;padding:5px 0}
+
+  /* Breadcrumb */
+  .breadcrumb{font-size:.72rem;flex-wrap:wrap}
+
+  /* Low stock / info banners */
+  .low-stock-banner{padding:10px 12px;border-radius:var(--radius-sm)}
+  .low-stock-title{font-size:.7rem;margin-bottom:6px}
+
+  /* Inventory match chips */
   .inv-match-items{gap:6px}
+  .inv-match-chip{font-size:.72rem;padding:5px 10px}
+
+  /* Coating chips */
+  .coating-chip{font-size:.72rem;padding:4px 10px}
+
+  /* Section-level spacing */
+  .section-filters{margin-bottom:12px}
+  .low-stock-banner{margin-bottom:12px}
 }
 
 .bottom-nav{
@@ -2736,19 +2808,18 @@ function toggleCollapse() {
 }
 
 function handleResize() {
-  const sb     = document.getElementById('sidebar');
-  const main   = document.getElementById('main-content');
-  const toggle = document.getElementById('sidebar-toggle');
-  const bnav   = document.getElementById('bottom-nav');
+  const sb   = document.getElementById('sidebar');
+  const main = document.getElementById('main-content');
+  const bnav = document.getElementById('bottom-nav');
   if (isMobile()) {
-    toggle.style.display = 'flex';
-    bnav.style.display   = 'flex';
+    // Mobile/tablet: bottom nav handles navigation, no topbar hamburger needed
+    bnav.style.display = 'flex';
     sb.classList.remove('collapsed');
     main.classList.remove('collapsed');
     main.style.marginInlineStart = '0';
   } else {
-    toggle.style.display = 'none';
-    bnav.style.display   = 'none';
+    // Desktop: sidebar visible, bottom nav hidden
+    bnav.style.display = 'none';
     sb.classList.remove('open');
     document.getElementById('sidebar-overlay').classList.remove('show');
     const wasCollapsed = localStorage.getItem(COLLAPSE_KEY) === '1';
