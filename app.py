@@ -298,28 +298,55 @@ def change_password():
 @app.route("/api/dashboard/stats", methods=["GET"])
 @_auth()
 def dashboard_stats():
-    cid = session["clinic_id"]
+    cid  = session.get("clinic_id")
+    role = session.get("role")
+
+    # super_admin with no clinic assigned — return empty dashboard
+    if not cid:
+        chart = {}
+        for i in range(7):
+            d = (date.today() - timedelta(days=6-i)).isoformat()
+            chart[d] = 0
+        return ok({
+            "today_patients":   0,
+            "today_earnings":   0,
+            "outstanding_debt": 0,
+            "low_stock_count":  0,
+            "monthly_revenue":  0,
+            "chart_7days":      chart,
+            "recent_visits":    [],
+            "super_admin_note": "No clinic selected. Use the Super Admin panel to manage clinics.",
+        })
+
     today = today_str()
     month_start = date.today().replace(day=1).isoformat()
 
     # Today's visits
-    today_v = db.table("visits").select("amount_paid,remaining") \
-        .eq("clinic_id", cid).eq("visit_date", today).execute()
-    today_visits = today_v.data or []
+    try:
+        today_v = db.table("visits").select("amount_paid,remaining") \
+            .eq("clinic_id", cid).eq("visit_date", today).execute()
+        today_visits = today_v.data or []
+    except Exception:
+        today_visits = []
     today_patients = len(today_visits)
     today_earnings = sum(v.get("amount_paid", 0) or 0 for v in today_visits)
 
     # Total outstanding debt
-    debt_r = db.table("visits").select("remaining") \
-        .eq("clinic_id", cid).execute()
-    outstanding = sum(v.get("remaining", 0) or 0 for v in (debt_r.data or []))
+    try:
+        debt_r = db.table("visits").select("remaining").eq("clinic_id", cid).execute()
+        outstanding = sum(v.get("remaining", 0) or 0 for v in (debt_r.data or []))
+    except Exception:
+        outstanding = 0
 
     # Monthly revenue
-    month_v = db.table("visits").select("amount_paid") \
-        .eq("clinic_id", cid).gte("visit_date", month_start).execute()
-    monthly_revenue = sum(v.get("amount_paid", 0) or 0 for v in (month_v.data or []))
+    try:
+        month_v = db.table("visits").select("amount_paid") \
+            .eq("clinic_id", cid).gte("visit_date", month_start).execute()
+        monthly_revenue = sum(v.get("amount_paid", 0) or 0 for v in (month_v.data or []))
+    except Exception:
+        monthly_revenue = 0
 
-    # Low stock count — always use client-side fallback (no RPC dependency)
+    # Low stock count
     try:
         ll = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).execute()
         lf = db.table("frames").select("quantity,min_stock").eq("clinic_id", cid).execute()
@@ -331,23 +358,29 @@ def dashboard_stats():
         low_count = 0
 
     # Last 7 days revenue
-    seven_ago = (date.today() - timedelta(days=6)).isoformat()
-    week_v = db.table("visits").select("visit_date,amount_paid") \
-        .eq("clinic_id", cid).gte("visit_date", seven_ago).execute()
-
     chart = {}
     for i in range(7):
         d = (date.today() - timedelta(days=6-i)).isoformat()
         chart[d] = 0
-    for v in (week_v.data or []):
-        d = v.get("visit_date")
-        if d in chart:
-            chart[d] += v.get("amount_paid", 0) or 0
+    try:
+        seven_ago = (date.today() - timedelta(days=6)).isoformat()
+        week_v = db.table("visits").select("visit_date,amount_paid") \
+            .eq("clinic_id", cid).gte("visit_date", seven_ago).execute()
+        for v in (week_v.data or []):
+            d = v.get("visit_date")
+            if d in chart:
+                chart[d] += v.get("amount_paid", 0) or 0
+    except Exception:
+        pass
 
     # Recent 5 visits
-    recent_v = db.table("visits").select(
-        "id,visit_date,total_amount,amount_paid,remaining,patient_id,lens_type"
-    ).eq("clinic_id", cid).order("visit_date", desc=True).limit(5).execute()
+    try:
+        recent_v = db.table("visits").select(
+            "id,visit_date,total_amount,amount_paid,remaining,patient_id,lens_type"
+        ).eq("clinic_id", cid).order("visit_date", desc=True).limit(5).execute()
+        recent_visits = recent_v.data or []
+    except Exception:
+        recent_visits = []
 
     return ok({
         "today_patients":   today_patients,
@@ -356,7 +389,7 @@ def dashboard_stats():
         "low_stock_count":  low_count,
         "monthly_revenue":  monthly_revenue,
         "chart_7days":      chart,
-        "recent_visits":    recent_v.data or [],
+        "recent_visits":    recent_visits,
     })
 
 
@@ -396,7 +429,7 @@ def list_patients():
 
 
 @app.route("/api/patients", methods=["POST"])
-@_auth(roles=["doctor"], setting="recept_edit_patients")
+@_auth(roles=["doctor", "super_admin", "receptionist"], setting="recept_edit_patients")
 def create_patient():
     cid  = session["clinic_id"]
     uid  = session["user_id"]
