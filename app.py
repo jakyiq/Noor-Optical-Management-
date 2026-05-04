@@ -319,19 +319,16 @@ def dashboard_stats():
         .eq("clinic_id", cid).gte("visit_date", month_start).execute()
     monthly_revenue = sum(v.get("amount_paid", 0) or 0 for v in (month_v.data or []))
 
-    # Low stock count
-    low_lenses = db.rpc("count_low_stock_lenses", {"p_clinic_id": cid}).execute()
-    low_frames  = db.rpc("count_low_stock_frames",  {"p_clinic_id": cid}).execute()
-    # Fallback if RPC not available: fetch and count client-side
+    # Low stock count — always use client-side fallback (no RPC dependency)
     try:
-        low_count = (low_lenses.data or 0) + (low_frames.data or 0)
-    except Exception:
         ll = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).execute()
         lf = db.table("frames").select("quantity,min_stock").eq("clinic_id", cid).execute()
         low_count = (
-            sum(1 for l in (ll.data or []) if l["quantity"] <= l["min_stock"]) +
-            sum(1 for f in (lf.data or []) if f["quantity"] <= f["min_stock"])
+            sum(1 for l in (ll.data or []) if (l.get("quantity") or 0) <= (l.get("min_stock") or 0)) +
+            sum(1 for f in (lf.data or []) if (f.get("quantity") or 0) <= (f.get("min_stock") or 0))
         )
+    except Exception:
+        low_count = 0
 
     # Last 7 days revenue
     seven_ago = (date.today() - timedelta(days=6)).isoformat()
@@ -343,7 +340,7 @@ def dashboard_stats():
         d = (date.today() - timedelta(days=6-i)).isoformat()
         chart[d] = 0
     for v in (week_v.data or []):
-        d = v["visit_date"]
+        d = v.get("visit_date")
         if d in chart:
             chart[d] += v.get("amount_paid", 0) or 0
 
@@ -353,13 +350,13 @@ def dashboard_stats():
     ).eq("clinic_id", cid).order("visit_date", desc=True).limit(5).execute()
 
     return ok({
-        "today_patients":  today_patients,
-        "today_earnings":  today_earnings,
+        "today_patients":   today_patients,
+        "today_earnings":   today_earnings,
         "outstanding_debt": outstanding,
-        "low_stock_count": low_count,
-        "monthly_revenue": monthly_revenue,
-        "chart_7days":     chart,
-        "recent_visits":   recent_v.data or [],
+        "low_stock_count":  low_count,
+        "monthly_revenue":  monthly_revenue,
+        "chart_7days":      chart,
+        "recent_visits":    recent_v.data or [],
     })
 
 
