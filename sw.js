@@ -2,7 +2,7 @@
 // Caches the app shell for "Add to Home Screen" use
 // API calls always go to network (no offline caching of patient data)
 
-const CACHE_NAME = 'noor-shell-v1';
+const CACHE_NAME = 'noor-shell-v2';
 
 const SHELL_ASSETS = [
   '/',

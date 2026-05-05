@@ -54,9 +54,20 @@ CREATE TABLE IF NOT EXISTS clinics (
   name        TEXT NOT NULL,
   logo_url    TEXT,
   phone       TEXT,
+  owner_email TEXT,
+  owner_auth_user_id UUID,
+  is_banned   BOOLEAN NOT NULL DEFAULT FALSE,
+  banned_at   TIMESTAMPTZ,
+  banned_reason TEXT,
   address     TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE clinics ADD COLUMN IF NOT EXISTS owner_email TEXT;
+ALTER TABLE clinics ADD COLUMN IF NOT EXISTS owner_auth_user_id UUID;
+ALTER TABLE clinics ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE clinics ADD COLUMN IF NOT EXISTS banned_at TIMESTAMPTZ;
+ALTER TABLE clinics ADD COLUMN IF NOT EXISTS banned_reason TEXT;
 
 -- ─────────────────────────────────────────────
 -- LICENSES
@@ -81,6 +92,8 @@ CREATE TABLE IF NOT EXISTS users (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id            UUID REFERENCES clinics(id) ON DELETE CASCADE, -- NULL for super_admin
   username             TEXT NOT NULL UNIQUE,
+  email                TEXT,
+  auth_user_id          UUID,
   password_hash        TEXT NOT NULL,
   role                 user_role NOT NULL DEFAULT 'receptionist',
   full_name            TEXT NOT NULL,
@@ -89,6 +102,9 @@ CREATE TABLE IF NOT EXISTS users (
   last_login           TIMESTAMPTZ,
   created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_user_id UUID;
 
 CREATE INDEX IF NOT EXISTS idx_users_clinic    ON users(clinic_id);
 CREATE INDEX IF NOT EXISTS idx_users_username  ON users(username);
@@ -112,9 +128,23 @@ CREATE TABLE IF NOT EXISTS clinic_settings (
   wa_template_1            TEXT DEFAULT 'عزيزي {patient_name}، يسعدنا تذكيرك بموعدك القادم في {clinic_name} بتاريخ {next_visit}.',
   wa_template_2            TEXT DEFAULT 'مرحباً {patient_name}! حان وقت فحص نظرك الدوري في {clinic_name}.',
   wa_template_3            TEXT DEFAULT '{patient_name}، تذكير بموعد المتابعة {next_visit}. عيادة {clinic_name}.',
+  -- Print defaults
+  print_header_text        TEXT,
+  print_certification_text TEXT,
+  print_warning_text       TEXT,
+  print_qr_url             TEXT,
+  print_show_financials    BOOLEAN NOT NULL DEFAULT TRUE,
+  default_checkup_fee      NUMERIC(12,0) NOT NULL DEFAULT 0,
   -- UI preference
   language                 TEXT NOT NULL DEFAULT 'ar'
 );
+
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_header_text TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_certification_text TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_warning_text TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_qr_url TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_show_financials BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS default_checkup_fee NUMERIC(12,0) NOT NULL DEFAULT 0;
 
 -- ─────────────────────────────────────────────
 -- PATIENTS
@@ -256,6 +286,21 @@ CREATE INDEX IF NOT EXISTS idx_audit_clinic ON audit_log(clinic_id, created_at D
 CREATE INDEX IF NOT EXISTS idx_audit_user   ON audit_log(user_id);
 
 -- ─────────────────────────────────────────────
+-- BACKUPS
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS backup_log (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id   UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  created_by  UUID REFERENCES users(id) ON DELETE SET NULL,
+  kind        TEXT NOT NULL DEFAULT 'manual',
+  row_counts  JSONB,
+  backup_data JSONB,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_backup_log_clinic ON backup_log(clinic_id, created_at DESC);
+
+-- ─────────────────────────────────────────────
 -- SUPER ADMIN USER
 -- Create the first super admin manually with a unique password for each environment.
 -- Do not ship default admin credentials in production schema.
@@ -279,6 +324,7 @@ ALTER TABLE visits          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lenses          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE frames          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE backup_log      ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION jwt_clinic_id()
 RETURNS UUID

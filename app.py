@@ -9,6 +9,8 @@ import bcrypt
 import traceback
 import logging
 import secrets
+import urllib.error
+import urllib.request
 from datetime import datetime, timedelta, date
 from functools import wraps
 
@@ -102,6 +104,45 @@ def _safe_license_summary(license_state):
     }
 
 
+def _extract_auth_user_id(auth_result):
+    user = getattr(auth_result, "user", None)
+    if user is None and isinstance(auth_result, dict):
+        user = auth_result.get("user")
+    if user is None:
+        return None
+    if isinstance(user, dict):
+        return user.get("id")
+    return getattr(user, "id", None)
+
+
+def _auth_rest(path, payload, query=""):
+    url = f"{SUPABASE_URL.rstrip('/')}/auth/v1/{path}{query}"
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(detail or str(exc)) from exc
+
+
+def _clinic_is_banned(clinic_id):
+    if not clinic_id:
+        return False
+    res = db.table("clinics").select("is_banned").eq("id", clinic_id).single().execute()
+    return bool(res.data and res.data.get("is_banned"))
+
+
 def _license_state(clinic_id):
     """
     Backend-only license decision.
@@ -141,7 +182,7 @@ def _license_state(clinic_id):
 def _csrf_protect():
     if request.method not in WRITE_METHODS:
         return None
-    if request.endpoint in {"login"}:
+    if request.endpoint in {"login", "signup", "reset_password"}:
         return None
     if "user_id" not in session:
         return None
@@ -205,6 +246,10 @@ def _auth(roles=None, setting=None, export=False, allow_readonly_write=False):
             if role == "super_admin":
                 return f(*args, **kwargs)
 
+            if _clinic_is_banned(clinic_id):
+                session.clear()
+                return err("Clinic account is banned. Please contact support.", 403)
+
             # 2. License check
             license_state = _license_state(clinic_id)
             status = license_state["status"]
@@ -246,31 +291,52 @@ def _auth(roles=None, setting=None, export=False, allow_readonly_write=False):
 @limiter.limit("5 per minute; 20 per hour")
 def login():
     body = request.get_json() or {}
-    username = (body.get("username") or "").strip()
+    username = (body.get("username") or body.get("email") or "").strip()
     password = body.get("password") or ""
 
     if not username or not password:
         return err("Username and password are required")
 
-    # Fetch user
-    res = db.table("users") \
-        .select("*") \
-        .eq("username", username) \
-        .eq("is_active", True) \
-        .limit(1) \
-        .execute()
+    user = None
+    auth_user_id = None
 
-    if not res.data:
-        return err("Invalid credentials", 401)
+    # Owner accounts use Supabase Auth. Staff/super-admin username login
+    # remains supported during the migration.
+    if "@" in username:
+        try:
+            auth_res = _auth_rest("token", {"email": username, "password": password}, "?grant_type=password")
+            auth_user_id = (auth_res.get("user") or {}).get("id")
+        except Exception:
+            auth_user_id = None
 
-    user = res.data[0]
+        if auth_user_id:
+            res = db.table("users").select("*").eq("auth_user_id", auth_user_id).eq("is_active", True).limit(1).execute()
+            if not res.data:
+                res = db.table("users").select("*").eq("email", username).eq("is_active", True).limit(1).execute()
+            if res.data:
+                user = res.data[0]
 
-    # Verify password
-    if not bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
-        return err("Invalid credentials", 401)
+    if user is None:
+        res = db.table("users") \
+            .select("*") \
+            .eq("username", username) \
+            .eq("is_active", True) \
+            .limit(1) \
+            .execute()
+
+        if not res.data:
+            return err("Invalid credentials", 401)
+
+        user = res.data[0]
+
+        if not bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
+            return err("Invalid credentials", 401)
 
     role = user["role"]
     clinic_id = user["clinic_id"]
+
+    if role != "super_admin" and _clinic_is_banned(clinic_id):
+        return err("Clinic account is banned. Please contact support.", 403)
 
     # License check (skip for super_admin)
     grace_warning = None
@@ -348,6 +414,95 @@ def login():
 def logout():
     session.clear()
     return ok()
+
+
+@app.route("/api/signup", methods=["POST"])
+@limiter.limit("5 per hour")
+def signup():
+    body = request.get_json() or {}
+    clinic_name = (body.get("clinic_name") or "").strip()
+    owner_name = (body.get("owner_name") or "").strip()
+    email = (body.get("email") or "").strip().lower()
+    phone = (body.get("phone") or "").strip()
+    password = body.get("password") or ""
+
+    if not clinic_name or not owner_name or not email or len(password) < 6:
+        return err("clinic_name, owner_name, email, and a 6+ character password are required")
+
+    existing = db.table("users").select("id").eq("email", email).limit(1).execute()
+    if existing.data:
+        return err("An account already exists for this email", 409)
+
+    try:
+        auth_res = _auth_rest("signup", {"email": email, "password": password})
+        auth_user_id = (auth_res.get("user") or {}).get("id")
+    except Exception as exc:
+        logging.exception("Supabase signup failed")
+        return err(f"Signup failed: {str(exc)}", 400)
+
+    clinic_res = db.table("clinics").insert({
+        "name": clinic_name,
+        "phone": phone,
+        "owner_email": email,
+        "owner_auth_user_id": auth_user_id,
+        "created_at": now_iso(),
+    }).execute()
+    clinic = clinic_res.data[0]
+    cid = clinic["id"]
+
+    db.table("clinic_settings").insert({
+        "clinic_id": cid,
+        "followup_months_default": 3,
+        "recept_view_patients": True,
+        "recept_edit_patients": True,
+        "recept_view_financials": False,
+        "recept_edit_financials": False,
+        "recept_access_inventory": True,
+        "recept_export_reports": False,
+        "recept_view_audit": False,
+        "default_checkup_fee": 0,
+        "print_show_financials": True,
+    }).execute()
+
+    expires_at = (date.today() + timedelta(days=7)).isoformat()
+    db.table("licenses").insert({
+        "clinic_id": cid,
+        "plan": "trial",
+        "starts_at": today_str(),
+        "expires_at": expires_at,
+        "is_active": True,
+        "notes": "Self signup trial",
+    }).execute()
+
+    hashed = bcrypt.hashpw(secrets.token_urlsafe(24).encode(), bcrypt.gensalt()).decode()
+    db.table("users").insert({
+        "clinic_id": cid,
+        "username": email,
+        "email": email,
+        "auth_user_id": auth_user_id,
+        "password_hash": hashed,
+        "full_name": owner_name,
+        "role": "doctor",
+        "is_active": True,
+        "must_change_password": False,
+        "created_at": now_iso(),
+    }).execute()
+
+    return ok({"clinic_id": cid, "email": email, "trial_expires_at": expires_at}), 201
+
+
+@app.route("/api/reset-password", methods=["POST"])
+@limiter.limit("5 per hour")
+def reset_password():
+    body = request.get_json() or {}
+    email = (body.get("email") or "").strip().lower()
+    if not email:
+        return err("email is required")
+    try:
+        _auth_rest("recover", {"email": email})
+    except Exception:
+        logging.exception("Supabase reset password failed")
+    return ok({"message": "If the email exists, a reset link has been sent."})
 
 
 @app.route("/api/me", methods=["GET"])
@@ -746,6 +901,27 @@ def get_visit(vid):
     if not res.data:
         return err("Visit not found", 404)
     return ok(res.data)
+
+
+@app.route("/api/visits/<vid>/print", methods=["GET"])
+@_auth(setting="recept_view_patients")
+def get_visit_print_payload(vid):
+    cid = session["clinic_id"]
+    visit = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).single().execute()
+    if not visit.data:
+        return err("Visit not found", 404)
+
+    patient = db.table("patients").select("*").eq("clinic_id", cid) \
+        .eq("id", visit.data["patient_id"]).single().execute()
+    clinic = db.table("clinics").select("id,name,logo_url,phone,address").eq("id", cid).single().execute()
+    settings = db.table("clinic_settings").select("*").eq("clinic_id", cid).single().execute()
+
+    return ok({
+        "visit": visit.data,
+        "patient": patient.data,
+        "clinic": clinic.data,
+        "settings": settings.data,
+    })
 
 
 @app.route("/api/visits/<vid>", methods=["PUT"])
@@ -1176,7 +1352,7 @@ def export_all_patients():
 def get_settings():
     cid = session["clinic_id"]
     cs  = db.table("clinic_settings").select("*").eq("clinic_id", cid).single().execute()
-    cl  = db.table("clinics").select("id,name,logo_url,phone,address").eq("id", cid).single().execute()
+    cl  = db.table("clinics").select("id,name,logo_url,phone,address,owner_email,is_banned").eq("id", cid).single().execute()
     return ok({
         "clinic":   cl.data,
         "settings": cs.data,
@@ -1202,6 +1378,8 @@ def update_settings():
         "recept_view_financials","recept_edit_financials",
         "recept_access_inventory","recept_export_reports","recept_view_audit",
         "followup_months_default","wa_template_1","wa_template_2","wa_template_3",
+        "print_header_text","print_certification_text","print_warning_text",
+        "print_qr_url","print_show_financials","default_checkup_fee",
         "language",
     ]
     settings_upd = {k: v for k, v in body.items() if k in settings_fields}
@@ -1392,6 +1570,9 @@ def admin_list_clinics():
         lic = db.table("licenses").select("plan,expires_at,is_active") \
             .eq("clinic_id", c["id"]).order("starts_at", desc=True).limit(1).execute()
         c["license"] = lic.data[0] if lic.data else None
+        users = db.table("users").select("id,email,username,full_name,role,is_active,last_login,created_at") \
+            .eq("clinic_id", c["id"]).execute()
+        c["users"] = users.data or []
 
     return ok(clinic_list)
 
@@ -1404,6 +1585,7 @@ def admin_create_clinic():
     name      = (body.get("name") or "").strip()
     username  = (body.get("doctor_username") or "").strip()
     password  = body.get("doctor_password") or ""
+    owner_email = (body.get("owner_email") or body.get("email") or "").strip().lower()
     plan      = body.get("plan", "trial")
     full_name = body.get("doctor_full_name") or name + " Doctor"
 
@@ -1414,6 +1596,7 @@ def admin_create_clinic():
     clinic_res = db.table("clinics").insert({
         "name":       name,
         "phone":      body.get("phone"),
+        "owner_email": owner_email or None,
         "address":    body.get("address"),
         "created_at": now_iso(),
     }).execute()
@@ -1431,6 +1614,8 @@ def admin_create_clinic():
         "recept_access_inventory": False,
         "recept_export_reports":   False,
         "recept_view_audit":       False,
+        "default_checkup_fee":      body.get("default_checkup_fee") or 0,
+        "print_show_financials":    True,
         "wa_template_1":           "Dear {patient_name}, your next visit at {clinic_name} is on {next_visit}.",
         "wa_template_2":           "Hello {patient_name}! Time for your annual eye check at {clinic_name}.",
         "wa_template_3":           "{patient_name}, follow-up reminder: {next_visit}. {clinic_name}.",
@@ -1456,6 +1641,7 @@ def admin_create_clinic():
     db.table("users").insert({
         "clinic_id":            cid,
         "username":             username,
+        "email":                owner_email or None,
         "password_hash":        hashed,
         "full_name":            full_name,
         "role":                 "doctor",
@@ -1472,10 +1658,23 @@ def admin_create_clinic():
 @_require_super
 def admin_update_clinic(cid):
     body = request.get_json() or {}
-    allowed = ["name","phone","address","logo_url"]
+    allowed = ["name","phone","address","logo_url","owner_email","is_banned","banned_reason"]
     updates = {k: v for k, v in body.items() if k in allowed}
+    if "is_banned" in updates:
+        updates["is_banned"] = bool(updates["is_banned"])
+        updates["banned_at"] = now_iso() if updates["is_banned"] else None
     if updates:
         db.table("clinics").update(updates).eq("id", cid).execute()
+    return ok()
+
+
+@app.route("/api/admin/clinics/<cid>", methods=["DELETE"])
+@_auth()
+@_require_super
+def admin_delete_clinic(cid):
+    if cid == session.get("clinic_id"):
+        return err("Cannot delete the clinic you are currently using", 400)
+    db.table("clinics").delete().eq("id", cid).execute()
     return ok()
 
 
@@ -1556,6 +1755,43 @@ def admin_update_license(target_clinic_id):
     db.table("licenses").insert({"clinic_id": target_clinic_id, **updates}).execute()
 
     return ok()
+
+
+@app.route("/api/admin/clinics/<cid>/backup", methods=["POST"])
+@_auth()
+@_require_super
+def admin_backup_clinic(cid):
+    clinic = db.table("clinics").select("*").eq("id", cid).single().execute()
+    if not clinic.data:
+        return err("Clinic not found", 404)
+
+    payload = {"clinic": clinic.data}
+    for table in ["patients", "visits", "frames", "lenses", "users", "clinic_settings", "licenses"]:
+        query = db.table(table).select("*")
+        if table == "clinic_settings":
+            query = query.eq("clinic_id", cid)
+        elif table == "licenses":
+            query = query.eq("clinic_id", cid)
+        else:
+            query = query.eq("clinic_id", cid)
+        payload[table] = query.execute().data or []
+
+    row_counts = {k: len(v) for k, v in payload.items() if isinstance(v, list)}
+    backup_res = db.table("backup_log").insert({
+        "clinic_id": cid,
+        "created_by": session.get("user_id"),
+        "kind": "manual",
+        "row_counts": row_counts,
+        "backup_data": payload,
+        "created_at": now_iso(),
+    }).execute()
+
+    return ok({
+        "backup_id": backup_res.data[0]["id"] if backup_res.data else None,
+        "created_at": now_iso(),
+        "row_counts": row_counts,
+        "backup": payload,
+    })
 
 
 @app.route("/api/admin/audit", methods=["GET"])
