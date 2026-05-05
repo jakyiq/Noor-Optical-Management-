@@ -317,8 +317,16 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .report-stat-label{font-size:.74rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.06em}
 
 /* VISIT CARD INNER GRID */
+.patient-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.patient-summary-card{background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow-sm)}
+.patient-summary-label{font-size:.68rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.patient-summary-value{font-family:'DM Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--ink)}
+.patient-summary-value.danger{color:var(--danger)}
+.patient-summary-sub{font-size:.78rem;color:var(--ink-light);margin-top:3px}
+.patient-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.visit-action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .visit-body-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media(max-width:600px){.visit-body-grid{grid-template-columns:1fr;gap:12px}}
+@media(max-width:600px){.patient-summary-grid{grid-template-columns:1fr 1fr}.patient-detail-actions .btn{flex:1;justify-content:center}.visit-body-grid{grid-template-columns:1fr;gap:12px}}
 
 /* VISIT CARD */
 .visit-card{background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-md);margin-bottom:14px;overflow:hidden}
@@ -1098,12 +1106,14 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-outline" onclick="openEditPatient()"><span data-i18n="edit">تعديل</span></button>
+              <button class="btn btn-outline" onclick="openOldPrescription()"><span data-i18n="addOldPrescription">Add old Rx</span></button>
               <button class="btn btn-burgundy" onclick="openNewVisit()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 <span data-i18n="newVisit">زيارة جديدة</span>
               </button>
             </div>
           </div>
+          <div id="patient-summary"></div>
           <div id="patient-visit-history"></div>
         </div>
       </section>
@@ -1430,6 +1440,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       </div>
       <div class="tab-panel active" id="ptab-info">
         <div class="form-grid">
+          <div class="form-group" id="visit-date-group" style="display:none"><label class="form-label" data-i18n="visitDate">Visit Date</label><input type="date" class="form-input" id="f-visit-date"></div>
           <div class="form-group"><label class="form-label" data-i18n="fullName">الاسم الكامل *</label><input type="text" class="form-input" id="p-name"></div>
           <div class="form-group"><label class="form-label" data-i18n="phone">الهاتف</label><input type="tel" class="form-input" id="p-phone"></div>
           <div class="form-group"><label class="form-label" data-i18n="age">العمر</label><input type="number" class="form-input" id="p-age" min="1" max="120"></div>
@@ -1638,7 +1649,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   <div class="modal" style="width:min(540px,100%)">
     <div class="modal-header"><div class="modal-title" data-i18n="prescriptionSlip">وصفة طبية</div><button class="modal-close" onclick="closeModal('modal-rx-slip')">✕</button></div>
     <div class="modal-body"><div id="rx-slip-content"></div></div>
-    <div class="modal-footer"><button class="btn btn-outline" onclick="printRxSlip()" data-i18n="print">طباعة</button><button class="btn btn-burgundy" onclick="closeModal('modal-rx-slip')" data-i18n="close">إغلاق</button></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="printRxSlip()" data-i18n="printA5">Print A5</button><button class="btn btn-burgundy" onclick="closeModal('modal-rx-slip')" data-i18n="close">إغلاق</button></div>
   </div>
 </div>
 
@@ -1681,6 +1692,7 @@ const LANG_DATA = {
     lenses:'العدسات',frames:'الإطارات',reports:'التقارير',settings:'الإعدادات',
     auditLog:'سجل التدقيق',language:'اللغة',management:'إدارة',inventory:'المخزون',
     analytics:'تحليلات',security:'الأمان',addPatient:'إضافة مريض',
+    addOldPrescription:'إضافة وصفة قديمة',oldPrescription:'وصفة قديمة',topUpRemaining:'تسديد المتبقي',printA5:'طباعة A5',latestVisit:'آخر زيارة',visitDate:'تاريخ الزيارة',
     addLens:'إضافة عدسة',addFrame:'إضافة إطار',addUser:'إضافة مستخدم',
     save:'حفظ',cancel:'إلغاء',edit:'تعديل',delete:'حذف',restock:'إعادة تخزين',
     actions:'إجراءات',name:'الاسم',phone:'الهاتف',age:'العمر',gender:'الجنس',
@@ -1739,6 +1751,7 @@ const LANG_DATA = {
     auditLog:'Audit Log',language:'Language',management:'Management',
     inventory:'Inventory',analytics:'Analytics',security:'Security',
     addPatient:'Add Patient',addLens:'Add Lens',addFrame:'Add Frame',addUser:'Add User',
+    addOldPrescription:'Add Old Rx',oldPrescription:'Old Prescription',topUpRemaining:'Top Up Remaining',printA5:'Print A5',latestVisit:'Latest Visit',visitDate:'Visit Date',
     save:'Save',cancel:'Cancel',edit:'Edit',delete:'Delete',restock:'Restock',
     actions:'Actions',name:'Name',phone:'Phone',age:'Age',gender:'Gender',
     address:'Address',notes:'Notes',fullName:'Full Name',male:'Male',female:'Female',
@@ -2163,17 +2176,49 @@ function filterPatients() {
 
 async function openPatientDetail(pid) {
   NOOR.editingPatientId = pid;
-  const p = getPatient(pid); if (!p) return;
+  const p = getPatient(pid) || {};
   document.getElementById('patients-list-view').style.display = 'none';
   document.getElementById('patients-detail-view').style.display = 'block';
-  document.getElementById('patient-detail-name').textContent  = p.full_name;
-  document.getElementById('patient-detail-name2').textContent = p.full_name;
+  document.getElementById('patient-detail-name').textContent  = p.full_name || '—';
+  document.getElementById('patient-detail-name2').textContent = p.full_name || '—';
   document.getElementById('patient-detail-info').textContent  = `${p.phone||''} • ${p.age?p.age+(NOOR.lang==='ar'?' سنة':' yrs'):''}`;
   try {
     const data = await get(`/api/patients/${pid}`);
+    const patient = data.data || {};
     const visits = data.data?.visits || [];
+    NOOR._currentPatientDetail = patient;
+    document.getElementById('patient-detail-name').textContent  = patient.full_name || '—';
+    document.getElementById('patient-detail-name2').textContent = patient.full_name || '—';
+    document.getElementById('patient-detail-info').textContent  = `${patient.phone||''} • ${patient.age?patient.age+(NOOR.lang==='ar'?' سنة':' yrs'):''}`;
+    renderPatientSummary(patient, visits);
     renderVisitHistory(visits);
   } catch(e) { toast(e.message,'error'); }
+}
+
+function rxPart(v, eye) {
+  const prefix = eye === 'od' ? 'od' : 'os';
+  return `SPH ${v[`${prefix}_sphere`] ?? '—'} CYL ${v[`${prefix}_cylinder`] ?? '—'} AX ${v[`${prefix}_axis`] ?? '—'}`;
+}
+
+function renderPatientSummary(p, visits) {
+  const latest = visits[0] || {};
+  const outstanding = visits.reduce((sum, v) => sum + (parseFloat(v.remaining) || 0), 0);
+  const latestRx = latest.id ? `OD ${rxPart(latest,'od')} | OS ${rxPart(latest,'os')}` : '—';
+  const latestLens = latest.id ? [latest.lens_type, latest.lens_material, latest.lens_coating].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
+  const latestFrame = latest.id ? [latest.frame_brand, latest.frame_type].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
+  const nextVisit = visits.find(v => v.next_visit_date)?.next_visit_date;
+  document.getElementById('patient-summary').innerHTML = `
+    <div class="patient-summary-grid">
+      <div class="patient-summary-card"><div class="patient-summary-label">${t('outstandingDebt')}</div><div class="patient-summary-value ${outstanding>0?'danger':''}">${fmtIQD(outstanding)}</div><div class="patient-summary-sub">${visits.length} ${t('visits')}</div></div>
+      <div class="patient-summary-card"><div class="patient-summary-label">${t('latestVisit')}</div><div class="patient-summary-value">${latest.visit_date?fmtDate(latest.visit_date):'—'}</div><div class="patient-summary-sub">${nextVisit?`${t('nextVisit')}: ${fmtDate(nextVisit)}`:''}</div></div>
+      <div class="patient-summary-card"><div class="patient-summary-label">RX</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestRx)}</div><div class="patient-summary-sub">IPD: ${esc(latest.ipd||'—')}</div></div>
+      <div class="patient-summary-card"><div class="patient-summary-label">${t('lensType')} / ${t('frame')}</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestLens)}</div><div class="patient-summary-sub">${esc(latestFrame)}</div></div>
+    </div>
+    <div class="patient-detail-actions">
+      ${outstanding>0?`<button class="btn btn-gold" onclick="topUpPatientRemaining()">${t('topUpRemaining')}: ${fmtIQD(outstanding)}</button>`:''}
+      ${latest.id?`<button class="btn btn-outline" onclick="showRxSlip('${escAttr(latest.id)}')">${t('printA5')}</button>`:''}
+    </div>
+  `;
 }
 
 function renderVisitHistory(visits) {
@@ -2197,12 +2242,13 @@ function renderVisitHistory(visits) {
           <div>
             <div style="font-size:.72rem;font-weight:700;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Rx</div>
             <table style="border-collapse:collapse;font-size:.82rem;font-family:'DM Mono',monospace">
-              <thead><tr>${['Eye','SPH','CYL','AXIS'].map(h=>`<th style="padding:4px 8px;border:1px solid var(--cream-border);background:var(--cream);font-size:.65rem">${h}</th>`).join('')}</tr></thead>
+              <thead><tr>${['Eye','SPH','CYL','AXIS','ADD','VA'].map(h=>`<th style="padding:4px 8px;border:1px solid var(--cream-border);background:var(--cream);font-size:.65rem">${h}</th>`).join('')}</tr></thead>
               <tbody>
-                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OD</td>${[v.od_sphere,v.od_cylinder,v.od_axis].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
-                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OS</td>${[v.os_sphere,v.os_cylinder,v.os_axis].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
+                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OD</td>${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
+                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OS</td>${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
               </tbody>
             </table>
+            <div style="font-size:.8rem;color:var(--ink-light);margin-top:8px">Lens: ${esc([v.lens_type,v.lens_material,v.lens_coating].filter(Boolean).join(' · ')) || '—'}<br>Frame: ${esc([v.frame_brand,v.frame_type,v.frame_material].filter(Boolean).join(' · ')) || '—'}</div>
           </div>
           <div>
             <div style="font-size:.72rem;font-weight:700;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t('financials')}</div>
@@ -2213,7 +2259,10 @@ function renderVisitHistory(visits) {
             </div>
           </div>
         </div>
-        <div style="margin-top:12px"><button class="btn btn-outline btn-sm" onclick="showRxSlip('${escAttr(v.id)}')">${t('prescriptionSlip')}</button></div>
+        <div class="visit-action-row">
+          ${v.remaining>0?`<button class="btn btn-gold btn-sm" onclick="topUpVisitRemaining('${escAttr(v.id)}')">${t('topUpRemaining')}: ${fmtIQD(v.remaining)}</button>`:''}
+          <button class="btn btn-outline btn-sm" onclick="showRxSlip('${escAttr(v.id)}')">${t('printA5')}</button>
+        </div>
       </div>
     </div>
   `).join('');
@@ -2238,6 +2287,8 @@ function openAddPatient() {
 async function openNewVisit() {
   NOOR.patientModalMode = 'visit';
   clearPatientForm(); switchPatientTab('rx');
+  document.getElementById('visit-date-group').style.display = 'block';
+  document.getElementById('f-visit-date').value = todayStr();
   document.getElementById('modal-patient-title').textContent = t('newVisit');
   if (NOOR.editingPatientId) {
     try {
@@ -2254,6 +2305,15 @@ async function openNewVisit() {
     } catch(_){}
   }
   openModal('modal-patient');
+}
+
+async function openOldPrescription() {
+  if (!NOOR.editingPatientId) return;
+  await openNewVisit();
+  NOOR.patientModalMode = 'old_rx';
+  document.getElementById('modal-patient-title').textContent = t('oldPrescription');
+  document.getElementById('f-visit-date').value = '';
+  switchPatientTab('info');
 }
 
 async function openEditPatient() {
@@ -2287,6 +2347,8 @@ function clearPatientForm() {
   document.getElementById('f-followup-months').value = NOOR.settings.followup_months_default || 3;
   document.getElementById('followup-date-row').style.display = 'none';
   document.getElementById('prev-rx-box').style.display = 'none';
+  document.getElementById('visit-date-group').style.display = 'none';
+  document.getElementById('f-visit-date').value = todayStr();
   document.getElementById('inv-match-items').innerHTML = `<span class="inv-match-empty">${t('enterRxFirst')}</span>`;
   NOOR._selectedLensId = null;
   NOOR._selectedFrameInvId = null;
