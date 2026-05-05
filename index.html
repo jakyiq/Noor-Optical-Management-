@@ -27,6 +27,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px}
 body{background:var(--cream);color:var(--ink);font-family:'Cairo','DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+#app,.main-content,.page-content{max-width:100%;overflow-x:hidden}
 html[dir=ltr] body{font-family:'DM Sans','Cairo',sans-serif}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -461,7 +462,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
    No desktop-mode tricks. Tables become tap-friendly cards.
    Text stays at native 16px — no forced zoom, no tiny fonts.
    ═══════════════════════════════════════════════════════════ */
-@media(max-width:600px){
+@media(max-width:1024px){
 
   /* ── Base ── */
   html{ font-size:16px }
@@ -509,46 +510,61 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
      Each <tr> becomes a card. Column headers (thead) hide.
      Each <td> gets a label via data-label attr (set by JS).
   ═══════════════════════════════════════════════════════════ */
-  .table-wrap{ background:transparent; border:none; box-shadow:none; overflow:visible }
-  .table-wrap table{ display:block; min-width:0; width:100%; font-size:1rem }
-  .table-wrap thead{ display:none }
-  .table-wrap tbody{ display:flex; flex-direction:column; gap:12px }
-  .table-wrap tr{
+  .table-wrap{ background:transparent; border:none; box-shadow:none; overflow:visible; width:100% }
+  .table-wrap table,
+  .settings-section-body>table{ display:block; min-width:0!important; width:100%; font-size:1rem }
+  .table-wrap thead,
+  .settings-section-body>table thead{ display:none }
+  .table-wrap tbody,
+  .settings-section-body>table tbody{ display:flex; flex-direction:column; gap:12px }
+  .table-wrap tr,
+  .settings-section-body>table tr{
     display:grid; grid-template-columns:1fr 1fr;
     background:var(--surface); border:1px solid var(--cream-border);
     border-radius:var(--radius-md); padding:14px 14px 10px;
-    gap:12px 18px; box-shadow:var(--shadow-sm);
+    gap:12px 18px; box-shadow:var(--shadow-sm); width:100%; min-width:0;
   }
-  .table-wrap td{
+  .table-wrap td,
+  .settings-section-body>table td{
     display:flex; flex-direction:column; gap:3px;
     border:none; padding:0; white-space:normal; font-size:.88rem;
+    min-width:0; overflow-wrap:anywhere;
   }
   /* Data-label shows column name above each value */
-  .table-wrap td[data-label]::before{
+  .table-wrap td[data-label]::before,
+  .settings-section-body>table td[data-label]::before{
     content:attr(data-label);
     font-size:.62rem; font-weight:700; color:var(--ink-light);
     text-transform:uppercase; letter-spacing:.06em;
   }
   /* Name: full width, big, tappable */
-  .table-wrap td.td-name{
+  .table-wrap td.td-name,
+  .settings-section-body>table td.td-name{
     grid-column:1/-1; font-size:1.05rem; font-weight:700;
     color:var(--ink); padding-bottom:10px;
     border-bottom:1px solid var(--cream-border); cursor:pointer;
   }
-  .table-wrap td.td-name::before{ display:none }
+  .table-wrap td.td-name::before,
+  .settings-section-body>table td.td-name::before{ display:none }
   /* Phone: monospace */
-  .table-wrap td.td-phone{ font-family:'DM Mono',monospace; font-size:.88rem }
+  .table-wrap td.td-phone,
+  .settings-section-body>table td.td-phone{ font-family:'DM Mono',monospace; font-size:.88rem }
   /* Amount: monospace */
-  .table-wrap td.td-amount{ font-family:'DM Mono',monospace }
+  .table-wrap td.td-amount,
+  .settings-section-body>table td.td-amount{ font-family:'DM Mono',monospace }
   /* Actions: full width, side by side buttons */
-  .table-wrap td.td-actions-cell{
-    grid-column:1/-1; flex-direction:row; gap:8px;
+  .table-wrap td.td-actions-cell,
+  .settings-section-body>table td.td-actions-cell{
+    grid-column:1/-1; display:grid; grid-template-columns:repeat(auto-fit,minmax(86px,1fr)); gap:8px;
     padding-top:8px; border-top:1px solid var(--cream-border); margin-top:2px;
   }
-  .table-wrap td.td-actions-cell::before{ display:none }
+  .table-wrap td.td-actions-cell::before,
+  .settings-section-body>table td.td-actions-cell::before{ display:none }
   .table-wrap td.td-actions-cell .btn,
-  .table-wrap td.td-actions-cell button{
-    flex:1; justify-content:center; padding:10px; font-size:.85rem;
+  .table-wrap td.td-actions-cell button,
+  .settings-section-body>table td.td-actions-cell .btn,
+  .settings-section-body>table td.td-actions-cell button{
+    width:100%; justify-content:center; padding:10px; font-size:.85rem;
     border-radius:var(--radius-sm); border-width:1.5px;
   }
   /* Last td (actions div) — fallback if not using td-actions-cell class */
@@ -618,6 +634,10 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 
   /* ── Bottom nav: bigger tap targets ── */
   :root{ --bottom-nav-h:66px }
+  .bottom-nav{ overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+  .bottom-nav::-webkit-scrollbar{ display:none }
+  .bottom-nav-inner{ min-width:max-content; overflow-x:visible }
+  .bnav-item{ flex:0 0 70px; min-width:70px }
   .bnav-item svg{ width:22px; height:22px }
   .bnav-label{ font-size:.64rem; margin-top:1px }
 }
@@ -664,8 +684,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   border-radius:3px 3px 0 0;
 }
 @media(max-width:400px){
-  .bnav-hide-sm{display:none}
-  .bnav-more-btn{display:flex}
+  .bnav-hide-sm{display:flex}
+  .bnav-more-btn{display:none}
 }
 
 @media print{
@@ -745,9 +765,13 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
         <span class="bnav-label" data-i18n="reports">التقارير</span>
       </button>
-      <button class="bnav-item bnav-more-btn" onclick="toggleSidebar()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        <span class="bnav-label">المزيد</span>
+      <button class="bnav-item bnav-hide-sm" data-section="frames" onclick="navigate('frames')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg>
+        <span class="bnav-label" data-i18n="frames">Frames</span>
+      </button>
+      <button class="bnav-item bnav-hide-sm" data-section="settings" onclick="navigate('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06a2 2 0 01-2.83 2.83l-.06-.06A1.7 1.7 0 0015 19.4a1.7 1.7 0 00-1 .6 1.7 1.7 0 00-.4 1.1V21a2 2 0 01-4 0v-.09A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.88.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-.6-1 1.7 1.7 0 00-1.1-.4H3a2 2 0 010-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.34-1.88l-.06-.06a2 2 0 012.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-.6 1.7 1.7 0 00.4-1.1V3a2 2 0 014 0v.09A1.7 1.7 0 0015 4.6a1.7 1.7 0 001.88-.34l.06-.06a2 2 0 012.83 2.83l-.06.06A1.7 1.7 0 0019.4 9c.2.38.5.72.88.93.26.15.56.23.86.23H21a2 2 0 010 4h-.09a1.7 1.7 0 00-1.51.84z"/></svg>
+        <span class="bnav-label" data-i18n="settings">Settings</span>
       </button>
     </div>
   </nav>
