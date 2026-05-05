@@ -34,10 +34,10 @@ html[dir=ltr] body{font-family:'DM Sans','Cairo',sans-serif}
 ::-webkit-scrollbar-thumb{background:var(--cream-border);border-radius:99px}
 
 /* LOGIN */
-#login-screen{position:fixed;inset:0;z-index:9999;background:var(--cream);display:flex;align-items:center;justify-content:center;flex-direction:column}
+#login-screen{position:fixed;inset:0;z-index:9999;background:var(--cream);display:flex;align-items:center;justify-content:center;flex-direction:column;padding:24px 12px;overflow-y:auto}
 .login-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
 .login-bg svg{width:100%;height:100%;opacity:.08}
-.login-card{position:relative;z-index:1;background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:48px 40px;width:min(420px,92vw);text-align:center}
+.login-card{position:relative;z-index:1;background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:48px 40px;width:min(420px,92vw);max-height:calc(100dvh - 48px);overflow-y:auto;text-align:center}
 .login-logo{width:72px;height:72px;background:var(--burgundy);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
 .login-logo svg{width:36px;height:36px;fill:white}
 .login-title{font-family:'Amiri','Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--burgundy);margin-bottom:4px}
@@ -47,10 +47,16 @@ html[dir=ltr] .login-title{font-family:'Playfair Display','Amiri',serif}
 .field-group label{display:block;font-size:.78rem;font-weight:600;color:var(--ink-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
 .field-group input{width:100%;padding:12px 16px;border:1.5px solid var(--cream-border);border-radius:var(--radius-sm);background:var(--cream);font-family:inherit;font-size:.95rem;color:var(--ink);transition:border-color .2s,box-shadow .2s;outline:none}
 .field-group input:focus{border-color:var(--burgundy);box-shadow:0 0 0 3px rgba(107,26,42,.08)}
-.btn-primary{width:100%;padding:13px;background:var(--burgundy);color:white;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:1rem;font-weight:600;cursor:pointer;transition:background .2s,transform .1s,box-shadow .2s;margin-top:8px}
+.btn-primary{width:100%;min-height:46px;padding:13px;background:var(--burgundy);color:white;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:1rem;font-weight:600;cursor:pointer;transition:background .2s,transform .1s,box-shadow .2s;margin-top:8px;position:relative;z-index:1}
 .btn-primary:hover{background:var(--burgundy-soft);box-shadow:var(--shadow-md)}
 .btn-primary:active{transform:scale(.98)}
 .btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.login-actions,.login-lang-switch{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.login-actions{margin-top:12px}
+.login-lang-switch{margin-top:20px}
+.login-card .lang-btn{min-height:38px;padding:8px 14px;background:var(--cream);border:1.5px solid var(--cream-border);color:var(--burgundy);font-weight:700;opacity:1}
+.login-card .lang-btn:hover{background:var(--burgundy-pale);border-color:var(--burgundy);color:var(--burgundy)}
+.login-card .lang-btn.active{background:var(--burgundy);border-color:var(--burgundy);color:white}
 .login-error{background:#fef2f2;border:1px solid #fecaca;color:var(--danger);border-radius:var(--radius-sm);padding:10px 14px;font-size:.85rem;margin-bottom:16px;display:none}
 .login-error.show{display:block}
 .login-ornament{width:40px;height:2px;background:var(--gold);margin:24px auto 0;border-radius:99px}
@@ -271,8 +277,11 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .followup-row-days.overdue{color:var(--danger);font-weight:700}
 .followup-row-days.soon{color:var(--warning);font-weight:600}
 .followup-row-days.ok{color:var(--success)}
-.wa-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#25D366;color:white;border:none;border-radius:var(--radius-sm);font-size:.78rem;font-weight:600;cursor:pointer;transition:background .15s}
-.wa-btn:hover{background:#128C7E}
+.td-actions-cell{white-space:nowrap}
+.wa-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:38px;min-width:118px;padding:8px 14px;background:#25D366;color:white;border:1.5px solid #1fb85a;border-radius:var(--radius-sm);font-family:inherit;font-size:.82rem;font-weight:700;line-height:1;cursor:pointer;transition:background .15s,box-shadow .15s,transform .1s;position:relative;z-index:1;box-shadow:0 3px 10px rgba(37,211,102,.22)}
+.wa-btn:hover{background:#128C7E;box-shadow:0 5px 14px rgba(18,140,126,.25)}
+.wa-btn:active{transform:translateY(1px)}
+.wa-btn svg{flex-shrink:0}
 
 /* LOW STOCK BANNER */
 .low-stock-banner{background:#fef3e2;border:1px solid #f4c87a;border-radius:var(--radius-md);padding:14px 18px;margin-bottom:18px;display:none}
@@ -572,7 +581,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   .table-wrap .td-actions .btn{ flex:1; justify-content:center; padding:10px; font-size:.85rem }
 
   /* WhatsApp button */
-  .wa-btn{ width:100%; justify-content:center; padding:11px; font-size:.9rem }
+  .wa-btn{ width:100%; min-width:0; justify-content:center; padding:11px; font-size:.9rem }
 
   /* ── Modals: bottom sheet ── */
   .modal{ border-radius:var(--radius-lg) var(--radius-lg) 0 0; width:100%; max-height:92vh }
@@ -586,6 +595,11 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   .tabs{ overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none }
   .tabs::-webkit-scrollbar{ display:none }
   .tab-btn{ padding:10px 16px; font-size:.86rem; white-space:nowrap; flex-shrink:0 }
+
+  #login-screen{align-items:center;justify-content:flex-start;padding:16px 10px}
+  .login-card{margin:auto 0;padding:28px 20px;width:min(420px,94vw);max-height:none;overflow:visible}
+  .login-logo{width:60px;height:60px;margin-bottom:14px}
+  .login-sub{margin-bottom:22px}
 
   /* ── RX table in modal: scrollable ── */
   .rx-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:14px }
@@ -765,19 +779,19 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
     <button class="btn-primary" id="login-btn" onclick="doLogin()">
       <span id="login-btn-text">تسجيل الدخول</span>
     </button>
-    <div style="margin-top:12px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <button class="lang-btn" onclick="openSignupPanel()">Create trial</button>
-      <button class="lang-btn" onclick="resetPassword()">Reset password</button>
+    <div class="login-actions">
+      <button class="lang-btn" type="button" onclick="openSignupPanel()">Create trial</button>
+      <button class="lang-btn" type="button" onclick="resetPassword()">Reset password</button>
     </div>
     <div id="signup-panel" style="display:none;margin-top:18px;text-align:start;border-top:1px solid var(--cream-border);padding-top:16px">
       <div class="field-group"><label>Clinic name</label><input type="text" id="signup-clinic" placeholder="Noor Optical"></div>
       <div class="field-group"><label>Owner name</label><input type="text" id="signup-owner" placeholder="Owner name"></div>
       <div class="field-group"><label>Phone</label><input type="tel" id="signup-phone" placeholder="07..."></div>
-      <button class="btn-primary" onclick="doSignup()">Start 7-day trial</button>
+      <button class="btn-primary" type="button" onclick="doSignup()">Start 7-day trial</button>
     </div>
-    <div style="margin-top:20px;display:flex;gap:8px;justify-content:center">
-      <button class="lang-btn active" id="login-lang-ar" onclick="setLang('ar')">العربية</button>
-      <button class="lang-btn" id="login-lang-en" onclick="setLang('en')">English</button>
+    <div class="login-lang-switch">
+      <button class="lang-btn active" type="button" id="login-lang-ar" onclick="setLang('ar')">العربية</button>
+      <button class="lang-btn" type="button" id="login-lang-en" onclick="setLang('en')">English</button>
     </div>
     <div class="login-ornament"></div>
   </div>
