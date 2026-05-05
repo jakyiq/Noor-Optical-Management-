@@ -326,6 +326,13 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .patient-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
 .visit-action-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .visit-body-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#modal-patient.old-rx-mode #ptab-info .form-group:not(#visit-date-group){display:none}
+#modal-patient.old-rx-mode #ptab-frame-btn,
+#modal-patient.old-rx-mode #ptab-fin-btn{display:none}
+#modal-patient.old-rx-mode #prev-rx-box,
+#modal-patient.old-rx-mode #ptab-rx .form-grid,
+#modal-patient.old-rx-mode #ptab-rx .form-group,
+#modal-patient.old-rx-mode #ptab-rx .inv-match-box{display:none!important}
 @media(max-width:600px){.patient-summary-grid{grid-template-columns:1fr 1fr}.patient-detail-actions .btn{flex:1;justify-content:center}.visit-body-grid{grid-template-columns:1fr;gap:12px}}
 
 /* VISIT CARD */
@@ -2259,10 +2266,6 @@ function renderVisitHistory(visits) {
             </div>
           </div>
         </div>
-        <div class="visit-action-row">
-          ${v.remaining>0?`<button class="btn btn-gold btn-sm" onclick="topUpVisitRemaining('${escAttr(v.id)}')">${t('topUpRemaining')}: ${fmtIQD(v.remaining)}</button>`:''}
-          <button class="btn btn-outline btn-sm" onclick="showRxSlip('${escAttr(v.id)}')">${t('printA5')}</button>
-        </div>
       </div>
     </div>
   `).join('');
@@ -2279,6 +2282,7 @@ function showPatientsListView() {
 function openAddPatient() {
   NOOR.editingPatientId = null;
   NOOR.patientModalMode = 'create';
+  document.getElementById('modal-patient').classList.remove('old-rx-mode');
   document.getElementById('modal-patient-title').textContent = t('addPatient');
   clearPatientForm(); switchPatientTab('info');
   populateFrameInventory(); openModal('modal-patient');
@@ -2286,6 +2290,7 @@ function openAddPatient() {
 
 async function openNewVisit() {
   NOOR.patientModalMode = 'visit';
+  document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm(); switchPatientTab('rx');
   document.getElementById('visit-date-group').style.display = 'block';
   document.getElementById('f-visit-date').value = todayStr();
@@ -2311,6 +2316,7 @@ async function openOldPrescription() {
   if (!NOOR.editingPatientId) return;
   await openNewVisit();
   NOOR.patientModalMode = 'old_rx';
+  document.getElementById('modal-patient').classList.add('old-rx-mode');
   document.getElementById('modal-patient-title').textContent = t('oldPrescription');
   document.getElementById('f-visit-date').value = '';
   switchPatientTab('info');
@@ -2319,6 +2325,7 @@ async function openOldPrescription() {
 async function openEditPatient() {
   if (!NOOR.editingPatientId) return;
   NOOR.patientModalMode = 'edit';
+  document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm();
   switchPatientTab('info');
   document.getElementById('modal-patient-title').textContent = t('edit');
@@ -2458,7 +2465,10 @@ function onCheckupToggle() {
 
 function updateNextVisitDate() {
   const m = parseInt(document.getElementById('f-followup-months').value)||3;
-  const d = new Date(); d.setMonth(d.getMonth()+m);
+  const base = document.getElementById('f-visit-date')?.value
+    ? new Date(document.getElementById('f-visit-date').value + 'T00:00:00')
+    : new Date();
+  const d = new Date(base); d.setMonth(d.getMonth()+m);
   document.getElementById('f-next-visit').value = d.toISOString().split('T')[0];
 }
 
@@ -2474,6 +2484,16 @@ function calcTotal() {
   document.getElementById('fs-total').textContent     = fmtIQD(total);
   document.getElementById('fs-paid').textContent      = fmtIQD(pd);
   document.getElementById('fs-remaining').textContent = fmtIQD(Math.max(0,total-pd));
+}
+
+function numOrNull(id) {
+  const val = document.getElementById(id).value;
+  return val === '' ? null : parseFloat(val);
+}
+
+function intOrNull(id) {
+  const val = document.getElementById(id).value;
+  return val === '' ? null : parseInt(val);
 }
 
 async function savePatient() {
@@ -2517,54 +2537,73 @@ async function savePatient() {
     const cf = parseFloat(document.getElementById('f-checkup-fee').value)||0;
     const pd = parseFloat(document.getElementById('f-paid').value)||0;
     const total = lp+fp+cf;
-    const hasRx = document.getElementById('rx-od-sph').value !== '';
+    const rxIds = ['rx-od-sph','rx-od-cyl','rx-od-axis','rx-od-add','rx-od-va','rx-od-bcva','rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva','rx-ipd'];
+    const hasRx = rxIds.some(id => document.getElementById(id).value !== '');
+    const hasFrame = NOOR.patientModalMode !== 'old_rx' && ['p-frame-brand','p-frame-type','p-frame-material','p-frame-inv'].some(id => document.getElementById(id).value !== '');
+    const hasCheckup = NOOR.patientModalMode !== 'old_rx' && (document.getElementById('f-checkup').checked || document.getElementById('f-next-visit').value !== '');
 
-    if (total > 0 || hasRx) {
+    if (total > 0 || hasRx || hasFrame || hasCheckup) {
       const coatings = [...document.querySelectorAll('.coating-chip.selected')].map(c=>c.dataset.val).join(',');
       await post('/api/visits', {
         patient_id:      pid,
-        visit_date:      todayStr(),
-        od_sphere:       parseFloat(document.getElementById('rx-od-sph').value)||null,
-        od_cylinder:     parseFloat(document.getElementById('rx-od-cyl').value)||null,
-        od_axis:         parseInt(document.getElementById('rx-od-axis').value)||null,
-        od_addition:     parseFloat(document.getElementById('rx-od-add').value)||null,
+        visit_date:      document.getElementById('f-visit-date').value || todayStr(),
+        od_sphere:       numOrNull('rx-od-sph'),
+        od_cylinder:     numOrNull('rx-od-cyl'),
+        od_axis:         intOrNull('rx-od-axis'),
+        od_addition:     numOrNull('rx-od-add'),
         od_va:           document.getElementById('rx-od-va').value||null,
         od_bcva:         document.getElementById('rx-od-bcva').value||null,
-        os_sphere:       parseFloat(document.getElementById('rx-os-sph').value)||null,
-        os_cylinder:     parseFloat(document.getElementById('rx-os-cyl').value)||null,
-        os_axis:         parseInt(document.getElementById('rx-os-axis').value)||null,
-        os_addition:     parseFloat(document.getElementById('rx-os-add').value)||null,
+        os_sphere:       numOrNull('rx-os-sph'),
+        os_cylinder:     numOrNull('rx-os-cyl'),
+        os_axis:         intOrNull('rx-os-axis'),
+        os_addition:     numOrNull('rx-os-add'),
         os_va:           document.getElementById('rx-os-va').value||null,
         os_bcva:         document.getElementById('rx-os-bcva').value||null,
-        ipd:             parseFloat(document.getElementById('rx-ipd').value)||null,
-        lens_type:       document.getElementById('rx-lens-type').value,
-        lens_material:   document.getElementById('rx-material').value,
-        lens_coating:    coatings||'clear',
-        lens_count:      parseInt(document.getElementById('rx-lens-count').value)||2,
+        ipd:             numOrNull('rx-ipd'),
+        lens_type:       NOOR.patientModalMode === 'old_rx' ? null : document.getElementById('rx-lens-type').value,
+        lens_material:   NOOR.patientModalMode === 'old_rx' ? null : document.getElementById('rx-material').value,
+        lens_coating:    NOOR.patientModalMode === 'old_rx' ? null : (coatings||'clear'),
+        lens_count:      NOOR.patientModalMode === 'old_rx' ? null : (parseInt(document.getElementById('rx-lens-count').value)||2),
         lens_id:         NOOR._selectedLensId||null,
-        frame_id:        NOOR._selectedFrameInvId||null,
-        frame_brand:     document.getElementById('p-frame-brand').value||null,
-        frame_type:      document.getElementById('p-frame-type').value||null,
-        frame_material:  document.getElementById('p-frame-material').value||null,
-        did_checkup:     document.getElementById('f-checkup').checked,
-        next_visit_date: document.getElementById('f-next-visit').value||null,
+        frame_id:        NOOR.patientModalMode === 'old_rx' ? null : (NOOR._selectedFrameInvId||null),
+        frame_brand:     NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-brand').value||null),
+        frame_type:      NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-type').value||null),
+        frame_material:  NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-material').value||null),
+        did_checkup:     NOOR.patientModalMode === 'old_rx' ? false : document.getElementById('f-checkup').checked,
+        next_visit_date: NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('f-next-visit').value||null),
         followup_months: parseInt(document.getElementById('f-followup-months').value)||3,
-        frame_cost:      parseFloat(document.getElementById('f-frame-cost').value)||0,
-        frame_price:     fp,
-        lens_cost:       parseFloat(document.getElementById('f-lens-cost').value)||0,
-        lens_price:      lp,
-        checkup_fee:     cf,
-        amount_paid:     pd,
+        frame_cost:      NOOR.patientModalMode === 'old_rx' ? 0 : (parseFloat(document.getElementById('f-frame-cost').value)||0),
+        frame_price:     NOOR.patientModalMode === 'old_rx' ? 0 : fp,
+        lens_cost:       NOOR.patientModalMode === 'old_rx' ? 0 : (parseFloat(document.getElementById('f-lens-cost').value)||0),
+        lens_price:      NOOR.patientModalMode === 'old_rx' ? 0 : lp,
+        checkup_fee:     NOOR.patientModalMode === 'old_rx' ? 0 : cf,
+        amount_paid:     NOOR.patientModalMode === 'old_rx' ? 0 : pd,
       });
     }
 
     closeModal('modal-patient');
     toast(t('successSaved'));
     await renderPatients();
+    NOOR.editingPatientId = pid;
+    await openPatientDetail(pid);
 
   } catch(e) {
     toast(e.message, 'error');
   }
+}
+
+async function topUpPatientRemaining() {
+  const detail = NOOR._currentPatientDetail || {};
+  const visits = (detail.visits || []).filter(v => (parseFloat(v.remaining)||0) > 0);
+  try {
+    for (const v of visits) {
+      const remaining = parseFloat(v.remaining) || 0;
+      await put(`/api/visits/${v.id}`, { amount_paid: (parseFloat(v.amount_paid)||0) + remaining });
+    }
+    toast(t('successSaved'));
+    await renderPatients();
+    await openPatientDetail(detail.id || NOOR.editingPatientId);
+  } catch(e) { toast(e.message,'error'); }
 }
 
 async function deletePatient(id) {
@@ -2581,7 +2620,7 @@ async function deletePatient(id) {
 // ══════════════════════════════════════════════════════════
 async function renderFollowups() {
   try {
-    const data = await get('/api/followups?days=14');
+    const data = await get('/api/followups?days=3650');
     const rows = data.data || [];
 
     // Update badge
