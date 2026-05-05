@@ -456,115 +456,170 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   .page-header>div:last-child{display:flex;gap:8px;flex-wrap:wrap}
 }
 
+/* ═══════════════════════════════════════════════════════════
+   MOBILE NATIVE LAYOUT  ≤ 600px
+   No desktop-mode tricks. Tables become tap-friendly cards.
+   Text stays at native 16px — no forced zoom, no tiny fonts.
+   ═══════════════════════════════════════════════════════════ */
 @media(max-width:600px){
-  .stats-grid{grid-template-columns:repeat(2,1fr)}
-  .form-grid{grid-template-columns:1fr}
-  .dash-grid{grid-template-columns:1fr}
-  .page-content{padding:14px 12px}
 
-  /* Page headers: stack vertically, full-width action buttons */
-  .page-header{flex-direction:column;gap:10px;margin-bottom:18px}
-  .page-header>div:first-child{width:100%}
-  .page-header>div:last-child{width:100%;display:flex;flex-wrap:wrap;gap:8px}
-  .page-header>div:last-child .btn{flex:1;justify-content:center;min-width:0;padding:9px 12px;font-size:.82rem}
-  .page-header-title{font-size:1.35rem}
+  /* ── Base ── */
+  html{ font-size:16px }
+  .stats-grid{ grid-template-columns:1fr 1fr; gap:10px }
+  .form-grid{ grid-template-columns:1fr }
+  .dash-grid{ grid-template-columns:1fr }
+  .page-content{ padding:14px 14px 80px }
 
-  /* Topbar: tighter, no wasted space */
-  .topbar{padding:0 12px;gap:8px;height:54px}
-  .topbar-title{font-size:.9rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px}
-  /* Hide sidebar-toggle: bottom nav handles all navigation on mobile */
-  #sidebar-toggle{display:none!important}
-  /* Search bar: compact but usable */
-  .search-wrap{flex:1;min-width:0;max-width:none}
-  .search-wrap input{font-size:.8rem;padding:8px 12px 8px 32px;border-radius:8px}
-  html[dir=rtl] .search-wrap input{padding:8px 32px 8px 12px}
-  .search-icon{inset-inline-start:10px}
-  /* Notification bell: smaller */
-  .icon-btn{width:32px;height:32px;flex-shrink:0}
+  /* ── Topbar: no hamburger, title + search + bell ── */
+  .topbar{ padding:0 14px; gap:10px; height:54px }
+  #sidebar-toggle{ display:none!important }
+  .topbar-title{ font-size:1rem; font-weight:700; flex:1; min-width:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .search-wrap{ position:relative; width:auto; flex:none }
+  .search-wrap input{ width:160px; font-size:.88rem;
+    padding:9px 14px 9px 32px; border-radius:20px }
+  html[dir=rtl] .search-wrap input{ padding:9px 32px 9px 14px }
+  .search-icon{ inset-inline-start:10px }
+  .icon-btn{ width:36px; height:36px; flex-shrink:0 }
 
-  /* Modals: slide up from bottom */
-  .modal{border-radius:var(--radius-lg) var(--radius-lg) 0 0;width:100%}
-  .modal-overlay{align-items:flex-end;padding:0}
-  .modal-body{padding:16px 14px;max-height:72vh;overflow-y:auto}
-  .modal-header{padding:16px 14px 12px}
-  .modal-footer{padding:12px 14px 20px;flex-wrap:wrap}
-  .modal-footer .btn{flex:1;justify-content:center}
+  /* ── Page headers ── */
+  .page-header{ flex-direction:column; gap:10px; margin-bottom:18px }
+  .page-header-title{ font-size:1.5rem }
+  .page-header>div:last-child{ width:100%; display:flex; flex-wrap:wrap; gap:8px }
+  .page-header>div:last-child .btn{
+    flex:1; justify-content:center; min-width:0; padding:11px 12px; font-size:.88rem }
 
-  /* Dashboard hero */
-  .dash-hero{padding:18px 16px;border-radius:var(--radius-md)}
-  .dash-date{font-size:1.15rem}
-  .stat-card{padding:12px}
-  .stat-card-value{font-size:1.3rem}
-  .stat-card-label{font-size:.66rem}
+  /* ── Stat cards ── */
+  .stat-card{ padding:14px 12px }
+  .stat-card-icon{ width:30px; height:30px; margin-bottom:10px }
+  .stat-card-label{ font-size:.68rem }
+  .stat-card-value{ font-size:1.35rem }
 
-  /* Tables: scrollable container, compact cells, NO forced min-width */
-  .table-wrap{border-radius:var(--radius-sm);overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .table-wrap table{font-size:.75rem;min-width:0;width:100%}
-  /* Patients table: hide less critical columns, show key ones */
-  #section-patients .table-wrap table{min-width:420px}
-  #section-lenses .table-wrap table{min-width:480px}
-  #section-frames .table-wrap table{min-width:440px}
-  #section-followups .table-wrap table{min-width:380px}
-  #section-reports .table-wrap table{min-width:460px}
-  th{padding:8px 7px;font-size:.6rem;white-space:nowrap}
-  td{padding:8px 7px;white-space:nowrap}
-  .td-actions{gap:4px}
-  .td-actions .btn{padding:5px 8px;font-size:.7rem;gap:3px}
-  .td-actions .btn svg{display:none}
+  /* ── Dashboard hero ── */
+  .dash-hero{ padding:18px 16px; border-radius:var(--radius-md) }
+  .dash-date{ font-size:1.15rem }
 
-  /* RX prescription table */
-  .rx-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .rx-table{min-width:420px;font-size:.78rem}
-  .rx-input{font-size:.78rem;padding:4px 5px}
+  /* ── Section filters: full-width row ── */
+  .section-filters{ gap:8px; flex-wrap:wrap; margin-bottom:14px }
+  .section-filters .filter-input{ flex:1 1 140px; min-width:0 }
+  .section-filters .filter-select{ flex:1 1 110px; min-width:0 }
+  .filter-input,.filter-select{ font-size:.9rem; padding:10px 12px; height:44px }
 
-  /* Reports stats grid */
-  .report-stat-grid{grid-template-columns:1fr 1fr;gap:10px}
-  .report-stat{padding:12px 8px}
-  .report-stat-val{font-size:1.1rem}
-  .report-stat-label{font-size:.65rem}
+  /* ══ NATIVE CARD TABLES ══════════════════════════════════
+     Each <tr> becomes a card. Column headers (thead) hide.
+     Each <td> gets a label via data-label attr (set by JS).
+  ═══════════════════════════════════════════════════════════ */
+  .table-wrap{ background:transparent; border:none; box-shadow:none; overflow:visible }
+  .table-wrap table{ display:block; min-width:0; width:100%; font-size:1rem }
+  .table-wrap thead{ display:none }
+  .table-wrap tbody{ display:flex; flex-direction:column; gap:12px }
+  .table-wrap tr{
+    display:grid; grid-template-columns:1fr 1fr;
+    background:var(--surface); border:1px solid var(--cream-border);
+    border-radius:var(--radius-md); padding:14px 14px 10px;
+    gap:12px 18px; box-shadow:var(--shadow-sm);
+  }
+  .table-wrap td{
+    display:flex; flex-direction:column; gap:3px;
+    border:none; padding:0; white-space:normal; font-size:.88rem;
+  }
+  /* Data-label shows column name above each value */
+  .table-wrap td[data-label]::before{
+    content:attr(data-label);
+    font-size:.62rem; font-weight:700; color:var(--ink-light);
+    text-transform:uppercase; letter-spacing:.06em;
+  }
+  /* Name: full width, big, tappable */
+  .table-wrap td.td-name{
+    grid-column:1/-1; font-size:1.05rem; font-weight:700;
+    color:var(--ink); padding-bottom:10px;
+    border-bottom:1px solid var(--cream-border); cursor:pointer;
+  }
+  .table-wrap td.td-name::before{ display:none }
+  /* Phone: monospace */
+  .table-wrap td.td-phone{ font-family:'DM Mono',monospace; font-size:.88rem }
+  /* Amount: monospace */
+  .table-wrap td.td-amount{ font-family:'DM Mono',monospace }
+  /* Actions: full width, side by side buttons */
+  .table-wrap td.td-actions-cell{
+    grid-column:1/-1; flex-direction:row; gap:8px;
+    padding-top:8px; border-top:1px solid var(--cream-border); margin-top:2px;
+  }
+  .table-wrap td.td-actions-cell::before{ display:none }
+  .table-wrap td.td-actions-cell .btn,
+  .table-wrap td.td-actions-cell button{
+    flex:1; justify-content:center; padding:10px; font-size:.85rem;
+    border-radius:var(--radius-sm); border-width:1.5px;
+  }
+  /* Last td (actions div) — fallback if not using td-actions-cell class */
+  .table-wrap .td-actions{ flex-direction:row; gap:8px; width:100% }
+  .table-wrap .td-actions .btn{ flex:1; justify-content:center; padding:10px; font-size:.85rem }
 
-  /* Filters row */
-  .section-filters{gap:8px;flex-wrap:wrap}
-  .section-filters .filter-input{min-width:0;flex:1 1 130px}
-  .section-filters .filter-select{flex:1 1 110px;min-width:0}
-  .filter-input,.filter-select{font-size:.8rem;padding:8px 10px}
+  /* WhatsApp button */
+  .wa-btn{ width:100%; justify-content:center; padding:11px; font-size:.9rem }
 
-  /* Tabs: horizontally scrollable */
-  .tabs{-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  .tabs::-webkit-scrollbar{display:none}
-  .tab-btn{padding:8px 12px;font-size:.78rem;white-space:nowrap}
+  /* ── Modals: bottom sheet ── */
+  .modal{ border-radius:var(--radius-lg) var(--radius-lg) 0 0; width:100%; max-height:92vh }
+  .modal-overlay{ align-items:flex-end; padding:0 }
+  .modal-body{ padding:16px 16px; max-height:65vh; overflow-y:auto }
+  .modal-header{ padding:18px 16px 14px }
+  .modal-footer{ padding:14px 16px 24px; flex-wrap:wrap; gap:10px }
+  .modal-footer .btn{ flex:1; justify-content:center; padding:12px }
 
-  /* Settings */
-  .settings-section-body{padding:14px}
-  .toggle-row{gap:10px;flex-wrap:nowrap}
-  .toggle-label{font-size:.82rem;flex:1;min-width:0}
-  .settings-section-header{font-size:.72rem;padding:12px 16px}
+  /* ── Tabs in modal: swipe ── */
+  .tabs{ overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+  .tabs::-webkit-scrollbar{ display:none }
+  .tab-btn{ padding:10px 16px; font-size:.86rem; white-space:nowrap; flex-shrink:0 }
 
-  /* Visit cards */
-  .visit-card-header{padding:11px 12px;flex-wrap:wrap;gap:6px}
-  .visit-card-body{padding:12px}
+  /* ── RX table in modal: scrollable ── */
+  .rx-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:14px }
+  .rx-table{ min-width:360px; font-size:.85rem }
+  .rx-table th{ padding:8px 6px; font-size:.64rem }
+  .rx-table td{ padding:6px 4px }
+  .rx-input{ font-size:.9rem; padding:6px 5px }
 
-  /* Financial summary */
-  .fin-summary{padding:10px}
-  .fin-row{font-size:.8rem;padding:5px 0}
+  /* ── Financial summary ── */
+  .fin-summary{ padding:14px }
+  .fin-row{ font-size:.9rem; padding:7px 0 }
 
-  /* Breadcrumb */
-  .breadcrumb{font-size:.72rem;flex-wrap:wrap}
+  /* ── Form fields in modal ── */
+  .form-input,.form-select,.form-textarea{ font-size:1rem; padding:12px 14px }
+  .form-label{ font-size:.72rem }
 
-  /* Low stock / info banners */
-  .low-stock-banner{padding:10px 12px;border-radius:var(--radius-sm)}
-  .low-stock-title{font-size:.7rem;margin-bottom:6px}
+  /* ── Settings ── */
+  .settings-section-body{ padding:14px }
+  .settings-section-header{ font-size:.74rem; padding:14px 16px }
+  .toggle-row{ gap:12px }
+  .toggle-label{ font-size:.9rem; flex:1; min-width:0 }
 
-  /* Inventory match chips */
-  .inv-match-items{gap:6px}
-  .inv-match-chip{font-size:.72rem;padding:5px 10px}
+  /* ── Visit cards in patient detail ── */
+  .visit-card{ border-radius:var(--radius-md) }
+  .visit-card-header{ padding:13px 14px; flex-wrap:wrap; gap:8px }
+  .visit-card-body{ padding:14px }
+  .visit-body-grid{ grid-template-columns:1fr }
 
-  /* Coating chips */
-  .coating-chip{font-size:.72rem;padding:4px 10px}
+  /* ── Report stats ── */
+  .report-stat-grid{ grid-template-columns:1fr 1fr; gap:10px }
+  .report-stat{ padding:14px 10px }
+  .report-stat-val{ font-size:1.25rem }
+  .report-stat-label{ font-size:.68rem }
 
-  /* Section-level spacing */
-  .section-filters{margin-bottom:12px}
-  .low-stock-banner{margin-bottom:12px}
+  /* ── Breadcrumb ── */
+  .breadcrumb{ font-size:.8rem; flex-wrap:wrap; margin-bottom:14px }
+
+  /* ── Low stock banner ── */
+  .low-stock-banner{ padding:12px 14px; border-radius:var(--radius-sm); margin-bottom:14px }
+  .low-stock-title{ font-size:.72rem; margin-bottom:8px }
+
+  /* ── Coating / match chips ── */
+  .coating-chips{ gap:8px }
+  .coating-chip{ font-size:.82rem; padding:7px 14px }
+  .inv-match-chip{ font-size:.82rem; padding:7px 12px }
+
+  /* ── Bottom nav: bigger tap targets ── */
+  :root{ --bottom-nav-h:66px }
+  .bnav-item svg{ width:22px; height:22px }
+  .bnav-label{ font-size:.64rem; margin-top:1px }
 }
 
 .bottom-nav{
@@ -1843,18 +1898,18 @@ function filterPatients() {
   if (!list.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
   tbody.innerHTML = list.map(p => {
-    // For last visit / next visit we rely on cached visits if available
-    // The patient detail view loads visits separately
     return `<tr>
-      <td class="td-name" style="cursor:pointer" onclick="openPatientDetail('${p.id}')">${p.full_name}</td>
-      <td class="td-phone">${p.phone||'—'}</td>
-      <td>${p.age||'—'}</td>
-      <td>—</td><td>—</td>
-      <td>—</td>
-      <td><div class="td-actions">
-        <button class="btn btn-outline btn-sm" onclick="openPatientDetail('${p.id}')">${t('edit')}</button>
-        <button class="btn btn-sm" style="color:var(--danger);border:1px solid #fecaca;background:transparent" onclick="deletePatient('${p.id}')">${t('delete')}</button>
-      </div></td>
+      <td class="td-name" onclick="openPatientDetail('${p.id}')">${p.full_name}</td>
+      <td class="td-phone" data-label="${t('phone')}">${p.phone||'—'}</td>
+      <td data-label="${t('age')}">${p.age||'—'}</td>
+      <td data-label="${t('gender')}">${p.gender?t(p.gender):'—'}</td>
+      <td class="td-actions-cell">
+        <button class="btn btn-burgundy btn-sm" onclick="openPatientDetail('${p.id}')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          ${t('edit')}
+        </button>
+        <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deletePatient('${p.id}')">${t('delete')}</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -2205,13 +2260,16 @@ async function renderFollowups() {
       const label = d<0?`${Math.abs(d)} ${NOOR.lang==='ar'?'أيام متأخرة':'days overdue'}`:d===0?(NOOR.lang==='ar'?'اليوم':'Today'):`${d} ${NOOR.lang==='ar'?'يوم':'days'}`;
       return `<tr>
         <td class="td-name">${item.patient_name||'—'}</td>
-        <td class="td-phone">${item.patient_phone||'—'}</td>
-        <td>${fmtDate(item.visit_date)}</td>
-        <td>${fmtDate(item.next_visit_date)}</td>
-        <td><span class="followup-row-days ${cls}">${label}</span></td>
-        <td><button class="wa-btn" onclick="sendWA('${item.patient_id}','${item.next_visit_date}','${item.patient_name||''}','${item.patient_phone||''}')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>WhatsApp
-        </button></td>
+        <td class="td-phone" data-label="${t('phone')}">${item.patient_phone||'—'}</td>
+        <td data-label="${t('lastVisit')}">${fmtDate(item.visit_date)}</td>
+        <td data-label="${t('nextVisit')}">${fmtDate(item.next_visit_date)}</td>
+        <td data-label="${t('daysLeft')}"><span class="followup-row-days ${cls}">${label}</span></td>
+        <td class="td-actions-cell">
+          <button class="wa-btn" onclick="sendWA('${item.patient_id}','${item.next_visit_date}','${item.patient_name||''}','${item.patient_phone||''}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+            WhatsApp
+          </button>
+        </td>
       </tr>`;
     }).join('');
   } catch(e) { toast(e.message,'error'); }
@@ -2257,18 +2315,18 @@ function filterLenses() {
   tbody.innerHTML = list.map(l => {
     const st = l.quantity===0?['danger',t('out')]:l.quantity<=l.min_stock?['warning',t('low')]:['success',t('ok')];
     return `<tr>
-      <td>${(l.lens_type||'').replace(/_/g,' ')}</td><td>${l.material}</td><td>${(l.coating||'').replace(/_/g,' ')}</td>
-      <td style="font-family:'DM Mono',monospace">${l.sphere>0?'+':''}${l.sphere}</td>
-      <td style="font-family:'DM Mono',monospace">${l.cylinder||0}</td>
-      <td style="font-family:'DM Mono',monospace">${l.quantity}</td>
-      <td style="font-family:'DM Mono',monospace">${l.min_stock}</td>
-      <td><span class="badge badge-${st[0]}">${st[1]}</span></td>
-      <td style="font-family:'DM Mono',monospace">${fmtNum(l.sell_price)}</td>
-      <td><div class="td-actions">
+      <td class="td-name">${(l.lens_type||'').replace(/_/g,' ')} · ${(l.coating||'').replace(/_/g,' ')}</td>
+      <td data-label="${t('material')}">${l.material||'—'}</td>
+      <td data-label="SPH" style="font-family:'DM Mono',monospace">${l.sphere>0?'+':''}${l.sphere}</td>
+      <td data-label="CYL" style="font-family:'DM Mono',monospace">${l.cylinder||0}</td>
+      <td data-label="${t('qty')}" style="font-family:'DM Mono',monospace">${l.quantity}</td>
+      <td data-label="${t('status')}"><span class="badge badge-${st[0]}">${st[1]}</span></td>
+      <td data-label="${t('sellPrice')}" style="font-family:'DM Mono',monospace">${fmtNum(l.sell_price)}</td>
+      <td class="td-actions-cell">
         <button class="btn btn-outline btn-sm" onclick="openRestockModal('lens','${l.id}')">${t('restock')}</button>
         <button class="btn btn-outline btn-sm" onclick="openEditLens('${l.id}')">${t('edit')}</button>
-        <button class="btn btn-sm" style="color:var(--danger);border:1px solid #fecaca;background:transparent" onclick="deleteLens('${l.id}')">${t('delete')}</button>
-      </div></td>
+        <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteLens('${l.id}')">${t('delete')}</button>
+      </td>
     </tr>`;
   }).join('');
 }
@@ -2344,16 +2402,17 @@ async function renderFrames() {
     tbody.innerHTML = NOOR.frames.map(f => {
       const st = f.quantity===0?['danger',t('out')]:f.quantity<=f.min_stock?['warning',t('low')]:['success',t('ok')];
       return `<tr>
-        <td>${f.brand||'—'}</td><td>${(f.frame_type||'').replace(/_/g,' ')}</td><td>${f.frame_material||'—'}</td>
-        <td style="font-family:'DM Mono',monospace">${f.quantity}</td>
-        <td><span class="badge badge-${st[0]}">${st[1]}</span></td>
-        <td style="font-family:'DM Mono',monospace">${fmtNum(f.cost_price)}</td>
-        <td style="font-family:'DM Mono',monospace">${fmtNum(f.sell_price)}</td>
-        <td><div class="td-actions">
+        <td class="td-name">${f.brand||'—'} · ${(f.frame_type||'').replace(/_/g,' ')}</td>
+        <td data-label="${t('material')}">${f.frame_material||'—'}</td>
+        <td data-label="${t('color')}">${f.color||'—'}</td>
+        <td data-label="${t('qty')}" style="font-family:'DM Mono',monospace">${f.quantity}</td>
+        <td data-label="${t('status')}"><span class="badge badge-${st[0]}">${st[1]}</span></td>
+        <td data-label="${t('sellPrice')}" style="font-family:'DM Mono',monospace">${fmtNum(f.sell_price)}</td>
+        <td class="td-actions-cell">
           <button class="btn btn-outline btn-sm" onclick="openRestockModal('frame','${f.id}')">${t('restock')}</button>
           <button class="btn btn-outline btn-sm" onclick="openEditFrame('${f.id}')">${t('edit')}</button>
-          <button class="btn btn-sm" style="color:var(--danger);border:1px solid #fecaca;background:transparent" onclick="deleteFrame('${f.id}')">${t('delete')}</button>
-        </div></td>
+          <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteFrame('${f.id}')">${t('delete')}</button>
+        </td>
       </tr>`;
     }).join('');
   } catch(e) { toast(e.message,'error'); }
@@ -2455,15 +2514,15 @@ async function loadReports() {
     tbody.innerHTML = (s.visits||[]).map(v => {
       const p = getPatient(v.patient_id);
       return `<tr>
-        <td>${fmtDate(v.visit_date)}</td>
-        <td>${p?.full_name||'—'}</td>
-        <td>${(v.lens_type||'').replace(/_/g,' ')}</td>
-        <td style="font-family:'DM Mono',monospace">${fmtNum(v.total_amount)}</td>
-        <td style="font-family:'DM Mono',monospace">${fmtNum(v.amount_paid)}</td>
-        <td style="font-family:'DM Mono',monospace;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</td>
-        <td><button class="btn btn-outline btn-sm" onclick="showRxSlipFromData(${JSON.stringify(v).replace(/"/g,'&quot;')})">
-          ${t('slip')}
-        </button></td>
+        <td class="td-name">${p?.full_name||'—'}</td>
+        <td data-label="${t('date')}">${fmtDate(v.visit_date)}</td>
+        <td data-label="${NOOR.lang==='ar'?'نوع العدسة':'Lens'}">${(v.lens_type||'').replace(/_/g,' ')}</td>
+        <td data-label="${t('total')}" style="font-family:'DM Mono',monospace">${fmtNum(v.total_amount)}</td>
+        <td data-label="${t('paid')}" style="font-family:'DM Mono',monospace">${fmtNum(v.amount_paid)}</td>
+        <td data-label="${t('remaining')}" style="font-family:'DM Mono',monospace;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</td>
+        <td class="td-actions-cell">
+          <button class="btn btn-outline btn-sm" onclick="showRxSlipFromData(${JSON.stringify(v).replace(/"/g,'&quot;')})">${t('slip')}</button>
+        </td>
       </tr>`;
     }).join('');
   } catch(e) { toast(e.message,'error'); }
@@ -2631,11 +2690,11 @@ async function renderUsersTable() {
     const data = await get('/api/users');
     NOOR.users = data.data || [];
     document.getElementById('users-tbody').innerHTML = NOOR.users.map(u => `<tr>
-      <td>${u.full_name}</td>
-      <td style="font-family:'DM Mono',monospace">${u.username}</td>
-      <td><span class="badge badge-${u.role==='doctor'?'burgundy':'neutral'}">${t(u.role)}</span></td>
-      <td><span class="badge badge-${u.is_active?'success':'danger'}">${u.is_active?(NOOR.lang==='ar'?'نشط':'Active'):(NOOR.lang==='ar'?'معطل':'Disabled')}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="toggleUserActive('${u.id}',${!u.is_active})">${u.is_active?(NOOR.lang==='ar'?'تعطيل':'Disable'):(NOOR.lang==='ar'?'تفعيل':'Enable')}</button></td>
+      <td class="td-name">${u.full_name}</td>
+      <td data-label="${t('username')}" style="font-family:'DM Mono',monospace">${u.username}</td>
+      <td data-label="${t('role')}"><span class="badge badge-${u.role==='doctor'?'burgundy':'neutral'}">${t(u.role)}</span></td>
+      <td data-label="${t('status')}"><span class="badge badge-${u.is_active?'success':'danger'}">${u.is_active?(NOOR.lang==='ar'?'نشط':'Active'):(NOOR.lang==='ar'?'معطل':'Disabled')}</span></td>
+      <td class="td-actions-cell"><button class="btn btn-outline btn-sm" onclick="toggleUserActive('${u.id}',${!u.is_active})">${u.is_active?(NOOR.lang==='ar'?'تعطيل':'Disable'):(NOOR.lang==='ar'?'تفعيل':'Enable')}</button></td>
     </tr>`).join('');
   } catch(_){}
 }
@@ -2670,11 +2729,10 @@ async function renderAuditLog() {
     const data = await get('/api/audit?' + params.toString());
     const rows = data.data || [];
     document.getElementById('audit-tbody').innerHTML = rows.map(a => `<tr>
-      <td style="font-family:'DM Mono',monospace;font-size:.8rem">${new Date(a.created_at).toLocaleString(NOOR.lang==='ar'?'ar-IQ':'en-GB')}</td>
-      <td>${a.username||a.full_name||'—'}</td>
-      <td><span class="audit-action audit-${a.action}">${a.action}</span></td>
-      <td>${a.entity_type}</td>
-      <td style="font-size:.82rem;color:var(--ink-mid)">${a.details||'—'}</td>
+      <td class="td-name" style="font-size:.9rem">${a.username||a.full_name||'—'} · <span class="audit-action audit-${a.action}">${a.action}</span></td>
+      <td data-label="${t('timestamp')}" style="font-family:'DM Mono',monospace;font-size:.82rem">${new Date(a.created_at).toLocaleString(NOOR.lang==='ar'?'ar-IQ':'en-GB')}</td>
+      <td data-label="${t('entity')}">${a.entity_type}</td>
+      <td data-label="${t('details')}" style="font-size:.85rem;color:var(--ink-mid)">${a.details||'—'}</td>
     </tr>`).join('');
   } catch(e) { toast(e.message,'error'); }
 }
@@ -2694,12 +2752,12 @@ async function renderSuperAdmin() {
       const sl  = !lic.is_active?'Inactive':exp!==null&&exp<0?'Expired':exp!==null&&exp<7?'Expiring Soon':'Active';
       return `<tr>
         <td class="td-name">${c.name}</td>
-        <td><span class="badge badge-burgundy">${lic.plan||'—'}</span></td>
-        <td style="font-family:'DM Mono',monospace">${lic.expires_at||'Lifetime'}</td>
-        <td><span class="badge badge-${st}">${sl}</span></td>
-        <td><div class="td-actions">
+        <td data-label="Plan"><span class="badge badge-burgundy">${lic.plan||'—'}</span></td>
+        <td data-label="Expires" style="font-family:'DM Mono',monospace">${lic.expires_at||'Lifetime'}</td>
+        <td data-label="Status"><span class="badge badge-${st}">${sl}</span></td>
+        <td class="td-actions-cell">
           <button class="btn btn-outline btn-sm" onclick="impersonateClinic('${c.id}')">Impersonate</button>
-        </div></td>
+        </td>
       </tr>`;
     }).join('');
   } catch(e) { toast(e.message,'error'); }
