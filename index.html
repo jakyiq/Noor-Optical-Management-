@@ -1781,6 +1781,7 @@ async function checkSession() {
       document.getElementById('license-banner').classList.add('show');
     }
     bootApp();
+    if (data.data.must_change_password) openModal('modal-change-password');
   } catch(_) {
     // Not logged in — show login screen (already visible)
   }
@@ -1820,13 +1821,20 @@ function fmtIQD(n){ return fmtNum(n)+' IQD'; }
 function daysDiff(s){ return Math.round((new Date(s)-new Date())/(86400000)); }
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function getPatient(id){ return NOOR.patients.find(p=>p.id===id); }
+function esc(v){
+  if (v === null || v === undefined || v === '') return '—';
+  return String(v).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
+}
+function escAttr(v){ return esc(v).replace(/`/g, '&#96;'); }
 
 function toast(msg, type='success') {
   const tc = document.getElementById('toast-container');
   const el = document.createElement('div');
   el.className = `toast ${type}`;
   el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${type==='success'?'<polyline points="20,6 9,17 4,12"/>':'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>'}
-  </svg>${msg}`;
+  </svg>${esc(msg)}`;
   tc.appendChild(el);
   setTimeout(()=>el.remove(), 3500);
 }
@@ -1872,8 +1880,8 @@ async function renderDashboard() {
     cont.innerHTML = recents.map(v => {
       const p = getPatient(v.patient_id);
       return `<div class="mini-list-item">
-        <div class="mini-avatar">${(p?.full_name||'?')[0]}</div>
-        <div><div class="mini-name">${p?.full_name||'—'}</div><div class="mini-sub">${fmtDate(v.visit_date)}</div></div>
+        <div class="mini-avatar">${esc((p?.full_name||'?')[0])}</div>
+        <div><div class="mini-name">${esc(p?.full_name)}</div><div class="mini-sub">${fmtDate(v.visit_date)}</div></div>
         <div class="mini-amount">${fmtNum(v.total_amount)} <span style="font-size:.7rem;color:var(--ink-light)">IQD</span></div>
       </div>`;
     }).join('');
@@ -1923,16 +1931,16 @@ function filterPatients() {
   empty.style.display = 'none';
   tbody.innerHTML = list.map(p => {
     return `<tr>
-      <td class="td-name" onclick="openPatientDetail('${p.id}')">${p.full_name}</td>
-      <td class="td-phone" data-label="${t('phone')}">${p.phone||'—'}</td>
-      <td data-label="${t('age')}">${p.age||'—'}</td>
+      <td class="td-name" onclick="openPatientDetail('${escAttr(p.id)}')">${esc(p.full_name)}</td>
+      <td class="td-phone" data-label="${t('phone')}">${esc(p.phone)}</td>
+      <td data-label="${t('age')}">${esc(p.age)}</td>
       <td data-label="${t('gender')}">${p.gender?t(p.gender):'—'}</td>
       <td class="td-actions-cell">
-        <button class="btn btn-burgundy btn-sm" onclick="openPatientDetail('${p.id}')">
+        <button class="btn btn-burgundy btn-sm" onclick="openPatientDetail('${escAttr(p.id)}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           ${t('edit')}
         </button>
-        <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deletePatient('${p.id}')">${t('delete')}</button>
+        <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deletePatient('${escAttr(p.id)}')">${t('delete')}</button>
       </td>
     </tr>`;
   }).join('');
@@ -1964,7 +1972,7 @@ function renderVisitHistory(visits) {
       <div class="visit-card-header" onclick="toggleVisit('vc${v.id}')">
         <div>
           <span style="font-weight:700">${fmtDate(v.visit_date)}</span>
-          <span style="margin:0 10px;color:var(--ink-light)">${(v.lens_type||'').replace(/_/g,' ')}</span>
+          <span style="margin:0 10px;color:var(--ink-light)">${esc((v.lens_type||'').replace(/_/g,' '))}</span>
           ${v.remaining>0?`<span class="badge badge-danger">${fmtNum(v.remaining)} IQD ${t('remaining')}</span>`:`<span class="badge badge-success">Paid</span>`}
         </div>
         <span style="font-family:'DM Mono',monospace;font-size:.9rem;color:var(--ink-mid)">${fmtNum(v.total_amount)} IQD</span>
@@ -1976,8 +1984,8 @@ function renderVisitHistory(visits) {
             <table style="border-collapse:collapse;font-size:.82rem;font-family:'DM Mono',monospace">
               <thead><tr>${['Eye','SPH','CYL','AXIS'].map(h=>`<th style="padding:4px 8px;border:1px solid var(--cream-border);background:var(--cream);font-size:.65rem">${h}</th>`).join('')}</tr></thead>
               <tbody>
-                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OD</td>${[v.od_sphere,v.od_cylinder,v.od_axis].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${x??'—'}</td>`).join('')}</tr>
-                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OS</td>${[v.os_sphere,v.os_cylinder,v.os_axis].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${x??'—'}</td>`).join('')}</tr>
+                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OD</td>${[v.od_sphere,v.od_cylinder,v.od_axis].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
+                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OS</td>${[v.os_sphere,v.os_cylinder,v.os_axis].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
               </tbody>
             </table>
           </div>
@@ -1990,7 +1998,7 @@ function renderVisitHistory(visits) {
             </div>
           </div>
         </div>
-        <div style="margin-top:12px"><button class="btn btn-outline btn-sm" onclick="showRxSlip('${v.id}')">${t('prescriptionSlip')}</button></div>
+        <div style="margin-top:12px"><button class="btn btn-outline btn-sm" onclick="showRxSlip('${escAttr(v.id)}')">${t('prescriptionSlip')}</button></div>
       </div>
     </div>
   `).join('');
@@ -2081,8 +2089,8 @@ async function onRxChange() {
     const matches = data.data || [];
     if (!matches.length) { cont.innerHTML='<span class="inv-match-empty">No matching lenses</span>'; return; }
     cont.innerHTML = matches.map(l =>
-      `<div class="inv-match-chip" data-id="${l.id}" onclick="selectMatchLens(this,'${l.id}')">
-        SPH ${l.sphere>0?'+':''}${l.sphere} CYL ${l.cylinder||0} · ${(l.lens_type||'').replace(/_/g,' ')} · Qty: ${l.quantity}
+      `<div class="inv-match-chip" data-id="${escAttr(l.id)}" onclick="selectMatchLens(this,'${escAttr(l.id)}')">
+        SPH ${l.sphere>0?'+':''}${esc(l.sphere)} CYL ${esc(l.cylinder||0)} · ${esc((l.lens_type||'').replace(/_/g,' '))} · Qty: ${esc(l.quantity)}
       </div>`
     ).join('');
   } catch(_) {}
@@ -2283,13 +2291,13 @@ async function renderFollowups() {
       const cls = d<0?'overdue':d<=3?'soon':'ok';
       const label = d<0?`${Math.abs(d)} ${NOOR.lang==='ar'?'أيام متأخرة':'days overdue'}`:d===0?(NOOR.lang==='ar'?'اليوم':'Today'):`${d} ${NOOR.lang==='ar'?'يوم':'days'}`;
       return `<tr>
-        <td class="td-name">${item.patient_name||'—'}</td>
-        <td class="td-phone" data-label="${t('phone')}">${item.patient_phone||'—'}</td>
+        <td class="td-name">${esc(item.patient_name)}</td>
+        <td class="td-phone" data-label="${t('phone')}">${esc(item.patient_phone)}</td>
         <td data-label="${t('lastVisit')}">${fmtDate(item.visit_date)}</td>
         <td data-label="${t('nextVisit')}">${fmtDate(item.next_visit_date)}</td>
         <td data-label="${t('daysLeft')}"><span class="followup-row-days ${cls}">${label}</span></td>
         <td class="td-actions-cell">
-          <button class="wa-btn" onclick="sendWA('${item.patient_id}','${item.next_visit_date}','${item.patient_name||''}','${item.patient_phone||''}')">
+          <button class="wa-btn" onclick="sendWA('${escAttr(item.patient_id)}','${escAttr(item.next_visit_date)}','${escAttr(item.patient_name||'')}','${escAttr(item.patient_phone||'')}')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
             WhatsApp
           </button>
@@ -2322,7 +2330,7 @@ async function renderLenses() {
     const banner = document.getElementById('lenses-low-banner');
     if (low.length) {
       banner.classList.add('show');
-      document.getElementById('lenses-low-items').innerHTML = low.map(l=>`<div class="low-stock-item">SPH ${l.sphere} CYL ${l.cylinder||0} — ${l.quantity} ${t('qty')}</div>`).join('');
+      document.getElementById('lenses-low-items').innerHTML = low.map(l=>`<div class="low-stock-item">SPH ${esc(l.sphere)} CYL ${esc(l.cylinder||0)} — ${esc(l.quantity)} ${t('qty')}</div>`).join('');
     } else banner.classList.remove('show');
     filterLenses();
   } catch(e) { toast(e.message,'error'); }
@@ -2339,17 +2347,17 @@ function filterLenses() {
   tbody.innerHTML = list.map(l => {
     const st = l.quantity===0?['danger',t('out')]:l.quantity<=l.min_stock?['warning',t('low')]:['success',t('ok')];
     return `<tr>
-      <td class="td-name">${(l.lens_type||'').replace(/_/g,' ')} · ${(l.coating||'').replace(/_/g,' ')}</td>
-      <td data-label="${t('material')}">${l.material||'—'}</td>
+      <td class="td-name">${esc((l.lens_type||'').replace(/_/g,' '))} · ${esc((l.coating||'').replace(/_/g,' '))}</td>
+      <td data-label="${t('material')}">${esc(l.material)}</td>
       <td data-label="SPH" style="font-family:'DM Mono',monospace">${l.sphere>0?'+':''}${l.sphere}</td>
-      <td data-label="CYL" style="font-family:'DM Mono',monospace">${l.cylinder||0}</td>
+      <td data-label="CYL" style="font-family:'DM Mono',monospace">${esc(l.cylinder||0)}</td>
       <td data-label="${t('qty')}" style="font-family:'DM Mono',monospace">${l.quantity}</td>
       <td data-label="${t('status')}"><span class="badge badge-${st[0]}">${st[1]}</span></td>
       <td data-label="${t('sellPrice')}" style="font-family:'DM Mono',monospace">${fmtNum(l.sell_price)}</td>
       <td class="td-actions-cell">
-        <button class="btn btn-outline btn-sm" onclick="openRestockModal('lens','${l.id}')">${t('restock')}</button>
-        <button class="btn btn-outline btn-sm" onclick="openEditLens('${l.id}')">${t('edit')}</button>
-        <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteLens('${l.id}')">${t('delete')}</button>
+        <button class="btn btn-outline btn-sm" onclick="openRestockModal('lens','${escAttr(l.id)}')">${t('restock')}</button>
+        <button class="btn btn-outline btn-sm" onclick="openEditLens('${escAttr(l.id)}')">${t('edit')}</button>
+        <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteLens('${escAttr(l.id)}')">${t('delete')}</button>
       </td>
     </tr>`;
   }).join('');
@@ -2417,7 +2425,7 @@ async function renderFrames() {
     const banner = document.getElementById('frames-low-banner');
     if (low.length) {
       banner.classList.add('show');
-      document.getElementById('frames-low-items').innerHTML = low.map(f=>`<div class="low-stock-item">${f.brand||'Frame'} — ${f.quantity} ${t('qty')}</div>`).join('');
+      document.getElementById('frames-low-items').innerHTML = low.map(f=>`<div class="low-stock-item">${esc(f.brand||'Frame')} — ${esc(f.quantity)} ${t('qty')}</div>`).join('');
     } else banner.classList.remove('show');
     const tbody = document.getElementById('frames-tbody');
     const empty = document.getElementById('frames-empty');
@@ -2426,16 +2434,16 @@ async function renderFrames() {
     tbody.innerHTML = NOOR.frames.map(f => {
       const st = f.quantity===0?['danger',t('out')]:f.quantity<=f.min_stock?['warning',t('low')]:['success',t('ok')];
       return `<tr>
-        <td class="td-name">${f.brand||'—'} · ${(f.frame_type||'').replace(/_/g,' ')}</td>
-        <td data-label="${t('material')}">${f.frame_material||'—'}</td>
-        <td data-label="${t('color')}">${f.color||'—'}</td>
+        <td class="td-name">${esc(f.brand)} · ${esc((f.frame_type||'').replace(/_/g,' '))}</td>
+        <td data-label="${t('material')}">${esc(f.frame_material)}</td>
+        <td data-label="${t('color')}">${esc(f.color)}</td>
         <td data-label="${t('qty')}" style="font-family:'DM Mono',monospace">${f.quantity}</td>
         <td data-label="${t('status')}"><span class="badge badge-${st[0]}">${st[1]}</span></td>
         <td data-label="${t('sellPrice')}" style="font-family:'DM Mono',monospace">${fmtNum(f.sell_price)}</td>
         <td class="td-actions-cell">
-          <button class="btn btn-outline btn-sm" onclick="openRestockModal('frame','${f.id}')">${t('restock')}</button>
-          <button class="btn btn-outline btn-sm" onclick="openEditFrame('${f.id}')">${t('edit')}</button>
-          <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteFrame('${f.id}')">${t('delete')}</button>
+          <button class="btn btn-outline btn-sm" onclick="openRestockModal('frame','${escAttr(f.id)}')">${t('restock')}</button>
+          <button class="btn btn-outline btn-sm" onclick="openEditFrame('${escAttr(f.id)}')">${t('edit')}</button>
+          <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteFrame('${escAttr(f.id)}')">${t('delete')}</button>
         </td>
       </tr>`;
     }).join('');
@@ -2538,9 +2546,9 @@ async function loadReports() {
     tbody.innerHTML = (s.visits||[]).map(v => {
       const p = getPatient(v.patient_id);
       return `<tr>
-        <td class="td-name">${p?.full_name||'—'}</td>
+        <td class="td-name">${esc(p?.full_name)}</td>
         <td data-label="${t('date')}">${fmtDate(v.visit_date)}</td>
-        <td data-label="${NOOR.lang==='ar'?'نوع العدسة':'Lens'}">${(v.lens_type||'').replace(/_/g,' ')}</td>
+        <td data-label="${NOOR.lang==='ar'?'نوع العدسة':'Lens'}">${esc((v.lens_type||'').replace(/_/g,' '))}</td>
         <td data-label="${t('total')}" style="font-family:'DM Mono',monospace">${fmtNum(v.total_amount)}</td>
         <td data-label="${t('paid')}" style="font-family:'DM Mono',monospace">${fmtNum(v.amount_paid)}</td>
         <td data-label="${t('remaining')}" style="font-family:'DM Mono',monospace;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</td>
@@ -2601,18 +2609,18 @@ function _renderRxSlip(v) {
   const p = getPatient(v.patient_id);
   document.getElementById('rx-slip-content').innerHTML = `
     <div class="rx-slip-header">
-      <div><div class="rx-slip-clinic">${NOOR.clinicName}</div><div style="font-size:.72rem;color:var(--ink-light)">${t('prescriptionSlip')}</div></div>
+      <div><div class="rx-slip-clinic">${esc(NOOR.clinicName)}</div><div style="font-size:.72rem;color:var(--ink-light)">${t('prescriptionSlip')}</div></div>
       <div class="rx-slip-date">${fmtDate(v.visit_date)}</div>
     </div>
-    <div class="rx-slip-patient"><div class="rx-slip-label">${t('name')}</div><div class="rx-slip-val">${p?.full_name||'—'}</div></div>
+    <div class="rx-slip-patient"><div class="rx-slip-label">${t('name')}</div><div class="rx-slip-val">${esc(p?.full_name)}</div></div>
     <table class="rx-table" style="margin-bottom:16px">
       <thead><tr><th>Eye</th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>VA</th></tr></thead>
       <tbody>
-        <tr><td class="eye-label">OD (R)</td>${[v.od_sphere,v.od_cylinder,v.od_axis,'—','—'].map(x=>`<td style="text-align:center;padding:6px;border:1px solid var(--cream-border)">${x??'—'}</td>`).join('')}</tr>
-        <tr><td class="eye-label">OS (L)</td>${[v.os_sphere,v.os_cylinder,v.os_axis,'—','—'].map(x=>`<td style="text-align:center;padding:6px;border:1px solid var(--cream-border)">${x??'—'}</td>`).join('')}</tr>
+        <tr><td class="eye-label">OD (R)</td>${[v.od_sphere,v.od_cylinder,v.od_axis,'—','—'].map(x=>`<td style="text-align:center;padding:6px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
+        <tr><td class="eye-label">OS (L)</td>${[v.os_sphere,v.os_cylinder,v.os_axis,'—','—'].map(x=>`<td style="text-align:center;padding:6px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
       </tbody>
     </table>
-    <div style="font-size:.78rem;color:var(--ink-light);border-top:1px dashed var(--cream-border);padding-top:12px">${NOOR.clinicName}</div>
+    <div style="font-size:.78rem;color:var(--ink-light);border-top:1px dashed var(--cream-border);padding-top:12px">${esc(NOOR.clinicName)}</div>
   `;
 }
 
@@ -2714,11 +2722,11 @@ async function renderUsersTable() {
     const data = await get('/api/users');
     NOOR.users = data.data || [];
     document.getElementById('users-tbody').innerHTML = NOOR.users.map(u => `<tr>
-      <td class="td-name">${u.full_name}</td>
-      <td data-label="${t('username')}" style="font-family:'DM Mono',monospace">${u.username}</td>
+      <td class="td-name">${esc(u.full_name)}</td>
+      <td data-label="${t('username')}" style="font-family:'DM Mono',monospace">${esc(u.username)}</td>
       <td data-label="${t('role')}"><span class="badge badge-${u.role==='doctor'?'burgundy':'neutral'}">${t(u.role)}</span></td>
       <td data-label="${t('status')}"><span class="badge badge-${u.is_active?'success':'danger'}">${u.is_active?(NOOR.lang==='ar'?'نشط':'Active'):(NOOR.lang==='ar'?'معطل':'Disabled')}</span></td>
-      <td class="td-actions-cell"><button class="btn btn-outline btn-sm" onclick="toggleUserActive('${u.id}',${!u.is_active})">${u.is_active?(NOOR.lang==='ar'?'تعطيل':'Disable'):(NOOR.lang==='ar'?'تفعيل':'Enable')}</button></td>
+      <td class="td-actions-cell"><button class="btn btn-outline btn-sm" onclick="toggleUserActive('${escAttr(u.id)}',${!u.is_active})">${u.is_active?(NOOR.lang==='ar'?'تعطيل':'Disable'):(NOOR.lang==='ar'?'تفعيل':'Enable')}</button></td>
     </tr>`).join('');
   } catch(_){}
 }
@@ -2753,10 +2761,10 @@ async function renderAuditLog() {
     const data = await get('/api/audit?' + params.toString());
     const rows = data.data || [];
     document.getElementById('audit-tbody').innerHTML = rows.map(a => `<tr>
-      <td class="td-name" style="font-size:.9rem">${a.username||a.full_name||'—'} · <span class="audit-action audit-${a.action}">${a.action}</span></td>
+      <td class="td-name" style="font-size:.9rem">${esc(a.username||a.full_name)} · <span class="audit-action audit-${escAttr(a.action)}">${esc(a.action)}</span></td>
       <td data-label="${t('timestamp')}" style="font-family:'DM Mono',monospace;font-size:.82rem">${new Date(a.created_at).toLocaleString(NOOR.lang==='ar'?'ar-IQ':'en-GB')}</td>
-      <td data-label="${t('entity')}">${a.entity_type}</td>
-      <td data-label="${t('details')}" style="font-size:.85rem;color:var(--ink-mid)">${a.details||'—'}</td>
+      <td data-label="${t('entity')}">${esc(a.entity_type)}</td>
+      <td data-label="${t('details')}" style="font-size:.85rem;color:var(--ink-mid)">${esc(a.details)}</td>
     </tr>`).join('');
   } catch(e) { toast(e.message,'error'); }
 }
@@ -2775,12 +2783,12 @@ async function renderSuperAdmin() {
       const st  = !lic.is_active?'danger':exp!==null&&exp<0?'danger':exp!==null&&exp<7?'warning':'success';
       const sl  = !lic.is_active?'Inactive':exp!==null&&exp<0?'Expired':exp!==null&&exp<7?'Expiring Soon':'Active';
       return `<tr>
-        <td class="td-name">${c.name}</td>
-        <td data-label="Plan"><span class="badge badge-burgundy">${lic.plan||'—'}</span></td>
-        <td data-label="Expires" style="font-family:'DM Mono',monospace">${lic.expires_at||'Lifetime'}</td>
+        <td class="td-name">${esc(c.name)}</td>
+        <td data-label="Plan"><span class="badge badge-burgundy">${esc(lic.plan)}</span></td>
+        <td data-label="Expires" style="font-family:'DM Mono',monospace">${esc(lic.expires_at||'Lifetime')}</td>
         <td data-label="Status"><span class="badge badge-${st}">${sl}</span></td>
         <td class="td-actions-cell">
-          <button class="btn btn-outline btn-sm" onclick="impersonateClinic('${c.id}')">Impersonate</button>
+          <button class="btn btn-outline btn-sm" onclick="impersonateClinic('${escAttr(c.id)}')">Impersonate</button>
         </td>
       </tr>`;
     }).join('');
@@ -2841,9 +2849,9 @@ function onGlobalSearch(q) {
       const matches = data.data || [];
       if (!matches.length) { res.classList.remove('show'); return; }
       res.innerHTML = matches.map(p => `
-        <div class="search-result-item" onclick="goToPatient('${p.id}')">
-          <div class="search-result-avatar">${p.full_name[0]}</div>
-          <div><div class="search-result-name">${p.full_name}</div><div class="search-result-phone">${p.phone||'—'}</div></div>
+        <div class="search-result-item" onclick="goToPatient('${escAttr(p.id)}')">
+          <div class="search-result-avatar">${esc((p.full_name||'?')[0])}</div>
+          <div><div class="search-result-name">${esc(p.full_name)}</div><div class="search-result-phone">${esc(p.phone)}</div></div>
         </div>
       `).join('');
       res.classList.add('show');

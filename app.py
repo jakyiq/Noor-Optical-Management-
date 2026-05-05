@@ -21,7 +21,10 @@ logging.basicConfig(level=logging.DEBUG)
 # APP INIT
 # ─────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "change-this-in-production")
+FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "")
+if not FLASK_SECRET_KEY:
+    raise RuntimeError("FLASK_SECRET_KEY must be set as an environment variable.")
+app.secret_key = FLASK_SECRET_KEY
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "None"   # Required for cross-origin on Vercel
 app.config["SESSION_COOKIE_SECURE"] = True        # Required when SameSite=None
@@ -148,6 +151,9 @@ def _auth(roles=None, setting=None):
             role = session.get("role")
             clinic_id = session.get("clinic_id")
 
+            if session.get("must_change_password") and request.endpoint != "change_password":
+                return err("Password change required", 403)
+
             # Super admin bypasses license and permission checks
             if role == "super_admin":
                 return f(*args, **kwargs)
@@ -223,6 +229,7 @@ def login():
     session["user_id"]   = user["id"]
     session["role"]      = role
     session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat()
+    session["must_change_password"] = bool(user.get("must_change_password", False))
 
     # For super_admin: if no clinic_id, auto-assign the first clinic or create a default one
     if role == "super_admin" and not clinic_id:
@@ -307,10 +314,11 @@ def me():
     session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat()
 
     return ok({
-        "user_id":       session["user_id"],
-        "clinic_id":     clinic_id,
-        "role":          role,
-        "grace_warning": grace_warning,
+        "user_id":              session["user_id"],
+        "clinic_id":            clinic_id,
+        "role":                 role,
+        "must_change_password": bool(session.get("must_change_password", False)),
+        "grace_warning":        grace_warning,
     })
 
 
@@ -327,6 +335,7 @@ def change_password():
         "password_hash":        hashed,
         "must_change_password": False,
     }).eq("id", session["user_id"]).execute()
+    session["must_change_password"] = False
 
     return ok()
 
@@ -1505,13 +1514,17 @@ def method_not_allowed(e):
 def internal_error(e):
     tb = traceback.format_exc()
     logging.error(tb)
-    return jsonify({"error": "Internal server error", "detail": str(e), "traceback": tb}), 500
+    if app.debug:
+        return jsonify({"error": "Internal server error", "detail": str(e), "traceback": tb}), 500
+    return jsonify({"error": "Internal server error"}), 500
 
 @app.errorhandler(Exception)
 def unhandled_exception(e):
     tb = traceback.format_exc()
     logging.error(tb)
-    return jsonify({"error": str(e), "traceback": tb}), 500
+    if app.debug:
+        return jsonify({"error": str(e), "traceback": tb}), 500
+    return jsonify({"error": "Internal server error"}), 500
 
 
 # ─────────────────────────────────────────────────────────────

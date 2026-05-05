@@ -257,29 +257,9 @@ CREATE INDEX IF NOT EXISTS idx_audit_user   ON audit_log(user_id);
 
 -- ─────────────────────────────────────────────
 -- SUPER ADMIN USER
--- Default login: username=admin  password=admin1234
--- bcrypt hash of "admin1234" with cost 12
+-- Create the first super admin manually with a unique password for each environment.
+-- Do not ship default admin credentials in production schema.
 -- ─────────────────────────────────────────────
-INSERT INTO users (
-  clinic_id,
-  username,
-  password_hash,
-  role,
-  full_name,
-  is_active,
-  must_change_password
-)
-VALUES (
-  NULL,
-  'admin',
-  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lewohGEMHLMq7DMYC',
-  'super_admin',
-  'Super Admin',
-  TRUE,
-  FALSE
-)
-ON CONFLICT (username) DO NOTHING;
-
 -- ─────────────────────────────────────────────
 -- DISABLE ROW LEVEL SECURITY
 -- All clinic isolation enforced in app.py via clinic_id
