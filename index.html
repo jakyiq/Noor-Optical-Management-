@@ -634,10 +634,10 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 
   /* ── Bottom nav: bigger tap targets ── */
   :root{ --bottom-nav-h:66px }
-  .bottom-nav{ overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none }
+  .bottom-nav{ overflow-x:hidden; -webkit-overflow-scrolling:auto; scrollbar-width:none }
   .bottom-nav::-webkit-scrollbar{ display:none }
-  .bottom-nav-inner{ min-width:max-content; overflow-x:visible }
-  .bnav-item{ flex:0 0 70px; min-width:70px }
+  .bottom-nav-inner{ min-width:0; overflow-x:visible; width:100% }
+  .bnav-item{ flex:1 1 0; min-width:0 }
   .bnav-item svg{ width:22px; height:22px }
   .bnav-label{ font-size:.64rem; margin-top:1px }
 }
@@ -667,6 +667,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 }
 .bnav-item:active{background:var(--cream)}
 .bnav-item.active{color:var(--burgundy)}
+.bnav-extra{display:none}
+.bnav-more-btn{display:flex}
 .bnav-item svg{width:20px;height:20px;flex-shrink:0}
 .bnav-label{font-size:.62rem;font-weight:600;letter-spacing:.02em;white-space:nowrap}
 .bnav-badge{
@@ -677,7 +679,6 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   display:flex;align-items:center;justify-content:center;
   border:2px solid var(--surface);
 }
-.bnav-more-btn{display:none}
 .bnav-item.active::after{
   content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);
   width:24px;height:3px;background:var(--burgundy);
@@ -685,7 +686,38 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 }
 @media(max-width:400px){
   .bnav-hide-sm{display:flex}
+}
+
+.more-menu-overlay{
+  display:none;position:fixed;inset:0;z-index:210;
+  background:rgba(26,20,16,.22);backdrop-filter:blur(2px);
+}
+.more-menu-overlay.show{display:block}
+.more-menu-sheet{
+  position:fixed;left:0;right:0;bottom:var(--bottom-nav-h);
+  z-index:220;background:var(--surface);
+  border:1px solid var(--cream-border);
+  border-bottom:none;border-radius:28px 28px 0 0;
+  box-shadow:0 -10px 36px rgba(26,20,16,.16);
+  padding:28px 28px 34px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+  transform:translateY(calc(100% + var(--bottom-nav-h)));
+  transition:transform .24s ease;
+}
+.more-menu-sheet.show{transform:translateY(0)}
+.more-tile{
+  min-height:92px;border:none;border-radius:18px;background:var(--cream);
+  color:var(--ink-mid);font-family:inherit;font-weight:700;font-size:.9rem;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:9px;box-shadow:var(--shadow-sm);cursor:pointer;
+}
+.more-tile svg{width:30px;height:30px}
+.more-tile:active{background:var(--cream-dark);transform:scale(.98)}
+#more-superadmin{display:none}
+@media(min-width:1025px){
+  .more-menu-overlay,.more-menu-sheet{display:none!important}
   .bnav-more-btn{display:none}
+  .bnav-extra{display:flex}
 }
 
 @media print{
@@ -744,11 +776,15 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 
   <nav class="bottom-nav" id="bottom-nav">
     <div class="bottom-nav-inner">
+      <button class="bnav-item bnav-more-btn" type="button" onclick="toggleMoreMenu()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+        <span class="bnav-label">المزيد</span>
+      </button>
       <button class="bnav-item active" data-section="dashboard" onclick="navigate('dashboard')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span class="bnav-label" data-i18n="dashboard">الرئيسية</span>
       </button>
-      <button class="bnav-item" data-section="patients" onclick="navigate('patients')">
+      <button class="bnav-item bnav-extra" data-section="patients" onclick="navigate('patients')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
         <span class="bnav-label" data-i18n="patients">المرضى</span>
       </button>
@@ -757,24 +793,56 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         <span class="bnav-label" data-i18n="followups">المتابعات</span>
         <span class="bnav-badge" id="bnav-followup-badge" style="display:none">0</span>
       </button>
-      <button class="bnav-item bnav-hide-sm" data-section="lenses" onclick="navigate('lenses')">
+      <button class="bnav-item bnav-primary-action" data-section="patients" onclick="navigate('patients')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4z"/></svg>
+        <span class="bnav-label">وصفة</span>
+      </button>
+      <button class="bnav-item bnav-extra" data-section="lenses" onclick="navigate('lenses')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
         <span class="bnav-label" data-i18n="lenses">العدسات</span>
       </button>
-      <button class="bnav-item bnav-hide-sm" data-section="reports" onclick="navigate('reports')">
+      <button class="bnav-item bnav-extra" data-section="reports" onclick="navigate('reports')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
         <span class="bnav-label" data-i18n="reports">التقارير</span>
       </button>
-      <button class="bnav-item bnav-hide-sm" data-section="frames" onclick="navigate('frames')">
+      <button class="bnav-item bnav-extra" data-section="frames" onclick="navigate('frames')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg>
         <span class="bnav-label" data-i18n="frames">Frames</span>
       </button>
-      <button class="bnav-item bnav-hide-sm" data-section="settings" onclick="navigate('settings')">
+      <button class="bnav-item bnav-extra" data-section="settings" onclick="navigate('settings')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06a2 2 0 01-2.83 2.83l-.06-.06A1.7 1.7 0 0015 19.4a1.7 1.7 0 00-1 .6 1.7 1.7 0 00-.4 1.1V21a2 2 0 01-4 0v-.09A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.88.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-.6-1 1.7 1.7 0 00-1.1-.4H3a2 2 0 010-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.34-1.88l-.06-.06a2 2 0 012.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-.6 1.7 1.7 0 00.4-1.1V3a2 2 0 014 0v.09A1.7 1.7 0 0015 4.6a1.7 1.7 0 001.88-.34l.06-.06a2 2 0 012.83 2.83l-.06.06A1.7 1.7 0 0019.4 9c.2.38.5.72.88.93.26.15.56.23.86.23H21a2 2 0 010 4h-.09a1.7 1.7 0 00-1.51.84z"/></svg>
         <span class="bnav-label" data-i18n="settings">Settings</span>
       </button>
     </div>
   </nav>
+
+  <div class="more-menu-overlay" id="more-menu-overlay" onclick="closeMoreMenu()"></div>
+  <div class="more-menu-sheet" id="more-menu-sheet" aria-hidden="true">
+    <button class="more-tile" type="button" onclick="navigateFromMore('lenses')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+      <span data-i18n="lenses">Lenses</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16l3-5 3 3 4-7"/></svg>
+      <span data-i18n="reports">Reports</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('frames')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg>
+      <span data-i18n="frames">Frames</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('audit')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span data-i18n="auditLog">Audit Log</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06a2 2 0 01-2.83 2.83l-.06-.06A1.7 1.7 0 0015 19.4a1.7 1.7 0 00-1 .6 1.7 1.7 0 00-.4 1.1V21a2 2 0 01-4 0v-.09A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.88.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-.6-1 1.7 1.7 0 00-1.1-.4H3a2 2 0 010-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.34-1.88l-.06-.06a2 2 0 012.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-.6 1.7 1.7 0 00.4-1.1V3a2 2 0 014 0v.09A1.7 1.7 0 0015 4.6a1.7 1.7 0 001.88-.34l.06-.06a2 2 0 012.83 2.83l-.06.06A1.7 1.7 0 0019.4 9c.2.38.5.72.88.93.26.15.56.23.86.23H21a2 2 0 010 4h-.09a1.7 1.7 0 00-1.51.84z"/></svg>
+      <span data-i18n="settings">Settings</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('superadmin')" id="more-superadmin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="7" width="12" height="13" rx="2"/><path d="M9 7V5a3 3 0 016 0v2"/><path d="M9 14h6"/><path d="M12 11v6"/></svg>
+      <span>Admin</span>
+    </button>
+  </div>
 
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
@@ -1764,7 +1832,10 @@ function bootApp() {
   document.getElementById('user-name').textContent    = NOOR.user.full_name;
   document.getElementById('user-role').textContent    = NOOR.user.role === 'super_admin' ? 'Super Admin' : t(NOOR.user.role);
   document.getElementById('user-avatar').textContent  = (NOOR.user.full_name || '?')[0];
-  if (NOOR.role === 'super_admin') document.getElementById('nav-superadmin').style.display = '';
+  if (NOOR.role === 'super_admin') {
+    document.getElementById('nav-superadmin').style.display = '';
+    document.getElementById('more-superadmin').style.display = 'flex';
+  }
   applyLang();
   navigate('dashboard');
 }
@@ -1791,6 +1862,7 @@ async function checkSession() {
 // NAVIGATION
 // ══════════════════════════════════════════════════════════
 function navigate(section) {
+  closeMoreMenu();
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.bnav-item').forEach(b => b.classList.toggle('active', b.dataset.section === section));
@@ -1801,6 +1873,28 @@ function navigate(section) {
   if (section === 'patients') showPatientsListView();
   renderSection(section);
   if (isMobile()) closeSidebar();
+}
+
+function toggleMoreMenu() {
+  const sheet = document.getElementById('more-menu-sheet');
+  const overlay = document.getElementById('more-menu-overlay');
+  const open = !sheet.classList.contains('show');
+  sheet.classList.toggle('show', open);
+  overlay.classList.toggle('show', open);
+  sheet.setAttribute('aria-hidden', open ? 'false' : 'true');
+}
+
+function closeMoreMenu() {
+  const sheet = document.getElementById('more-menu-sheet');
+  const overlay = document.getElementById('more-menu-overlay');
+  if (!sheet || !overlay) return;
+  sheet.classList.remove('show');
+  overlay.classList.remove('show');
+  sheet.setAttribute('aria-hidden', 'true');
+}
+
+function navigateFromMore(section) {
+  navigate(section);
 }
 
 function renderSection(s) {
