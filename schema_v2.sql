@@ -261,18 +261,99 @@ CREATE INDEX IF NOT EXISTS idx_audit_user   ON audit_log(user_id);
 -- Do not ship default admin credentials in production schema.
 -- ─────────────────────────────────────────────
 -- ─────────────────────────────────────────────
--- DISABLE ROW LEVEL SECURITY
--- All clinic isolation enforced in app.py via clinic_id
+-- ROW LEVEL SECURITY
+-- Flask uses the Supabase service role and remains the trusted API.
+-- Direct anon/client access is denied unless a policy below allows it.
+-- Sensitive backend-only tables intentionally have no client policies:
+-- licenses, users, clinic_settings, audit_log.
+-- If a future frontend Supabase client is added, issue JWTs with:
+--   clinic_id: <clinic uuid>
+--   role: doctor | receptionist | super_admin
 -- ─────────────────────────────────────────────
-ALTER TABLE clinics         DISABLE ROW LEVEL SECURITY;
-ALTER TABLE licenses        DISABLE ROW LEVEL SECURITY;
-ALTER TABLE users           DISABLE ROW LEVEL SECURITY;
-ALTER TABLE clinic_settings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE patients        DISABLE ROW LEVEL SECURITY;
-ALTER TABLE visits          DISABLE ROW LEVEL SECURITY;
-ALTER TABLE lenses          DISABLE ROW LEVEL SECURITY;
-ALTER TABLE frames          DISABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_log       DISABLE ROW LEVEL SECURITY;
+ALTER TABLE clinics         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE licenses        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clinic_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE patients        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE visits          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lenses          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE frames          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log       ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION jwt_clinic_id()
+RETURNS UUID
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT NULLIF(auth.jwt() ->> 'clinic_id', '')::UUID;
+$$;
+
+CREATE OR REPLACE FUNCTION jwt_app_role()
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT COALESCE(auth.jwt() ->> 'role', '');
+$$;
+
+DROP POLICY IF EXISTS clinics_same_clinic_select ON clinics;
+CREATE POLICY clinics_same_clinic_select ON clinics
+  FOR SELECT TO authenticated
+  USING (id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS patients_same_clinic_select ON patients;
+CREATE POLICY patients_same_clinic_select ON patients
+  FOR SELECT TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS patients_same_clinic_insert ON patients;
+CREATE POLICY patients_same_clinic_insert ON patients
+  FOR INSERT TO authenticated
+  WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS patients_same_clinic_update ON patients;
+CREATE POLICY patients_same_clinic_update ON patients
+  FOR UPDATE TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin')
+  WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS patients_same_clinic_delete ON patients;
+CREATE POLICY patients_same_clinic_delete ON patients
+  FOR DELETE TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS visits_same_clinic_select ON visits;
+CREATE POLICY visits_same_clinic_select ON visits
+  FOR SELECT TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS visits_same_clinic_insert ON visits;
+CREATE POLICY visits_same_clinic_insert ON visits
+  FOR INSERT TO authenticated
+  WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS visits_same_clinic_update ON visits;
+CREATE POLICY visits_same_clinic_update ON visits
+  FOR UPDATE TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin')
+  WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS visits_same_clinic_delete ON visits;
+CREATE POLICY visits_same_clinic_delete ON visits
+  FOR DELETE TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS lenses_same_clinic_all ON lenses;
+CREATE POLICY lenses_same_clinic_all ON lenses
+  FOR ALL TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin')
+  WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS frames_same_clinic_all ON frames;
+CREATE POLICY frames_same_clinic_all ON frames
+  FOR ALL TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin')
+  WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
 
 -- ─────────────────────────────────────────────
 -- HELPER FUNCTIONS

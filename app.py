@@ -8,11 +8,14 @@ import json
 import bcrypt
 import traceback
 import logging
+import secrets
 from datetime import datetime, timedelta, date
 from functools import wraps
 
 from flask import Flask, request, jsonify, session
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from supabase import create_client, Client
 
 logging.basicConfig(level=logging.DEBUG)
@@ -36,6 +39,13 @@ CORS(app, supports_credentials=True, origins=[
     "http://localhost:5000",
     "http://127.0.0.1:5000",
 ])
+
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["300 per hour"],
+    storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
+)
 
 # ─────────────────────────────────────────────
 # SUPABASE CLIENT  (service_role key — backend only)
@@ -71,10 +81,31 @@ def ok(data=None, **kwargs):
     payload.update(kwargs)
     return jsonify(payload)
 
-def _check_license(clinic_id):
+WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _csrf_token():
+    token = session.get("csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["csrf_token"] = token
+    return token
+
+
+def _safe_license_summary(license_state):
+    return {
+        "status": license_state["status"],
+        "plan": license_state.get("plan"),
+        "days_left": license_state.get("days_left"),
+        "read_only": license_state["status"] in ("expired_read_only", "blocked"),
+        "exports_allowed": license_state["status"] == "active",
+    }
+
+
+def _license_state(clinic_id):
     """
-    Returns (valid: bool, in_grace: bool, days_left: int|None)
-    Grace period: 5 days after expiry.
+    Backend-only license decision.
+    status values: active, trial, expired_read_only, blocked.
     """
     res = db.table("licenses") \
         .select("*") \
@@ -85,25 +116,41 @@ def _check_license(clinic_id):
         .execute()
 
     if not res.data:
-        return False, False, None
+        return {"status": "blocked", "plan": None, "days_left": None}
 
     lic = res.data[0]
     plan = lic.get("plan")
 
-    # Lifetime — never expires
+    # Lifetime never expires and has full paid capabilities.
     if plan == "lifetime" or lic.get("expires_at") is None:
-        return True, False, None
+        return {"status": "active", "plan": plan, "days_left": None}
 
     expires = date.fromisoformat(lic["expires_at"])
     today = date.today()
     delta = (expires - today).days
 
     if delta >= 0:
-        return True, False, delta          # valid
-    elif delta >= -5:
-        return False, True, delta          # expired but in grace
-    else:
-        return False, False, delta         # fully expired, blocked
+        status = "trial" if plan == "trial" else "active"
+        return {"status": status, "plan": plan, "days_left": delta}
+
+    # Expired clinics keep read access only. No write grace period.
+    return {"status": "expired_read_only", "plan": plan, "days_left": delta}
+
+
+@app.before_request
+def _csrf_protect():
+    if request.method not in WRITE_METHODS:
+        return None
+    if request.endpoint in {"login"}:
+        return None
+    if "user_id" not in session:
+        return None
+
+    expected = session.get("csrf_token")
+    provided = request.headers.get("X-CSRF-Token")
+    if not expected or not provided or not secrets.compare_digest(expected, provided):
+        return err("CSRF token missing or invalid", 403)
+    return None
 
 def _write_audit(clinic_id, user_id, action, entity_type, entity_id=None,
                  old_value=None, new_value=None):
@@ -122,11 +169,11 @@ def _write_audit(clinic_id, user_id, action, entity_type, entity_id=None,
 # ─────────────────────────────────────────────
 # AUTH DECORATOR
 # ─────────────────────────────────────────────
-def _auth(roles=None, setting=None):
+def _auth(roles=None, setting=None, export=False, allow_readonly_write=False):
     """
     Decorator that:
     1. Validates session exists and is not expired
-    2. Checks license (blocks if expired past grace)
+    2. Checks license/read-only/export state
     3. Optionally restricts to specific roles
     4. Optionally checks a clinic_settings permission key (for receptionist gating)
 
@@ -159,9 +206,18 @@ def _auth(roles=None, setting=None):
                 return f(*args, **kwargs)
 
             # 2. License check
-            valid, in_grace, days_left = _check_license(clinic_id)
-            if not valid and not in_grace:
-                return err("License expired", 403)
+            license_state = _license_state(clinic_id)
+            status = license_state["status"]
+            if status == "blocked":
+                return err("License blocked. Please contact support.", 403)
+            if export and status != "active":
+                return err("Export is available only for active paid clinics.", 403)
+            if (
+                status == "expired_read_only"
+                and request.method in WRITE_METHODS
+                and not allow_readonly_write
+            ):
+                return err("License expired. Clinic is read-only until activated.", 403)
 
             # 3. Role check
             if roles and role not in roles:
@@ -187,6 +243,7 @@ def _auth(roles=None, setting=None):
 # ─────────────────────────────────────────────────────────────
 
 @app.route("/api/login", methods=["POST"])
+@limiter.limit("5 per minute; 20 per hour")
 def login():
     body = request.get_json() or {}
     username = (body.get("username") or "").strip()
@@ -217,12 +274,14 @@ def login():
 
     # License check (skip for super_admin)
     grace_warning = None
+    license_summary = None
     if role != "super_admin":
-        valid, in_grace, days_left = _check_license(clinic_id)
-        if not valid and not in_grace:
+        license_state = _license_state(clinic_id)
+        if license_state["status"] == "blocked":
             return err("License expired. Please contact support.", 403)
-        if in_grace:
-            grace_warning = f"License expired. {abs(days_left)} grace day(s) remaining."
+        if license_state["status"] == "expired_read_only":
+            grace_warning = "License expired. Clinic is read-only until activated."
+        license_summary = _safe_license_summary(license_state)
 
     # Build session
     session.permanent = True
@@ -230,6 +289,7 @@ def login():
     session["role"]      = role
     session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat()
     session["must_change_password"] = bool(user.get("must_change_password", False))
+    csrf_token = _csrf_token()
 
     # For super_admin: if no clinic_id, auto-assign the first clinic or create a default one
     if role == "super_admin" and not clinic_id:
@@ -279,6 +339,8 @@ def login():
         "clinic_id":            clinic_id,
         "must_change_password": user.get("must_change_password", False),
         "grace_warning":        grace_warning,
+        "csrf_token":           csrf_token,
+        "license":              license_summary,
     })
 
 
@@ -302,13 +364,15 @@ def me():
     clinic_id = session.get("clinic_id")
 
     grace_warning = None
+    license_summary = None
     if role != "super_admin":
-        valid, in_grace, days_left = _check_license(clinic_id)
-        if not valid and not in_grace:
+        license_state = _license_state(clinic_id)
+        if license_state["status"] == "blocked":
             session.clear()
             return err("License expired", 403)
-        if in_grace:
-            grace_warning = f"Grace period: {abs(days_left)} day(s) remaining."
+        if license_state["status"] == "expired_read_only":
+            grace_warning = "License expired. Clinic is read-only until activated."
+        license_summary = _safe_license_summary(license_state)
 
     # Refresh session expiry
     session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat()
@@ -319,11 +383,13 @@ def me():
         "role":                 role,
         "must_change_password": bool(session.get("must_change_password", False)),
         "grace_warning":        grace_warning,
+        "csrf_token":           _csrf_token(),
+        "license":              license_summary,
     })
 
 
 @app.route("/api/change-password", methods=["POST"])
-@_auth()
+@_auth(allow_readonly_write=True)
 def change_password():
     body = request.get_json() or {}
     new_pw = body.get("password", "")
@@ -1008,6 +1074,7 @@ def restock_frame(fid):
 # ─────────────────────────────────────────────────────────────
 
 @app.route("/api/reports/summary", methods=["GET"])
+@limiter.limit("60 per hour")
 @_auth(setting="recept_export_reports")
 def reports_summary():
     cid       = session["clinic_id"]
@@ -1041,7 +1108,8 @@ def reports_summary():
 
 
 @app.route("/api/reports/export/excel", methods=["GET"])
-@_auth(setting="recept_export_reports")
+@limiter.limit("20 per hour")
+@_auth(setting="recept_export_reports", export=True)
 def export_excel_data():
     """Returns JSON rows that the frontend SheetJS uses to build the Excel file."""
     cid       = session["clinic_id"]
@@ -1090,7 +1158,8 @@ def export_excel_data():
 
 
 @app.route("/api/reports/export/patients", methods=["GET"])
-@_auth(setting="recept_export_reports")
+@limiter.limit("10 per hour")
+@_auth(setting="recept_export_reports", export=True)
 def export_all_patients():
     cid = session["clinic_id"]
     res = db.table("patients").select("*").eq("clinic_id", cid) \
