@@ -1249,6 +1249,52 @@ def restock_frame(fid):
 # REPORTS
 # ─────────────────────────────────────────────────────────────
 
+def _float_val(value):
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _months_between(start, end):
+    count = 0
+    cursor = date(start.year, start.month, 1)
+    limit = date(end.year, end.month, 1)
+    while cursor <= limit:
+        count += 1
+        if cursor.month == 12:
+            cursor = date(cursor.year + 1, 1, 1)
+        else:
+            cursor = date(cursor.year, cursor.month + 1, 1)
+    return count
+
+
+def _expense_occurrences(expense, start, end):
+    starts_on = date.fromisoformat(expense.get("starts_on") or start.isoformat())
+    if starts_on > end:
+        return 0
+    effective_start = max(start, starts_on)
+    frequency = (expense.get("frequency") or "monthly").lower()
+    if frequency in ("one_time", "once"):
+        return 1 if start <= starts_on <= end else 0
+    if frequency == "daily":
+        return (end - effective_start).days + 1
+    if frequency == "weekly":
+        return ((end - effective_start).days // 7) + 1
+    if frequency == "yearly":
+        return max(1, end.year - effective_start.year + 1)
+    # Default monthly.
+    return _months_between(effective_start, end)
+
+
+def _add_chart_item(items, key, label, kind, amount=0, cost=0, count=0):
+    if key not in items:
+        items[key] = {"key": key, "label": label, "kind": kind, "amount": 0, "cost": 0, "count": 0}
+    items[key]["amount"] += _float_val(amount)
+    items[key]["cost"] += _float_val(cost)
+    items[key]["count"] += int(count or 0)
+
+
 @app.route("/api/reports/summary", methods=["GET"])
 @limiter.limit("60 per hour")
 @_auth(setting="recept_export_reports")
@@ -1256,17 +1302,76 @@ def reports_summary():
     cid       = session["clinic_id"]
     date_from = request.args.get("from", date.today().replace(day=1).isoformat())
     date_to   = request.args.get("to",   today_str())
+    start_date = date.fromisoformat(date_from)
+    end_date = date.fromisoformat(date_to)
 
     visits = db.table("visits").select(
-        "id,patient_id,visit_date,total_amount,amount_paid,remaining,lens_type,created_at"
+        "id,patient_id,visit_date,total_amount,amount_paid,remaining,lens_type,lens_price,lens_cost,frame_brand,frame_type,frame_price,frame_cost,checkup_fee,created_at"
     ).eq("clinic_id", cid).gte("visit_date", date_from).lte("visit_date", date_to) \
      .order("visit_date", desc=True).execute()
 
     rows = visits.data or []
+    chart_items = {}
 
     revenue     = sum(r.get("amount_paid",  0) or 0 for r in rows)
     outstanding = sum(r.get("remaining",    0) or 0 for r in rows)
+    visit_cost  = sum(_float_val(r.get("lens_cost")) + _float_val(r.get("frame_cost")) for r in rows)
     patient_ids = list({r["patient_id"] for r in rows})
+
+    for r in rows:
+        lens_amount = _float_val(r.get("lens_price"))
+        if lens_amount:
+            label = f"Lens: {(r.get('lens_type') or 'Unknown').replace('_', ' ')}"
+            _add_chart_item(chart_items, f"lens:{r.get('lens_type') or 'unknown'}", label, "lens",
+                            amount=lens_amount, cost=r.get("lens_cost"), count=1)
+        frame_amount = _float_val(r.get("frame_price"))
+        if frame_amount:
+            frame_label = r.get("frame_brand") or r.get("frame_type") or "Unknown"
+            _add_chart_item(chart_items, f"frame:{frame_label}", f"Frame: {frame_label}", "frame",
+                            amount=frame_amount, cost=r.get("frame_cost"), count=1)
+        checkup_amount = _float_val(r.get("checkup_fee"))
+        if checkup_amount:
+            _add_chart_item(chart_items, "service:checkup", "Checkup fees", "service",
+                            amount=checkup_amount, cost=0, count=1)
+
+    try:
+        retail_res = db.table("retail_sales").select("*").eq("clinic_id", cid) \
+            .gte("sale_date", date_from).lte("sale_date", date_to) \
+            .order("sale_date", desc=True).execute()
+        retail_sales = retail_res.data or []
+    except Exception:
+        retail_sales = []
+
+    retail_revenue = 0
+    retail_cost = 0
+    for sale in retail_sales:
+        qty = int(sale.get("quantity") or 1)
+        amount = _float_val(sale.get("selling_price")) * qty
+        cost = _float_val(sale.get("cost_price")) * qty
+        retail_revenue += amount
+        retail_cost += cost
+        label = f"{sale.get('item_name') or sale.get('item_type') or 'Retail item'}"
+        _add_chart_item(chart_items, f"retail:{label}", label, "retail", amount=amount, cost=cost, count=qty)
+
+    try:
+        expense_res = db.table("operating_expenses").select("*").eq("clinic_id", cid) \
+            .eq("is_active", True).lte("starts_on", date_to).order("starts_on", desc=True).execute()
+        expenses = expense_res.data or []
+    except Exception:
+        expenses = []
+
+    operating_costs = 0
+    expense_rows = []
+    for expense in expenses:
+        occurrences = _expense_occurrences(expense, start_date, end_date)
+        effective_amount = _float_val(expense.get("amount")) * occurrences
+        if effective_amount <= 0:
+            continue
+        row = {**expense, "effective_amount": effective_amount, "occurrences": occurrences}
+        expense_rows.append(row)
+        operating_costs += effective_amount
+        label = expense.get("name") or expense.get("expense_type") or "Expense"
+        _add_chart_item(chart_items, f"expense:{label}", label, "expense", amount=effective_amount, cost=effective_amount, count=occurrences)
 
     # New patients in range
     new_ps = db.table("patients").select("id").eq("clinic_id", cid) \
@@ -1274,13 +1379,92 @@ def reports_summary():
         .lte("created_at", date_to   + "T23:59:59").execute()
 
     return ok({
-        "total_revenue":     revenue,
+        "total_revenue":     revenue + retail_revenue,
         "total_outstanding": outstanding,
+        "retail_revenue":    retail_revenue,
+        "retail_cost":       retail_cost,
+        "visit_cost":        visit_cost,
+        "operating_costs":   operating_costs,
+        "gross_profit":      revenue + retail_revenue - visit_cost - retail_cost - operating_costs,
         "patients_seen":     len(rows),
         "unique_patients":   len(patient_ids),
         "new_patients":      len(new_ps.data or []),
         "visits":            rows,
+        "retail_sales":      retail_sales,
+        "expenses":          expense_rows,
+        "chart_items":       list(chart_items.values()),
     })
+
+
+@app.route("/api/retail-sales", methods=["GET"])
+@_auth(setting="recept_export_reports")
+def list_retail_sales():
+    cid = session["clinic_id"]
+    date_from = request.args.get("from", date.today().replace(day=1).isoformat())
+    date_to = request.args.get("to", today_str())
+    res = db.table("retail_sales").select("*").eq("clinic_id", cid) \
+        .gte("sale_date", date_from).lte("sale_date", date_to) \
+        .order("sale_date", desc=True).execute()
+    return ok(res.data or [])
+
+
+@app.route("/api/retail-sales", methods=["POST"])
+@_auth(setting="recept_export_reports")
+def create_retail_sale():
+    cid = session["clinic_id"]
+    uid = session["user_id"]
+    body = request.get_json() or {}
+    item_name = (body.get("item_name") or "").strip()
+    if not item_name:
+        return err("item_name is required")
+    row = {
+        "clinic_id": cid,
+        "item_name": item_name,
+        "item_type": body.get("item_type") or "misc",
+        "quantity": int(body.get("quantity") or 1),
+        "cost_price": _float_val(body.get("cost_price")),
+        "selling_price": _float_val(body.get("selling_price")),
+        "sale_date": body.get("sale_date") or today_str(),
+        "notes": body.get("notes"),
+        "created_by": uid,
+    }
+    res = db.table("retail_sales").insert(row).execute()
+    _write_audit(cid, uid, "create", "retail_sale", res.data[0]["id"], new_value=res.data[0])
+    return ok(res.data[0]), 201
+
+
+@app.route("/api/operating-expenses", methods=["GET"])
+@_auth(setting="recept_export_reports")
+def list_operating_expenses():
+    cid = session["clinic_id"]
+    res = db.table("operating_expenses").select("*").eq("clinic_id", cid) \
+        .order("starts_on", desc=True).execute()
+    return ok(res.data or [])
+
+
+@app.route("/api/operating-expenses", methods=["POST"])
+@_auth(setting="recept_export_reports")
+def create_operating_expense():
+    cid = session["clinic_id"]
+    uid = session["user_id"]
+    body = request.get_json() or {}
+    name = (body.get("name") or "").strip()
+    if not name:
+        return err("name is required")
+    row = {
+        "clinic_id": cid,
+        "name": name,
+        "expense_type": body.get("expense_type") or "misc",
+        "frequency": body.get("frequency") or "monthly",
+        "amount": _float_val(body.get("amount")),
+        "starts_on": body.get("starts_on") or today_str(),
+        "is_active": body.get("is_active", True),
+        "notes": body.get("notes"),
+        "created_by": uid,
+    }
+    res = db.table("operating_expenses").insert(row).execute()
+    _write_audit(cid, uid, "create", "operating_expense", res.data[0]["id"], new_value=res.data[0])
+    return ok(res.data[0]), 201
 
 
 @app.route("/api/reports/export/excel", methods=["GET"])
@@ -1766,7 +1950,7 @@ def admin_backup_clinic(cid):
         return err("Clinic not found", 404)
 
     payload = {"clinic": clinic.data}
-    for table in ["patients", "visits", "frames", "lenses", "users", "clinic_settings", "licenses"]:
+    for table in ["patients", "visits", "frames", "lenses", "retail_sales", "operating_expenses", "users", "clinic_settings", "licenses"]:
         query = db.table(table).select("*")
         if table == "clinic_settings":
             query = query.eq("clinic_id", cid)

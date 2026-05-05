@@ -315,6 +315,33 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .report-stat{background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-md);padding:18px;text-align:center}
 .report-stat-val{font-family:'DM Mono',monospace;font-size:1.5rem;font-weight:500;color:var(--burgundy);margin-bottom:4px}
 .report-stat-label{font-size:.74rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.06em}
+.report-grid{display:grid;grid-template-columns:minmax(300px,1.1fr) minmax(300px,.9fr);gap:18px;margin-bottom:22px}
+.report-card{background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-md);padding:18px;box-shadow:var(--shadow-sm)}
+.report-card-title{font-size:.78rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.donut-layout{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:center}
+.donut-wrap{position:relative;width:220px;height:220px;margin:auto}
+.donut-wrap svg{width:220px;height:220px;transform:rotate(-90deg)}
+.donut-seg{cursor:pointer;transition:opacity .15s,stroke-width .15s}
+.donut-seg:hover{opacity:.78;stroke-width:34}
+.donut-center{position:absolute;inset:52px;border-radius:50%;background:var(--cream);display:flex;align-items:center;justify-content:center;text-align:center;padding:12px}
+.donut-center-val{font-family:'DM Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--burgundy)}
+.donut-center-label{font-size:.68rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.donut-legend{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;padding-inline-end:4px}
+.donut-legend-item{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;border:1px solid var(--cream-border);border-radius:var(--radius-sm);padding:8px 10px;background:var(--cream);cursor:pointer;transition:opacity .15s,background .15s}
+.donut-legend-item.hidden{opacity:.42;background:transparent}
+.donut-dot{width:10px;height:10px;border-radius:50%}
+.donut-legend-name{font-size:.84rem;font-weight:600;color:var(--ink)}
+.donut-legend-meta{font-size:.7rem;color:var(--ink-light)}
+.donut-legend-val{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--ink-mid)}
+.quick-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.quick-form .full{grid-column:1/-1}
+.mini-report-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto}
+.mini-report-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border-bottom:1px solid var(--cream-border);padding-bottom:8px}
+.mini-report-row:last-child{border-bottom:none}
+.mini-report-title{font-size:.86rem;font-weight:700;color:var(--ink)}
+.mini-report-sub{font-size:.72rem;color:var(--ink-light)}
+.mini-report-val{font-family:'DM Mono',monospace;font-size:.82rem;color:var(--burgundy)}
+@media(max-width:980px){.report-grid{grid-template-columns:1fr}.donut-layout{grid-template-columns:1fr}.donut-wrap{width:200px;height:200px}.donut-wrap svg{width:200px;height:200px}.donut-center{inset:48px}.quick-form{grid-template-columns:1fr}}
 
 /* VISIT CARD INNER GRID */
 .patient-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
@@ -1278,8 +1305,66 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         <div class="report-stat-grid">
           <div class="report-stat"><div class="report-stat-val" id="rep-revenue">—</div><div class="report-stat-label" data-i18n="totalRevenue">إجمالي الإيرادات (IQD)</div></div>
           <div class="report-stat"><div class="report-stat-val" id="rep-outstanding">—</div><div class="report-stat-label" data-i18n="totalOutstanding">الديون المعلقة (IQD)</div></div>
+          <div class="report-stat"><div class="report-stat-val" id="rep-expenses">—</div><div class="report-stat-label" data-i18n="operatingCosts">Operational Costs</div></div>
+          <div class="report-stat"><div class="report-stat-val" id="rep-profit">—</div><div class="report-stat-label" data-i18n="grossProfit">Gross Profit</div></div>
           <div class="report-stat"><div class="report-stat-val" id="rep-patients">—</div><div class="report-stat-label" data-i18n="patientsSeen">مرضى تمت رؤيتهم</div></div>
           <div class="report-stat"><div class="report-stat-val" id="rep-new-patients">—</div><div class="report-stat-label" data-i18n="newPatients">مرضى جدد</div></div>
+        </div>
+        <div class="report-grid">
+          <div class="report-card">
+            <div class="report-card-title"><span data-i18n="salesMix">Sales / Cost Mix</span><span id="donut-active-count"></span></div>
+            <div class="donut-layout">
+              <div class="donut-wrap">
+                <svg viewBox="0 0 220 220" id="report-donut"></svg>
+                <div class="donut-center"><div><div class="donut-center-val" id="donut-total">0</div><div class="donut-center-label">IQD</div></div></div>
+              </div>
+              <div class="donut-legend" id="donut-legend"></div>
+            </div>
+          </div>
+          <div class="report-card">
+            <div class="report-card-title"><span data-i18n="retailSales">Retail Sales</span></div>
+            <div class="quick-form">
+              <select class="form-select" id="sale-item-type">
+                <option value="cleaning_solution">Cleaning solution</option>
+                <option value="cloth">Cloth</option>
+                <option value="sunglasses">Sunglasses</option>
+                <option value="reading_frames">Generic reading frames</option>
+                <option value="cover">Cover</option>
+                <option value="misc">Misc</option>
+              </select>
+              <input class="form-input" id="sale-item-name" placeholder="Item name">
+              <input class="form-input" id="sale-qty" type="number" min="1" value="1" placeholder="Qty">
+              <input class="form-input" id="sale-date" type="date">
+              <input class="form-input" id="sale-cost" type="number" min="0" placeholder="Cost">
+              <input class="form-input" id="sale-price" type="number" min="0" placeholder="Selling price">
+              <button class="btn btn-burgundy full" onclick="saveRetailSale()" data-i18n="addSale">Add Sale</button>
+            </div>
+            <div class="mini-report-list" id="retail-sales-list"></div>
+          </div>
+          <div class="report-card">
+            <div class="report-card-title"><span data-i18n="operatingCosts">Operational Costs</span></div>
+            <div class="quick-form">
+              <select class="form-select" id="expense-type">
+                <option value="rent">Rent</option>
+                <option value="salary">Salaries</option>
+                <option value="internet">Internet</option>
+                <option value="electricity">Electricity</option>
+                <option value="misc">Misc</option>
+              </select>
+              <select class="form-select" id="expense-frequency">
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="daily">Daily</option>
+                <option value="yearly">Yearly</option>
+                <option value="one_time">One-time</option>
+              </select>
+              <input class="form-input" id="expense-name" placeholder="Expense name">
+              <input class="form-input" id="expense-start" type="date">
+              <input class="form-input full" id="expense-amount" type="number" min="0" placeholder="Amount">
+              <button class="btn btn-burgundy full" onclick="saveOperatingExpense()" data-i18n="addExpense">Add Expense</button>
+            </div>
+            <div class="mini-report-list" id="expenses-list"></div>
+          </div>
         </div>
         <div class="table-wrap">
           <table>
@@ -1700,6 +1785,7 @@ const LANG_DATA = {
     auditLog:'سجل التدقيق',language:'اللغة',management:'إدارة',inventory:'المخزون',
     analytics:'تحليلات',security:'الأمان',addPatient:'إضافة مريض',
     addOldPrescription:'إضافة وصفة قديمة',oldPrescription:'وصفة قديمة',topUpRemaining:'تسديد المتبقي',printA5:'طباعة A5',latestVisit:'آخر زيارة',visitDate:'تاريخ الزيارة',
+    operatingCosts:'التكاليف التشغيلية',grossProfit:'إجمالي الربح',salesMix:'مزيج المبيعات والتكاليف',retailSales:'مبيعات إضافية',addSale:'إضافة بيع',addExpense:'إضافة تكلفة',
     addLens:'إضافة عدسة',addFrame:'إضافة إطار',addUser:'إضافة مستخدم',
     save:'حفظ',cancel:'إلغاء',edit:'تعديل',delete:'حذف',restock:'إعادة تخزين',
     actions:'إجراءات',name:'الاسم',phone:'الهاتف',age:'العمر',gender:'الجنس',
@@ -1759,6 +1845,7 @@ const LANG_DATA = {
     inventory:'Inventory',analytics:'Analytics',security:'Security',
     addPatient:'Add Patient',addLens:'Add Lens',addFrame:'Add Frame',addUser:'Add User',
     addOldPrescription:'Add Old Rx',oldPrescription:'Old Prescription',topUpRemaining:'Top Up Remaining',printA5:'Print A5',latestVisit:'Latest Visit',visitDate:'Visit Date',
+    operatingCosts:'Operational Costs',grossProfit:'Gross Profit',salesMix:'Sales / Cost Mix',retailSales:'Retail Sales',addSale:'Add Sale',addExpense:'Add Expense',
     save:'Save',cancel:'Cancel',edit:'Edit',delete:'Delete',restock:'Restock',
     actions:'Actions',name:'Name',phone:'Phone',age:'Age',gender:'Gender',
     address:'Address',notes:'Notes',fullName:'Full Name',male:'Male',female:'Female',
@@ -1826,6 +1913,8 @@ const NOOR = {
   // cached data (refreshed from API on each section visit)
   patients: [], lenses: [], frames: [], visits: [],
   users: [], auditLog: [], clinics: [],
+  reportHiddenItems: new Set(),
+  reportChartItems: [],
   settings: {},
   waTemplates: { wa_template_1:'', wa_template_2:'', wa_template_3:'' },
 };
@@ -2911,6 +3000,8 @@ async function confirmRestock() {
 async function renderReports() {
   const from = document.getElementById('report-from');
   const to   = document.getElementById('report-to');
+  document.getElementById('sale-date').value ||= todayStr();
+  document.getElementById('expense-start').value ||= todayStr();
   if (!from.value) {
     const n = new Date();
     from.value = new Date(n.getFullYear(),n.getMonth(),1).toISOString().split('T')[0];
@@ -2927,8 +3018,14 @@ async function loadReports() {
     const s = data.data;
     document.getElementById('rep-revenue').textContent     = fmtNum(s.total_revenue);
     document.getElementById('rep-outstanding').textContent = fmtNum(s.total_outstanding);
+    document.getElementById('rep-expenses').textContent    = fmtNum(s.operating_costs || 0);
+    document.getElementById('rep-profit').textContent      = fmtNum(s.gross_profit || 0);
     document.getElementById('rep-patients').textContent    = s.patients_seen;
     document.getElementById('rep-new-patients').textContent= s.new_patients;
+    NOOR.reportChartItems = s.chart_items || [];
+    renderReportDonut();
+    renderRetailSalesList(s.retail_sales || []);
+    renderExpensesList(s.expenses || []);
     const tbody = document.getElementById('reports-tbody');
     tbody.innerHTML = (s.visits||[]).map(v => {
       const p = getPatient(v.patient_id);
@@ -2944,6 +3041,117 @@ async function loadReports() {
         </td>
       </tr>`;
     }).join('');
+  } catch(e) { toast(e.message,'error'); }
+}
+
+function reportColor(i, kind) {
+  const palettes = {
+    lens:['#6b1a2a','#8b2a3e','#b64b5f','#d97b8a'],
+    frame:['#c49a3c','#d9b85f','#a87618','#e7c978'],
+    retail:['#1e7e5a','#2aa876','#68c79a','#0f5d44'],
+    expense:['#c0392b','#d4820a','#8a4f2b','#6d3b24'],
+    service:['#4267b2','#5b7fd0','#7da0ee']
+  };
+  const p = palettes[kind] || ['#4a3f35','#8a7d70'];
+  return p[i % p.length];
+}
+
+function donutArc(cx, cy, r, start, end) {
+  const polar = a => {
+    const rad = (a - 90) * Math.PI / 180;
+    return {x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad)};
+  };
+  const s = polar(end), e = polar(start);
+  const large = end - start <= 180 ? 0 : 1;
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 0 ${e.x} ${e.y}`;
+}
+
+function renderReportDonut() {
+  const svg = document.getElementById('report-donut');
+  const legend = document.getElementById('donut-legend');
+  const items = (NOOR.reportChartItems || []).filter(x => !NOOR.reportHiddenItems.has(x.key) && (x.amount || 0) > 0);
+  const all = NOOR.reportChartItems || [];
+  const total = items.reduce((sum, x) => sum + (parseFloat(x.amount)||0), 0);
+  document.getElementById('donut-total').textContent = fmtNum(total);
+  document.getElementById('donut-active-count').textContent = `${items.length}/${all.length}`;
+  if (!total) {
+    svg.innerHTML = `<circle cx="110" cy="110" r="82" fill="none" stroke="var(--cream-border)" stroke-width="30"></circle>`;
+    legend.innerHTML = `<div class="mini-report-sub">No report items yet</div>`;
+    return;
+  }
+  let angle = 0;
+  svg.innerHTML = items.map((item, i) => {
+    const size = (parseFloat(item.amount)||0) / total * 360;
+    const path = donutArc(110, 110, 82, angle, angle + size);
+    angle += size;
+    return `<path class="donut-seg" data-key="${escAttr(item.key)}" d="${path}" fill="none" stroke="${reportColor(i,item.kind)}" stroke-width="30" stroke-linecap="round" onclick="toggleReportItem(this.dataset.key)"><title>${esc(item.label)}: ${fmtIQD(item.amount)}</title></path>`;
+  }).join('');
+  legend.innerHTML = all.map((item, i) => {
+    const hidden = NOOR.reportHiddenItems.has(item.key);
+    return `<div class="donut-legend-item ${hidden?'hidden':''}" data-key="${escAttr(item.key)}" onclick="toggleReportItem(this.dataset.key)">
+      <span class="donut-dot" style="background:${reportColor(i,item.kind)}"></span>
+      <span><span class="donut-legend-name">${esc(item.label)}</span><br><span class="donut-legend-meta">${esc(item.kind)} · ${item.count||0} item(s)</span></span>
+      <span class="donut-legend-val">${fmtNum(item.amount)}</span>
+    </div>`;
+  }).join('');
+}
+
+function toggleReportItem(key) {
+  if (NOOR.reportHiddenItems.has(key)) NOOR.reportHiddenItems.delete(key);
+  else NOOR.reportHiddenItems.add(key);
+  renderReportDonut();
+}
+
+function renderRetailSalesList(rows) {
+  const el = document.getElementById('retail-sales-list');
+  if (!rows.length) { el.innerHTML = `<div class="mini-report-sub">No retail sales in this range.</div>`; return; }
+  el.innerHTML = rows.slice(0, 8).map(r => {
+    const qty = parseInt(r.quantity)||1;
+    return `<div class="mini-report-row"><div><div class="mini-report-title">${esc(r.item_name)}</div><div class="mini-report-sub">${esc((r.item_type||'misc').replace(/_/g,' '))} · ${fmtDate(r.sale_date)} · Qty ${qty}</div></div><div class="mini-report-val">${fmtIQD((parseFloat(r.selling_price)||0)*qty)}</div></div>`;
+  }).join('');
+}
+
+function renderExpensesList(rows) {
+  const el = document.getElementById('expenses-list');
+  if (!rows.length) { el.innerHTML = `<div class="mini-report-sub">No operating costs in this range.</div>`; return; }
+  el.innerHTML = rows.slice(0, 8).map(r =>
+    `<div class="mini-report-row"><div><div class="mini-report-title">${esc(r.name)}</div><div class="mini-report-sub">${esc(r.expense_type)} · ${esc(r.frequency)} · ${r.occurrences||0}x</div></div><div class="mini-report-val">${fmtIQD(r.effective_amount)}</div></div>`
+  ).join('');
+}
+
+async function saveRetailSale() {
+  const itemType = document.getElementById('sale-item-type').value;
+  const name = document.getElementById('sale-item-name').value.trim() || itemType.replace(/_/g,' ');
+  try {
+    await post('/api/retail-sales', {
+      item_name: name,
+      item_type: itemType,
+      quantity: parseInt(document.getElementById('sale-qty').value)||1,
+      sale_date: document.getElementById('sale-date').value || todayStr(),
+      cost_price: parseFloat(document.getElementById('sale-cost').value)||0,
+      selling_price: parseFloat(document.getElementById('sale-price').value)||0,
+    });
+    ['sale-item-name','sale-cost','sale-price'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('sale-qty').value = '1';
+    toast(t('successSaved'));
+    await loadReports();
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function saveOperatingExpense() {
+  const type = document.getElementById('expense-type').value;
+  const name = document.getElementById('expense-name').value.trim() || type;
+  try {
+    await post('/api/operating-expenses', {
+      name,
+      expense_type: type,
+      frequency: document.getElementById('expense-frequency').value,
+      starts_on: document.getElementById('expense-start').value || todayStr(),
+      amount: parseFloat(document.getElementById('expense-amount').value)||0,
+    });
+    ['expense-name','expense-amount'].forEach(id => document.getElementById(id).value = '');
+    toast(t('successSaved'));
+    await loadReports();
   } catch(e) { toast(e.message,'error'); }
 }
 
