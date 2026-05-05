@@ -267,6 +267,46 @@ CREATE INDEX IF NOT EXISTS idx_visits_date    ON visits(clinic_id, visit_date);
 CREATE INDEX IF NOT EXISTS idx_visits_next    ON visits(clinic_id, next_visit_date);
 
 -- ─────────────────────────────────────────────
+-- RETAIL / MISCELLANEOUS SALES
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS retail_sales (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id      UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  item_name      TEXT NOT NULL,
+  item_type      TEXT NOT NULL DEFAULT 'misc',
+  quantity       INTEGER NOT NULL DEFAULT 1,
+  cost_price     NUMERIC(12,0) NOT NULL DEFAULT 0,
+  selling_price  NUMERIC(12,0) NOT NULL DEFAULT 0,
+  sale_date      DATE NOT NULL DEFAULT CURRENT_DATE,
+  notes          TEXT,
+  created_by     UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_retail_sales_clinic ON retail_sales(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_retail_sales_date   ON retail_sales(clinic_id, sale_date);
+
+-- ─────────────────────────────────────────────
+-- OPERATIONAL EXPENSES
+-- ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS operating_expenses (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id      UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  name           TEXT NOT NULL,
+  expense_type   TEXT NOT NULL DEFAULT 'misc',
+  frequency      TEXT NOT NULL DEFAULT 'monthly',
+  amount         NUMERIC(12,0) NOT NULL DEFAULT 0,
+  starts_on      DATE NOT NULL DEFAULT CURRENT_DATE,
+  is_active      BOOLEAN NOT NULL DEFAULT TRUE,
+  notes          TEXT,
+  created_by     UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_operating_expenses_clinic ON operating_expenses(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_operating_expenses_start  ON operating_expenses(clinic_id, starts_on);
+
+-- ─────────────────────────────────────────────
 -- AUDIT LOG
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS audit_log (
@@ -310,7 +350,7 @@ CREATE INDEX IF NOT EXISTS idx_backup_log_clinic ON backup_log(clinic_id, create
 -- Flask uses the Supabase service role and remains the trusted API.
 -- Direct anon/client access is denied unless a policy below allows it.
 -- Sensitive backend-only tables intentionally have no client policies:
--- licenses, users, clinic_settings, audit_log.
+-- licenses, clinic_settings, audit_log.
 -- If a future frontend Supabase client is added, issue JWTs with:
 --   clinic_id: <clinic uuid>
 --   role: doctor | receptionist | super_admin
@@ -323,9 +363,14 @@ ALTER TABLE patients        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE visits          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lenses          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE frames          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE retail_sales    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE operating_expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_log       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE backup_log      ENABLE ROW LEVEL SECURITY;
 
+-- ─────────────────────────────────────────────
+-- JWT HELPER FUNCTIONS
+-- ─────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION jwt_clinic_id()
 RETURNS UUID
 LANGUAGE sql
@@ -342,11 +387,49 @@ AS $$
   SELECT COALESCE(auth.jwt() ->> 'role', '');
 $$;
 
+-- ─────────────────────────────────────────────
+-- CLINICS
+-- Each clinic can only see its own row; super_admin sees all.
+-- ─────────────────────────────────────────────
 DROP POLICY IF EXISTS clinics_same_clinic_select ON clinics;
 CREATE POLICY clinics_same_clinic_select ON clinics
   FOR SELECT TO authenticated
   USING (id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
 
+-- ─────────────────────────────────────────────
+-- USERS
+-- Clinic staff can see users in their own clinic.
+-- super_admin sees all users.
+-- No client-side insert/update/delete — managed exclusively via Flask.
+-- ─────────────────────────────────────────────
+DROP POLICY IF EXISTS users_same_clinic_select ON users;
+CREATE POLICY users_same_clinic_select ON users
+  FOR SELECT TO authenticated
+  USING (
+    clinic_id = jwt_clinic_id()
+    OR jwt_app_role() = 'super_admin'
+    -- Allow users to always see their own row
+    OR auth.uid() = auth_user_id
+  );
+
+-- Prevent any direct client writes to users — Flask API only
+DROP POLICY IF EXISTS users_no_direct_insert ON users;
+DROP POLICY IF EXISTS users_no_direct_update ON users;
+DROP POLICY IF EXISTS users_no_direct_delete ON users;
+-- (No INSERT/UPDATE/DELETE policies = denied for all authenticated/anon roles)
+
+-- ─────────────────────────────────────────────
+-- CLINIC_SETTINGS
+-- Only the owning clinic (doctor role or super_admin) may read.
+-- ─────────────────────────────────────────────
+DROP POLICY IF EXISTS clinic_settings_same_clinic_select ON clinic_settings;
+CREATE POLICY clinic_settings_same_clinic_select ON clinic_settings
+  FOR SELECT TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+-- ─────────────────────────────────────────────
+-- PATIENTS
+-- ─────────────────────────────────────────────
 DROP POLICY IF EXISTS patients_same_clinic_select ON patients;
 CREATE POLICY patients_same_clinic_select ON patients
   FOR SELECT TO authenticated
@@ -368,6 +451,9 @@ CREATE POLICY patients_same_clinic_delete ON patients
   FOR DELETE TO authenticated
   USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
 
+-- ─────────────────────────────────────────────
+-- VISITS
+-- ─────────────────────────────────────────────
 DROP POLICY IF EXISTS visits_same_clinic_select ON visits;
 CREATE POLICY visits_same_clinic_select ON visits
   FOR SELECT TO authenticated
@@ -389,6 +475,9 @@ CREATE POLICY visits_same_clinic_delete ON visits
   FOR DELETE TO authenticated
   USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
 
+-- ─────────────────────────────────────────────
+-- LENSES, FRAMES, RETAIL SALES, OPERATING EXPENSES
+-- ─────────────────────────────────────────────
 DROP POLICY IF EXISTS lenses_same_clinic_all ON lenses;
 CREATE POLICY lenses_same_clinic_all ON lenses
   FOR ALL TO authenticated
@@ -400,6 +489,66 @@ CREATE POLICY frames_same_clinic_all ON frames
   FOR ALL TO authenticated
   USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin')
   WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS retail_sales_same_clinic_all ON retail_sales;
+CREATE POLICY retail_sales_same_clinic_all ON retail_sales
+  FOR ALL TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin')
+  WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS operating_expenses_same_clinic_all ON operating_expenses;
+CREATE POLICY operating_expenses_same_clinic_all ON operating_expenses
+  FOR ALL TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin')
+  WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+-- ─────────────────────────────────────────────
+-- AUDIT LOG — read-only for clinic staff; super_admin sees all
+-- ─────────────────────────────────────────────
+DROP POLICY IF EXISTS audit_log_same_clinic_select ON audit_log;
+CREATE POLICY audit_log_same_clinic_select ON audit_log
+  FOR SELECT TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+-- ─────────────────────────────────────────────
+-- LICENSES — super_admin only via RLS; clinic reads go through Flask
+-- ─────────────────────────────────────────────
+DROP POLICY IF EXISTS licenses_super_admin_all ON licenses;
+CREATE POLICY licenses_super_admin_all ON licenses
+  FOR ALL TO authenticated
+  USING (jwt_app_role() = 'super_admin')
+  WITH CHECK (jwt_app_role() = 'super_admin');
+
+-- ─────────────────────────────────────────────
+-- BACKUP LOG — super_admin only
+-- ─────────────────────────────────────────────
+DROP POLICY IF EXISTS backup_log_super_admin_select ON backup_log;
+CREATE POLICY backup_log_super_admin_select ON backup_log
+  FOR SELECT TO authenticated
+  USING (jwt_app_role() = 'super_admin');
+
+-- ─────────────────────────────────────────────
+-- ANON BLOCK: deny all anon access explicitly
+-- ─────────────────────────────────────────────
+DO $$
+DECLARE
+  t TEXT;
+  tbls TEXT[] := ARRAY[
+    'clinics','licenses','users','clinic_settings','patients','visits',
+    'lenses','frames','retail_sales','operating_expenses','audit_log','backup_log'
+  ];
+BEGIN
+  FOREACH t IN ARRAY tbls LOOP
+    EXECUTE format(
+      'DROP POLICY IF EXISTS %I ON %I',
+      t || '_deny_anon', t
+    );
+    EXECUTE format(
+      'CREATE POLICY %I ON %I FOR ALL TO anon USING (false)',
+      t || '_deny_anon', t
+    );
+  END LOOP;
+END $$;
 
 -- ─────────────────────────────────────────────
 -- HELPER FUNCTIONS

@@ -33,33 +33,257 @@ html[dir=ltr] body{font-family:'DM Sans','Cairo',sans-serif}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--cream-border);border-radius:99px}
 
-/* LOGIN */
-#login-screen{position:fixed;inset:0;z-index:9999;background:var(--cream);display:flex;align-items:center;justify-content:center;flex-direction:column;padding:24px 12px;overflow-y:auto}
-.login-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.login-bg svg{width:100%;height:100%;opacity:.08}
-.login-card{position:relative;z-index:1;background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:48px 40px;width:min(420px,92vw);max-height:calc(100dvh - 48px);overflow-y:auto;text-align:center}
-.login-logo{width:72px;height:72px;background:var(--burgundy);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px}
-.login-logo svg{width:36px;height:36px;fill:white}
-.login-title{font-family:'Amiri','Playfair Display',serif;font-size:2rem;font-weight:700;color:var(--burgundy);margin-bottom:4px}
-html[dir=ltr] .login-title{font-family:'Playfair Display','Amiri',serif}
-.login-sub{color:var(--ink-light);font-size:.85rem;margin-bottom:32px}
-.field-group{text-align:start;margin-bottom:16px}
-.field-group label{display:block;font-size:.78rem;font-weight:600;color:var(--ink-mid);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
-.field-group input{width:100%;padding:12px 16px;border:1.5px solid var(--cream-border);border-radius:var(--radius-sm);background:var(--cream);font-family:inherit;font-size:.95rem;color:var(--ink);transition:border-color .2s,box-shadow .2s;outline:none}
-.field-group input:focus{border-color:var(--burgundy);box-shadow:0 0 0 3px rgba(107,26,42,.08)}
-.btn-primary{width:100%;min-height:46px;padding:13px;background:var(--burgundy);color:white;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:1rem;font-weight:600;cursor:pointer;transition:background .2s,transform .1s,box-shadow .2s;margin-top:8px;position:relative;z-index:1}
-.btn-primary:hover{background:var(--burgundy-soft);box-shadow:var(--shadow-md)}
-.btn-primary:active{transform:scale(.98)}
-.btn-primary:disabled{opacity:.6;cursor:not-allowed}
-.login-actions,.login-lang-switch{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.login-actions{margin-top:12px}
-.login-lang-switch{margin-top:20px}
-.login-card .lang-btn{min-height:38px;padding:8px 14px;background:var(--cream);border:1.5px solid var(--cream-border);color:var(--burgundy);font-weight:700;opacity:1}
-.login-card .lang-btn:hover{background:var(--burgundy-pale);border-color:var(--burgundy);color:var(--burgundy)}
-.login-card .lang-btn.active{background:var(--burgundy);border-color:var(--burgundy);color:white}
-.login-error{background:#fef2f2;border:1px solid #fecaca;color:var(--danger);border-radius:var(--radius-sm);padding:10px 14px;font-size:.85rem;margin-bottom:16px;display:none}
-.login-error.show{display:block}
-.login-ornament{width:40px;height:2px;background:var(--gold);margin:24px auto 0;border-radius:99px}
+/* ══════════════════════════════════════
+   LOGIN / SIGNUP — FULL REDESIGN
+   ══════════════════════════════════════ */
+#login-screen{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:stretch;
+  overflow:hidden;
+}
+/* Left panel — brand / illustration */
+.login-panel-left{
+  flex:1;background:var(--burgundy);
+  display:flex;flex-direction:column;
+  justify-content:space-between;
+  padding:48px 52px;
+  position:relative;overflow:hidden;
+}
+.login-panel-left-bg{
+  position:absolute;inset:0;pointer-events:none;
+}
+.login-panel-left-bg svg{width:100%;height:100%}
+.lp-brand{position:relative;z-index:1;display:flex;align-items:center;gap:14px}
+.lp-brand-icon{
+  width:48px;height:48px;
+  background:rgba(255,255,255,.15);
+  border-radius:14px;border:1px solid rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+}
+.lp-brand-icon svg{width:26px;height:26px;fill:white}
+.lp-brand-name{
+  font-family:'Amiri',serif;font-size:1.8rem;
+  font-weight:700;color:white;line-height:1;
+}
+html[dir=ltr] .lp-brand-name{font-family:'Playfair Display',serif}
+.lp-brand-tag{font-size:.72rem;color:rgba(255,255,255,.45);margin-top:2px;letter-spacing:.04em}
+.lp-hero{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 0}
+.lp-hero-title{
+  font-family:'Amiri',serif;font-size:2.6rem;font-weight:700;
+  color:white;line-height:1.25;margin-bottom:16px;
+}
+html[dir=ltr] .lp-hero-title{font-family:'Playfair Display',serif;font-size:2.4rem}
+.lp-hero-sub{font-size:.95rem;color:rgba(255,255,255,.6);line-height:1.7;max-width:340px}
+.lp-gold-bar{width:40px;height:3px;background:var(--gold);border-radius:99px;margin:24px 0}
+.lp-features{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.lp-feature{display:flex;align-items:center;gap:12px}
+.lp-feature-dot{
+  width:28px;height:28px;flex-shrink:0;
+  background:rgba(255,255,255,.1);
+  border-radius:8px;border:1px solid rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+}
+.lp-feature-dot svg{width:14px;height:14px;stroke:rgba(255,255,255,.7);fill:none}
+.lp-feature-text{font-size:.83rem;color:rgba(255,255,255,.6)}
+.lp-footer{position:relative;z-index:1;font-size:.72rem;color:rgba(255,255,255,.3)}
+/* Right panel — form */
+.login-panel-right{
+  width:440px;flex-shrink:0;
+  background:var(--cream);
+  display:flex;flex-direction:column;
+  overflow-y:auto;
+  position:relative;
+}
+.login-form-wrap{
+  flex:1;display:flex;flex-direction:column;
+  justify-content:center;
+  padding:52px 44px;
+  min-height:100dvh;
+}
+/* Tabs: Sign In / Sign Up */
+.auth-tabs{
+  display:flex;gap:0;
+  background:var(--cream-dark);
+  border-radius:10px;
+  padding:4px;
+  margin-bottom:32px;
+}
+.auth-tab{
+  flex:1;padding:9px 16px;
+  border:none;background:transparent;
+  font-family:inherit;font-size:.85rem;font-weight:600;
+  color:var(--ink-light);cursor:pointer;
+  border-radius:7px;transition:all .2s;
+}
+.auth-tab.active{
+  background:var(--surface);
+  color:var(--burgundy);
+  box-shadow:0 2px 8px rgba(26,20,16,.08);
+}
+/* Form panes */
+.auth-pane{display:none}
+.auth-pane.active{display:block}
+.auth-pane-title{
+  font-family:'Amiri','Playfair Display',serif;
+  font-size:1.7rem;font-weight:700;color:var(--ink);
+  margin-bottom:4px;line-height:1.2;
+}
+html[dir=ltr] .auth-pane-title{font-family:'Playfair Display',serif}
+.auth-pane-sub{font-size:.84rem;color:var(--ink-light);margin-bottom:28px}
+/* Fields */
+.auth-field{margin-bottom:18px;text-align:start}
+.auth-field label{
+  display:block;font-size:.73rem;font-weight:700;
+  color:var(--ink-mid);margin-bottom:7px;
+  text-transform:uppercase;letter-spacing:.07em;
+}
+.auth-input-wrap{position:relative}
+.auth-field input{
+  width:100%;padding:13px 16px;
+  border:1.5px solid var(--cream-border);
+  border-radius:var(--radius-sm);
+  background:var(--surface);
+  font-family:inherit;font-size:.95rem;color:var(--ink);
+  transition:border-color .2s,box-shadow .2s;outline:none;
+}
+.auth-field input:focus{
+  border-color:var(--burgundy);
+  box-shadow:0 0 0 3px rgba(107,26,42,.07);
+}
+.auth-field input::placeholder{color:var(--ink-light);opacity:.6}
+/* Password toggle */
+.pw-toggle{
+  position:absolute;inset-inline-end:14px;top:50%;transform:translateY(-50%);
+  background:none;border:none;padding:4px;cursor:pointer;
+  color:var(--ink-light);display:flex;align-items:center;
+  transition:color .15s;
+}
+.pw-toggle:hover{color:var(--burgundy)}
+/* Row of 2 fields */
+.auth-field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* Submit */
+.auth-submit{
+  width:100%;min-height:48px;
+  padding:14px;
+  background:var(--burgundy);color:white;
+  border:none;border-radius:var(--radius-sm);
+  font-family:inherit;font-size:.95rem;font-weight:700;
+  cursor:pointer;transition:background .2s,box-shadow .2s,transform .1s;
+  margin-top:6px;position:relative;overflow:hidden;
+  letter-spacing:.02em;
+}
+.auth-submit:hover{background:var(--burgundy-soft);box-shadow:var(--shadow-md)}
+.auth-submit:active{transform:scale(.99)}
+.auth-submit:disabled{opacity:.55;cursor:not-allowed}
+.auth-submit-inner{display:flex;align-items:center;justify-content:center;gap:8px}
+.auth-submit-spinner{
+  width:16px;height:16px;
+  border:2px solid rgba(255,255,255,.3);
+  border-top-color:white;
+  border-radius:50%;
+  animation:spin .7s linear infinite;
+  display:none;
+}
+.auth-submit.loading .auth-submit-spinner{display:block}
+.auth-submit.loading .auth-submit-text{opacity:.7}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Error / success message */
+.auth-message{
+  border-radius:var(--radius-sm);
+  padding:11px 14px;
+  font-size:.84rem;
+  margin-bottom:18px;
+  display:none;
+  align-items:flex-start;
+  gap:10px;
+}
+.auth-message.show{display:flex}
+.auth-message.error{background:#fef2f2;border:1px solid #fecaca;color:var(--danger)}
+.auth-message.success{background:#ecfdf5;border:1px solid #a7f3d0;color:var(--success)}
+.auth-message-icon{flex-shrink:0;margin-top:1px}
+/* Forgot password link */
+.auth-forgot{
+  display:block;text-align:end;
+  font-size:.78rem;color:var(--burgundy);
+  background:none;border:none;cursor:pointer;
+  padding:0;font-family:inherit;
+  margin-top:-10px;margin-bottom:20px;
+  transition:opacity .15s;
+}
+.auth-forgot:hover{opacity:.7}
+/* Trial badge */
+.trial-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--gold-pale);border:1px solid rgba(196,154,60,.3);
+  color:#7a5200;
+  font-size:.75rem;font-weight:700;
+  padding:5px 10px;border-radius:99px;
+  margin-bottom:24px;
+  text-transform:uppercase;letter-spacing:.06em;
+}
+.trial-badge svg{width:13px;height:13px;fill:#c49a3c}
+/* Divider */
+.auth-or{
+  display:flex;align-items:center;gap:12px;
+  color:var(--ink-light);font-size:.78rem;
+  margin:20px 0;
+}
+.auth-or::before,.auth-or::after{
+  content:'';flex:1;height:1px;background:var(--cream-border);
+}
+/* Language switcher inside form */
+.auth-lang{
+  display:flex;justify-content:center;gap:8px;
+  margin-top:28px;padding-top:24px;
+  border-top:1px solid var(--cream-border);
+}
+.auth-lang-btn{
+  padding:6px 14px;
+  border:1.5px solid var(--cream-border);
+  border-radius:var(--radius-sm);
+  background:transparent;
+  color:var(--ink-mid);font-family:inherit;
+  font-size:.78rem;font-weight:600;
+  cursor:pointer;transition:all .15s;
+}
+.auth-lang-btn.active{
+  background:var(--burgundy);
+  border-color:var(--burgundy);
+  color:white;
+}
+.auth-lang-btn:hover:not(.active){
+  border-color:var(--burgundy);
+  color:var(--burgundy);
+  background:var(--burgundy-pale);
+}
+/* Reset password pane */
+.auth-back{
+  display:inline-flex;align-items:center;gap:6px;
+  background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:.82rem;
+  color:var(--ink-light);padding:0;margin-bottom:20px;
+  transition:color .15s;
+}
+.auth-back:hover{color:var(--burgundy)}
+.auth-back svg{width:16px;height:16px;stroke:currentColor;fill:none}
+/* Mobile: collapse left panel */
+@media(max-width:768px){
+  #login-screen{flex-direction:column}
+  .login-panel-left{
+    flex:none;
+    padding:28px 24px 24px;
+    min-height:auto;
+  }
+  .lp-hero{display:none}
+  .lp-footer{display:none}
+  .login-panel-right{width:100%;flex:1}
+  .login-form-wrap{padding:32px 24px;min-height:auto}
+  .auth-field-row{grid-template-columns:1fr}
+}
+@media(max-width:420px){
+  .login-form-wrap{padding:24px 18px}
+  .auth-tabs{margin-bottom:24px}
+}
 
 /* APP SHELL */
 #app{display:none;min-height:100vh}
@@ -638,11 +862,6 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   .tabs::-webkit-scrollbar{ display:none }
   .tab-btn{ padding:10px 16px; font-size:.86rem; white-space:nowrap; flex-shrink:0 }
 
-  #login-screen{align-items:center;justify-content:flex-start;padding:16px 10px}
-  .login-card{margin:auto 0;padding:28px 20px;width:min(420px,94vw);max-height:none;overflow:visible}
-  .login-logo{width:60px;height:60px;margin-bottom:14px}
-  .login-sub{margin-bottom:22px}
-
   /* ── RX table in modal: scrollable ── */
   .rx-table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:14px }
   .rx-table{ min-width:360px; font-size:.85rem }
@@ -789,55 +1008,195 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 </head>
 <body>
 
-<!-- LOGIN -->
+<!-- ════════════════════════════════════════
+     AUTH SCREEN (Login · Sign Up · Reset)
+     ════════════════════════════════════════ -->
 <div id="login-screen">
-  <div class="login-bg">
-    <svg viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
-      <defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0L0 0 0 40" fill="none" stroke="#6b1a2a" stroke-width=".5"/></pattern></defs>
-      <rect width="100%" height="100%" fill="url(#grid)"/>
-      <circle cx="700" cy="450" r="300" fill="none" stroke="#6b1a2a" stroke-width="1"/>
-      <circle cx="700" cy="450" r="200" fill="none" stroke="#6b1a2a" stroke-width=".5"/>
-      <circle cx="700" cy="450" r="400" fill="none" stroke="#6b1a2a" stroke-width=".3"/>
-      <line x1="400" y1="450" x2="1000" y2="450" stroke="#6b1a2a" stroke-width=".5"/>
-      <line x1="700" y1="150" x2="700" y2="750" stroke="#6b1a2a" stroke-width=".5"/>
-      <rect x="580" y="330" width="240" height="240" fill="none" stroke="#c49a3c" stroke-width=".5" transform="rotate(45 700 450)"/>
-    </svg>
+
+  <!-- Left: Brand panel -->
+  <div class="login-panel-left">
+    <div class="login-panel-left-bg" aria-hidden="true">
+      <svg viewBox="0 0 600 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <pattern id="lp-dots" width="28" height="28" patternUnits="userSpaceOnUse">
+            <circle cx="1.5" cy="1.5" r="1.5" fill="rgba(255,255,255,.07)"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#lp-dots)"/>
+        <circle cx="300" cy="820" r="320" fill="none" stroke="rgba(196,154,60,.18)" stroke-width="1"/>
+        <circle cx="300" cy="820" r="220" fill="none" stroke="rgba(196,154,60,.12)" stroke-width="1"/>
+        <circle cx="300" cy="820" r="120" fill="none" stroke="rgba(196,154,60,.1)" stroke-width="1"/>
+        <circle cx="560" cy="80" r="180" fill="rgba(255,255,255,.025)" stroke="none"/>
+        <line x1="0" y1="460" x2="600" y2="460" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="lp-brand">
+      <div class="lp-brand-icon">
+        <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="13" fill="none" stroke="white" stroke-width="2"/><circle cx="18" cy="18" r="5.5" fill="white"/><line x1="18" y1="5" x2="18" y2="10" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="18" y1="26" x2="18" y2="31" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="18" x2="10" y2="18" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="26" y1="18" x2="31" y2="18" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div>
+        <div class="lp-brand-name">نـور</div>
+        <div class="lp-brand-tag">Noor Optical</div>
+      </div>
+    </div>
+    <div class="lp-hero">
+      <div class="lp-hero-title" id="lp-hero-title">إدارة عيادتك البصرية بكل سهولة</div>
+      <div class="lp-gold-bar"></div>
+      <div class="lp-hero-sub" id="lp-hero-sub">نظام متكامل لإدارة المرضى، الوصفات، المخزون والتقارير المالية — في مكان واحد.</div>
+      <div class="lp-features" style="margin-top:28px">
+        <div class="lp-feature">
+          <div class="lp-feature-dot"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <span class="lp-feature-text" data-i18n-lp="featurePatients">إدارة المرضى والوصفات</span>
+        </div>
+        <div class="lp-feature">
+          <div class="lp-feature-dot"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg></div>
+          <span class="lp-feature-text" data-i18n-lp="featureInventory">مخزون الإطارات والعدسات</span>
+        </div>
+        <div class="lp-feature">
+          <div class="lp-feature-dot"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16l3-5 3 3 4-7"/></svg></div>
+          <span class="lp-feature-text" data-i18n-lp="featureReports">تقارير مالية وإحصاءات دقيقة</span>
+        </div>
+      </div>
+    </div>
+    <div class="lp-footer">© 2025 Noor Optical SaaS</div>
   </div>
-  <div class="login-card">
-    <div class="login-logo">
-      <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="white" stroke-width="2"/><circle cx="18" cy="18" r="6" fill="white"/><line x1="18" y1="4" x2="18" y2="9" stroke="white" stroke-width="2"/><line x1="18" y1="27" x2="18" y2="32" stroke="white" stroke-width="2"/><line x1="4" y1="18" x2="9" y2="18" stroke="white" stroke-width="2"/><line x1="27" y1="18" x2="32" y2="18" stroke="white" stroke-width="2"/></svg>
-    </div>
-    <div class="login-title" id="login-title">نـور</div>
-    <div class="login-sub" id="login-sub">نظام إدارة العيادات البصرية</div>
-    <div class="login-error" id="login-error"></div>
-    <div class="field-group">
-      <label id="lbl-username">البريد الإلكتروني أو اسم المستخدم</label>
-      <input type="text" id="login-username" autocomplete="username" placeholder="clinic@email.com">
-    </div>
-    <div class="field-group">
-      <label id="lbl-password">كلمة المرور</label>
-      <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••">
-    </div>
-    <button class="btn-primary" id="login-btn" onclick="doLogin()">
-      <span id="login-btn-text">تسجيل الدخول</span>
-    </button>
-    <div class="login-actions">
-      <button class="lang-btn" type="button" onclick="openSignupPanel()">Create trial</button>
-      <button class="lang-btn" type="button" onclick="resetPassword()">Reset password</button>
-    </div>
-    <div id="signup-panel" style="display:none;margin-top:18px;text-align:start;border-top:1px solid var(--cream-border);padding-top:16px">
-      <div class="field-group"><label>Clinic name</label><input type="text" id="signup-clinic" placeholder="Noor Optical"></div>
-      <div class="field-group"><label>Owner name</label><input type="text" id="signup-owner" placeholder="Owner name"></div>
-      <div class="field-group"><label>Phone</label><input type="tel" id="signup-phone" placeholder="07..."></div>
-      <button class="btn-primary" type="button" onclick="doSignup()">Start 7-day trial</button>
-    </div>
-    <div class="login-lang-switch">
-      <button class="lang-btn active" type="button" id="login-lang-ar" onclick="setLang('ar')">العربية</button>
-      <button class="lang-btn" type="button" id="login-lang-en" onclick="setLang('en')">English</button>
-    </div>
-    <div class="login-ornament"></div>
-  </div>
-</div>
+
+  <!-- Right: Form panel -->
+  <div class="login-panel-right">
+    <div class="login-form-wrap">
+
+      <!-- Auth Tabs -->
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" id="tab-signin" role="tab" aria-selected="true" type="button" onclick="switchAuthPane('signin')" data-i18n-tab="signin">تسجيل الدخول</button>
+        <button class="auth-tab" id="tab-signup" role="tab" aria-selected="false" type="button" onclick="switchAuthPane('signup')" data-i18n-tab="signup">حساب جديد</button>
+      </div>
+
+      <!-- ── Pane: Sign In ── -->
+      <div class="auth-pane active" id="pane-signin" role="tabpanel">
+        <div class="auth-pane-title" id="signin-title">أهلاً بعودتك</div>
+        <div class="auth-pane-sub" id="signin-sub">سجّل دخولك للمتابعة إلى لوحة التحكم</div>
+
+        <div class="auth-message error" id="signin-error" role="alert">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="signin-error-text"></span>
+        </div>
+
+        <div class="auth-field">
+          <label id="lbl-username" for="login-username">البريد الإلكتروني أو اسم المستخدم</label>
+          <input type="text" id="login-username" autocomplete="username" placeholder="clinic@email.com" inputmode="email">
+        </div>
+        <div class="auth-field">
+          <label id="lbl-password" for="login-password">كلمة المرور</label>
+          <div class="auth-input-wrap">
+            <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" style="padding-inline-end:44px">
+            <button class="pw-toggle" type="button" onclick="togglePwVisibility('login-password',this)" aria-label="Show/hide password" tabindex="-1">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="pw-eye-signin"><path d="M1 12S5 5 12 5s11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="auth-forgot" type="button" onclick="switchAuthPane('reset')" id="lbl-forgot">نسيت كلمة المرور؟</button>
+        <button class="auth-submit" id="login-btn" type="button" onclick="doLogin()">
+          <span class="auth-submit-inner">
+            <span class="auth-submit-spinner"></span>
+            <span class="auth-submit-text" id="login-btn-text">تسجيل الدخول</span>
+          </span>
+        </button>
+        <div class="auth-lang">
+          <button class="auth-lang-btn active" type="button" id="login-lang-ar" onclick="setLang('ar')">العربية</button>
+          <button class="auth-lang-btn" type="button" id="login-lang-en" onclick="setLang('en')">English</button>
+        </div>
+      </div>
+
+      <!-- ── Pane: Sign Up / Trial ── -->
+      <div class="auth-pane" id="pane-signup" role="tabpanel">
+        <div class="trial-badge">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span id="trial-badge-text">تجربة مجانية 7 أيام</span>
+        </div>
+        <div class="auth-pane-title" id="signup-title">أنشئ حساب عيادتك</div>
+        <div class="auth-pane-sub" id="signup-sub">ابدأ تجربتك المجانية — لا حاجة لبطاقة ائتمان</div>
+
+        <div class="auth-message error" id="signup-error" role="alert">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="signup-error-text"></span>
+        </div>
+        <div class="auth-message success" id="signup-success" role="status">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+          <span id="signup-success-text"></span>
+        </div>
+
+        <div class="auth-field">
+          <label id="lbl-signup-clinic" for="signup-clinic">اسم العيادة</label>
+          <input type="text" id="signup-clinic" autocomplete="organization" placeholder="عيادة النور البصرية">
+        </div>
+        <div class="auth-field">
+          <label id="lbl-signup-owner" for="signup-owner">اسم المالك</label>
+          <input type="text" id="signup-owner" autocomplete="name" placeholder="د. أحمد الخالدي">
+        </div>
+        <div class="auth-field-row">
+          <div class="auth-field" style="margin-bottom:0">
+            <label id="lbl-signup-email" for="signup-email">البريد الإلكتروني</label>
+            <input type="email" id="signup-email" autocomplete="email" placeholder="doctor@clinic.com" inputmode="email">
+          </div>
+          <div class="auth-field" style="margin-bottom:0">
+            <label id="lbl-signup-phone" for="signup-phone">رقم الهاتف</label>
+            <input type="tel" id="signup-phone" autocomplete="tel" placeholder="07xxxxxxxxx" inputmode="tel">
+          </div>
+        </div>
+        <div class="auth-field" style="margin-top:18px">
+          <label id="lbl-signup-password" for="signup-password">كلمة المرور</label>
+          <div class="auth-input-wrap">
+            <input type="password" id="signup-password" autocomplete="new-password" placeholder="6 أحرف على الأقل" style="padding-inline-end:44px">
+            <button class="pw-toggle" type="button" onclick="togglePwVisibility('signup-password',this)" aria-label="Show/hide password" tabindex="-1">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12S5 5 12 5s11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="auth-submit" id="signup-btn" type="button" onclick="doSignup()" style="margin-top:20px">
+          <span class="auth-submit-inner">
+            <span class="auth-submit-spinner"></span>
+            <span class="auth-submit-text" id="signup-btn-text">إنشاء الحساب وبدء التجربة</span>
+          </span>
+        </button>
+        <div class="auth-lang">
+          <button class="auth-lang-btn active" type="button" id="signup-lang-ar" onclick="setLang('ar')">العربية</button>
+          <button class="auth-lang-btn" type="button" id="signup-lang-en" onclick="setLang('en')">English</button>
+        </div>
+      </div>
+
+      <!-- ── Pane: Reset Password ── -->
+      <div class="auth-pane" id="pane-reset" role="tabpanel">
+        <button class="auth-back" type="button" onclick="switchAuthPane('signin')">
+          <svg viewBox="0 0 24 24" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
+          <span id="lbl-back">العودة لتسجيل الدخول</span>
+        </button>
+        <div class="auth-pane-title" id="reset-title">إعادة تعيين كلمة المرور</div>
+        <div class="auth-pane-sub" id="reset-sub">أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين</div>
+
+        <div class="auth-message error" id="reset-error" role="alert">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="reset-error-text"></span>
+        </div>
+        <div class="auth-message success" id="reset-success" role="status">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+          <span id="reset-success-text"></span>
+        </div>
+
+        <div class="auth-field">
+          <label id="lbl-reset-email" for="reset-email">البريد الإلكتروني</label>
+          <input type="email" id="reset-email" autocomplete="email" placeholder="clinic@email.com" inputmode="email">
+        </div>
+        <button class="auth-submit" id="reset-btn" type="button" onclick="doResetPassword()">
+          <span class="auth-submit-inner">
+            <span class="auth-submit-spinner"></span>
+            <span class="auth-submit-text" id="reset-btn-text">إرسال رابط الاسترداد</span>
+          </span>
+        </button>
+      </div>
+
+    </div><!-- /login-form-wrap -->
+  </div><!-- /login-panel-right -->
+</div><!-- /#login-screen -->
 
 <!-- APP -->
 <div id="app">
@@ -1930,16 +2289,7 @@ function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     el.textContent = t(el.getAttribute('data-i18n'));
   });
-  ['sb-lang-ar','sb-lang-en','login-lang-ar','login-lang-en'].forEach(id => {
-    document.getElementById(id)?.classList.remove('active');
-  });
-  if (NOOR.lang === 'ar') {
-    document.getElementById('sb-lang-ar')?.classList.add('active');
-    document.getElementById('login-lang-ar')?.classList.add('active');
-  } else {
-    document.getElementById('sb-lang-en')?.classList.add('active');
-    document.getElementById('login-lang-en')?.classList.add('active');
-  }
+  // lang states and auth UI text handled below
   const lt = document.getElementById('login-title');
   const ls = document.getElementById('login-sub');
   const lu = document.getElementById('lbl-username');
@@ -1948,6 +2298,39 @@ function applyLang() {
   if(ls) ls.textContent = NOOR.lang === 'ar' ? 'نظام إدارة العيادات البصرية' : 'Optical Clinic Management';
   if(lu) lu.textContent = NOOR.lang === 'ar' ? 'البريد الإلكتروني أو اسم المستخدم' : 'Email or username';
   if(lp) lp.textContent = NOOR.lang === 'ar' ? 'كلمة المرور' : 'Password';
+  // Auth screen tab labels
+  const isAr = NOOR.lang === 'ar';
+  const setT = (id, ar, en) => { const el = document.getElementById(id); if(el) el.textContent = isAr ? ar : en; };
+  setT('tab-signin',       'تسجيل الدخول',                'Sign In');
+  setT('tab-signup',       'حساب جديد',                   'Create Account');
+  setT('signin-title',     'أهلاً بعودتك',                'Welcome back');
+  setT('signin-sub',       'سجّل دخولك للمتابعة إلى لوحة التحكم', 'Sign in to continue to your dashboard');
+  setT('login-btn-text',   'تسجيل الدخول',                'Sign In');
+  setT('lbl-forgot',       'نسيت كلمة المرور؟',           'Forgot password?');
+  setT('trial-badge-text', 'تجربة مجانية 7 أيام',         '7-Day Free Trial');
+  setT('signup-title',     'أنشئ حساب عيادتك',            'Create your clinic account');
+  setT('signup-sub',       'ابدأ تجربتك المجانية — لا حاجة لبطاقة ائتمان', 'Start your free trial — no credit card required');
+  setT('signup-btn-text',  'إنشاء الحساب وبدء التجربة',   'Create Account & Start Trial');
+  setT('lbl-signup-clinic','اسم العيادة',                  'Clinic Name');
+  setT('lbl-signup-owner', 'اسم المالك',                   'Owner Name');
+  setT('lbl-signup-email', 'البريد الإلكتروني',            'Email');
+  setT('lbl-signup-phone', 'رقم الهاتف',                   'Phone');
+  setT('lbl-signup-password','كلمة المرور',                'Password');
+  setT('reset-title',      'إعادة تعيين كلمة المرور',      'Reset Password');
+  setT('reset-sub',        'أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين','Enter your email and we\'ll send a reset link');
+  setT('reset-btn-text',   'إرسال رابط الاسترداد',         'Send Reset Link');
+  setT('lbl-reset-email',  'البريد الإلكتروني',            'Email');
+  setT('lbl-back',         'العودة لتسجيل الدخول',         'Back to Sign In');
+  setT('lp-hero-title',    'إدارة عيادتك البصرية بكل سهولة','Manage your optical clinic with ease');
+  setT('lp-hero-sub',      'نظام متكامل لإدارة المرضى، الوصفات، المخزون والتقارير المالية — في مكان واحد.','A complete system for patients, prescriptions, inventory, and financials — all in one place.');
+  // lang btn states across both panels
+  const langBtns = ['sb-lang-ar','sb-lang-en','login-lang-ar','login-lang-en','signup-lang-ar','signup-lang-en'];
+  langBtns.forEach(id => document.getElementById(id)?.classList.remove('active'));
+  if (isAr) {
+    ['sb-lang-ar','login-lang-ar','signup-lang-ar'].forEach(id => document.getElementById(id)?.classList.add('active'));
+  } else {
+    ['sb-lang-en','login-lang-en','signup-lang-en'].forEach(id => document.getElementById(id)?.classList.add('active'));
+  }
 }
 
 function setLang(l) {
@@ -1958,90 +2341,151 @@ function setLang(l) {
 }
 
 // ══════════════════════════════════════════════════════════
-// AUTH
+// AUTH — PANE SWITCHER
 // ══════════════════════════════════════════════════════════
+function switchAuthPane(pane) {
+  ['signin','signup','reset'].forEach(p => {
+    document.getElementById(`pane-${p}`)?.classList.toggle('active', p === pane);
+  });
+  // Tab highlight — only signin/signup tabs exist
+  ['signin','signup'].forEach(p => {
+    const tab = document.getElementById(`tab-${p}`);
+    if (!tab) return;
+    const active = p === pane;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', active);
+  });
+  // Clear all messages on switch
+  ['signin-error','signup-error','signup-success','reset-error','reset-success'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.closest('.auth-message')?.classList.remove('show');
+  });
+}
+
+function _authSetLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.classList.toggle('loading', loading);
+}
+
+function _authShowError(errTextId, msg) {
+  const el = document.getElementById(errTextId);
+  if (!el) return;
+  el.textContent = msg;
+  el.closest('.auth-message').classList.add('show');
+}
+
+function _authHideMsg(msgId) {
+  document.getElementById(msgId)?.classList.remove('show');
+}
+
+function togglePwVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const isText = input.type === 'text';
+  input.type = isText ? 'password' : 'text';
+  const svg = btn.querySelector('svg');
+  if (svg) svg.innerHTML = isText
+    ? '<path d="M1 12S5 5 12 5s11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>'
+    : '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+}
+
+// ── Sign In ──────────────────────────────────────────────
 async function doLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
-  const errEl    = document.getElementById('login-error');
-  const btn      = document.getElementById('login-btn');
-  errEl.classList.remove('show');
+  _authHideMsg('signin-error');
 
   if (!username || !password) {
-    errEl.textContent = t('errorRequired');
-    errEl.classList.add('show');
+    _authShowError('signin-error-text', t('errorRequired'));
     return;
   }
 
-  btn.disabled = true;
-  btn.textContent = '...';
+  _authSetLoading('login-btn', true);
   try {
     const data = await post('/api/login', { username, password });
-    NOOR.user     = data.data;
-    NOOR.role     = data.data.role;
-    NOOR.clinicId = data.data.clinic_id;
+    NOOR.user      = data.data;
+    NOOR.role      = data.data.role;
+    NOOR.clinicId  = data.data.clinic_id;
     NOOR.csrfToken = data.data.csrf_token;
 
     if (data.data.grace_warning) {
-      const b = document.getElementById('license-banner');
       document.getElementById('license-banner-text').textContent = data.data.grace_warning;
-      b.classList.add('show');
+      document.getElementById('license-banner').classList.add('show');
     }
-
-    if (data.data.must_change_password) {
-      bootApp();
-      openModal('modal-change-password');
-    } else {
-      bootApp();
-    }
+    bootApp();
+    if (data.data.must_change_password) openModal('modal-change-password');
   } catch(e) {
-    errEl.textContent = e.message || t('invalidCredentials');
-    errEl.classList.add('show');
+    _authShowError('signin-error-text', e.message || t('invalidCredentials'));
   } finally {
-    btn.disabled = false;
-    btn.textContent = NOOR.lang === 'ar' ? 'تسجيل الدخول' : 'Sign In';
+    _authSetLoading('login-btn', false);
   }
 }
 
-function openSignupPanel() {
-  const panel = document.getElementById('signup-panel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-}
-
+// ── Sign Up ──────────────────────────────────────────────
 async function doSignup() {
-  const email = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value;
-  const clinic_name = document.getElementById('signup-clinic').value.trim();
-  const owner_name = document.getElementById('signup-owner').value.trim();
-  const phone = document.getElementById('signup-phone').value.trim();
-  const errEl = document.getElementById('login-error');
-  errEl.classList.remove('show');
-  try {
-    await post('/api/signup', { email, password, clinic_name, owner_name, phone });
-    toast('Trial created. Check your email if verification is enabled, then sign in.');
-    document.getElementById('signup-panel').style.display = 'none';
-  } catch(e) {
-    errEl.textContent = e.message;
-    errEl.classList.add('show');
-  }
-}
+  const email        = document.getElementById('signup-email').value.trim();
+  const password     = document.getElementById('signup-password').value;
+  const clinic_name  = document.getElementById('signup-clinic').value.trim();
+  const owner_name   = document.getElementById('signup-owner').value.trim();
+  const phone        = document.getElementById('signup-phone').value.trim();
+  _authHideMsg('signup-error');
+  _authHideMsg('signup-success');
 
-async function resetPassword() {
-  const email = document.getElementById('login-username').value.trim();
-  const errEl = document.getElementById('login-error');
-  if (!email || !email.includes('@')) {
-    errEl.textContent = 'Enter your email first.';
-    errEl.classList.add('show');
+  if (!clinic_name || !owner_name || !email || password.length < 6) {
+    _authShowError('signup-error-text', NOOR.lang === 'ar'
+      ? 'يرجى ملء جميع الحقول المطلوبة وكلمة مرور لا تقل عن 6 أحرف'
+      : 'Please fill all required fields and use a password of at least 6 characters.');
     return;
   }
+
+  _authSetLoading('signup-btn', true);
   try {
-    await post('/api/reset-password', { email });
-    toast('If the email exists, a reset link was sent.');
+    await post('/api/signup', { email, password, clinic_name, owner_name, phone });
+    const successEl = document.getElementById('signup-success-text');
+    if (successEl) successEl.textContent = NOOR.lang === 'ar'
+      ? 'تم إنشاء الحساب بنجاح! تحقق من بريدك الإلكتروني إذا كان التحقق مفعّلاً، ثم سجّل الدخول.'
+      : 'Account created! Check your email for verification if enabled, then sign in.';
+    document.getElementById('signup-success').classList.add('show');
+    // Pre-fill sign-in username for convenience
+    document.getElementById('login-username').value = email;
+    setTimeout(() => switchAuthPane('signin'), 2200);
   } catch(e) {
-    errEl.textContent = e.message;
-    errEl.classList.add('show');
+    _authShowError('signup-error-text', e.message);
+  } finally {
+    _authSetLoading('signup-btn', false);
   }
 }
+
+// ── Reset Password ───────────────────────────────────────
+async function doResetPassword() {
+  const email = document.getElementById('reset-email').value.trim();
+  _authHideMsg('reset-error');
+  _authHideMsg('reset-success');
+
+  if (!email || !email.includes('@')) {
+    _authShowError('reset-error-text', NOOR.lang === 'ar' ? 'أدخل بريدك الإلكتروني أولاً' : 'Enter a valid email first.');
+    return;
+  }
+
+  _authSetLoading('reset-btn', true);
+  try {
+    await post('/api/reset-password', { email });
+    const successEl = document.getElementById('reset-success-text');
+    if (successEl) successEl.textContent = NOOR.lang === 'ar'
+      ? 'إذا كان البريد مسجّلاً، ستصل رسالة استرداد خلال لحظات.'
+      : 'If this email is registered, a reset link has been sent.';
+    document.getElementById('reset-success').classList.add('show');
+  } catch(e) {
+    _authShowError('reset-error-text', e.message);
+  } finally {
+    _authSetLoading('reset-btn', false);
+  }
+}
+
+// Legacy alias kept for backwards compatibility
+function resetPassword() { switchAuthPane('reset'); }
 
 async function doLogout() {
   try { await post('/api/logout'); } catch(_) {}
@@ -2051,6 +2495,8 @@ async function doLogout() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-password').value = '';
+  // Return to sign-in pane on logout
+  switchAuthPane('signin');
 }
 
 function bootApp() {
@@ -3628,6 +4074,8 @@ document.addEventListener('click', e => {
 // ══════════════════════════════════════════════════════════
 document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('login-username').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-password').focus(); });
+document.getElementById('signup-password')?.addEventListener('keydown', e => { if(e.key==='Enter') doSignup(); });
+document.getElementById('reset-email')?.addEventListener('keydown', e => { if(e.key==='Enter') doResetPassword(); });
 
 // ══════════════════════════════════════════════════════════
 // INIT
