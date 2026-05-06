@@ -802,39 +802,11 @@ def create_visit():
     if not p.data:
         return err("Patient not found", 404)
 
-    # ── Enum-safe helpers ──────────────────────────────────────
-    VALID_LENS_TYPES     = {"single_vision","bifocal","progressive","reading","plano"}
-    VALID_LENS_MATERIALS = {"plastic","glass","contact"}
-    VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
-
-    def _enum_or_none(val, valid_set):
-        """Return val if it's a non-empty member of valid_set, else None."""
-        return val if (val and str(val).strip() in valid_set) else None
-
-    def _float_or_none(val):
-        try:    return float(val) if val not in (None, "", "null") else None
-        except: return None
-
-    def _int_or_none(val):
-        try:    return int(val) if val not in (None, "", "null") else None
-        except: return None
-
-    # ── Plano guard — force zero power if lens_type == plano ──
-    raw_lens_type = body.get("lens_type") or ""
-    lens_type = _enum_or_none(raw_lens_type.strip(), VALID_LENS_TYPES)
+    # Plano guard — force zero power if lens_type == plano
+    lens_type = body.get("lens_type", "single_vision")
     if lens_type == "plano":
         for fld in ["od_sphere","od_cylinder","os_sphere","os_cylinder"]:
             body[fld] = 0
-
-    # ── Lens coating: strip empty / invalid values ─────────────
-    raw_coating = body.get("lens_coating") or ""
-    lens_coating = raw_coating.strip() if raw_coating.strip() else None
-
-    # ── Frame type: must be valid enum or None ──────────────────
-    frame_type = _enum_or_none((body.get("frame_type") or "").strip(), VALID_FRAME_TYPES)
-
-    # ── Lens material: must be valid enum or None ───────────────
-    lens_material = _enum_or_none((body.get("lens_material") or "").strip(), VALID_LENS_MATERIALS)
 
     frame_price   = float(body.get("frame_price", 0) or 0)
     lens_price    = float(body.get("lens_price", 0) or 0)
@@ -843,54 +815,50 @@ def create_visit():
     amount_paid   = float(body.get("amount_paid", 0) or 0)
     remaining     = max(0, total_amount - amount_paid)
 
-    # VA / BCVA: store as-is (text), but strip whitespace
-    def _va_clean(val):
-        return (val or "").strip() or None
-
     row = {
         "clinic_id":     cid,
         "patient_id":    patient_id,
         "visit_date":    body.get("visit_date") or today_str(),
         # Rx OD
-        "od_sphere":     _float_or_none(body.get("od_sphere")),
-        "od_cylinder":   _float_or_none(body.get("od_cylinder")),
-        "od_axis":       _int_or_none(body.get("od_axis")),
-        "od_addition":   _float_or_none(body.get("od_addition")),
-        "od_va":         _va_clean(body.get("od_va")),
-        "od_bcva":       _va_clean(body.get("od_bcva")),
+        "od_sphere":     body.get("od_sphere"),
+        "od_cylinder":   body.get("od_cylinder"),
+        "od_axis":       body.get("od_axis"),
+        "od_addition":   body.get("od_addition"),
+        "od_va":         body.get("od_va"),
+        "od_bcva":       body.get("od_bcva"),
         # Rx OS
-        "os_sphere":     _float_or_none(body.get("os_sphere")),
-        "os_cylinder":   _float_or_none(body.get("os_cylinder")),
-        "os_axis":       _int_or_none(body.get("os_axis")),
-        "os_addition":   _float_or_none(body.get("os_addition")),
-        "os_va":         _va_clean(body.get("os_va")),
-        "os_bcva":       _va_clean(body.get("os_bcva")),
+        "os_sphere":     body.get("os_sphere"),
+        "os_cylinder":   body.get("os_cylinder"),
+        "os_axis":       body.get("os_axis"),
+        "os_addition":   body.get("os_addition"),
+        "os_va":         body.get("os_va"),
+        "os_bcva":       body.get("os_bcva"),
         # Shared
-        "ipd":           _float_or_none(body.get("ipd")),
+        "ipd":           body.get("ipd"),
         # Lens config
         "lens_type":     lens_type,
-        "lens_material": lens_material,
-        "lens_coating":  lens_coating,
-        "lens_count":    _int_or_none(body.get("lens_count")) or 2,
+        "lens_material": body.get("lens_material"),
+        "lens_coating":  body.get("lens_coating"),
+        "lens_count":    body.get("lens_count", 2),
         # Frame
-        "frame_id":      body.get("frame_id") or None,
-        "frame_brand":   (body.get("frame_brand") or "").strip() or None,
-        "frame_type":    frame_type,
-        "frame_material":(body.get("frame_material") or "").strip() or None,
+        "frame_id":      body.get("frame_id"),
+        "frame_brand":   body.get("frame_brand"),
+        "frame_type":    body.get("frame_type"),
+        "frame_material":body.get("frame_material"),
         # Checkup
-        "did_checkup":       bool(body.get("did_checkup", False)),
-        "next_visit_date":   body.get("next_visit_date") or None,
-        "followup_months":   _int_or_none(body.get("followup_months")) or 3,
+        "did_checkup":       body.get("did_checkup", False),
+        "next_visit_date":   body.get("next_visit_date"),
+        "followup_months":   body.get("followup_months", 3),
         # Financials
-        "frame_cost":    _float_or_none(body.get("frame_cost")) or 0,
+        "frame_cost":    body.get("frame_cost"),
         "frame_price":   frame_price,
-        "lens_cost":     _float_or_none(body.get("lens_cost")) or 0,
+        "lens_cost":     body.get("lens_cost"),
         "lens_price":    lens_price,
         "checkup_fee":   checkup_fee,
         "total_amount":  total_amount,
         "amount_paid":   amount_paid,
         "remaining":     remaining,
-        "notes":         (body.get("notes") or "").strip() or None,
+        "notes":         body.get("notes"),
         "created_by":    uid,
     }
 
@@ -987,24 +955,6 @@ def update_visit(vid):
         paid = float(updates.get("amount_paid",  old.data.get("amount_paid",  0)) or 0)
         updates["total_amount"] = fp + lp + cf
         updates["remaining"]    = max(0, updates["total_amount"] - paid)
-
-    # ── Enum-safe sanitisation ──────────────────────────────────
-    VALID_LENS_TYPES     = {"single_vision","bifocal","progressive","reading","plano"}
-    VALID_LENS_MATERIALS = {"plastic","glass","contact"}
-    VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
-
-    if "lens_type" in updates:
-        v = (updates["lens_type"] or "").strip()
-        updates["lens_type"] = v if v in VALID_LENS_TYPES else None
-    if "lens_material" in updates:
-        v = (updates["lens_material"] or "").strip()
-        updates["lens_material"] = v if v in VALID_LENS_MATERIALS else None
-    if "frame_type" in updates:
-        v = (updates["frame_type"] or "").strip()
-        updates["frame_type"] = v if v in VALID_FRAME_TYPES else None
-    if "lens_coating" in updates:
-        v = (updates["lens_coating"] or "").strip()
-        updates["lens_coating"] = v or None
 
     # Plano guard
     if updates.get("lens_type") == "plano":

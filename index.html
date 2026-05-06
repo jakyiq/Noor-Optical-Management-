@@ -1978,8 +1978,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
                 <td><input class="rx-input" id="rx-od-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()"></td>
                 <td><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="180" placeholder="0"></td>
                 <td><input class="rx-input" id="rx-od-add" type="number" step=".25" placeholder="0.00"></td>
-                <td><input class="rx-input" id="rx-od-va" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
-                <td><input class="rx-input" id="rx-od-bcva" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td><input class="rx-input" id="rx-od-va" type="text" placeholder="6/6"></td>
+                <td><input class="rx-input" id="rx-od-bcva" type="text" placeholder="6/6"></td>
               </tr>
               <tr>
                 <td class="eye-label">OS (L)</td>
@@ -1987,8 +1987,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
                 <td><input class="rx-input" id="rx-os-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()"></td>
                 <td><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="180" placeholder="0"></td>
                 <td><input class="rx-input" id="rx-os-add" type="number" step=".25" placeholder="0.00"></td>
-                <td><input class="rx-input" id="rx-os-va" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
-                <td><input class="rx-input" id="rx-os-bcva" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td><input class="rx-input" id="rx-os-va" type="text" placeholder="6/6"></td>
+                <td><input class="rx-input" id="rx-os-bcva" type="text" placeholder="6/6"></td>
               </tr>
             </tbody>
           </table>
@@ -2028,12 +2028,12 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       </div>
       <div class="tab-panel" id="ptab-financials">
         <div class="form-grid">
-          <div class="form-group"><label class="form-label" data-i18n="frameCost">تكلفة الإطار (IQD)</label><input type="number" class="form-input" id="f-frame-cost" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
-          <div class="form-group"><label class="form-label" data-i18n="framePrice">سعر الإطار (IQD)</label><input type="number" class="form-input" id="f-frame-price" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
-          <div class="form-group"><label class="form-label" data-i18n="lensCost">تكلفة العدسة (IQD)</label><input type="number" class="form-input" id="f-lens-cost" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
-          <div class="form-group"><label class="form-label" data-i18n="lensPrice">سعر العدسة (IQD)</label><input type="number" class="form-input" id="f-lens-price" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
-          <div class="form-group"><label class="form-label" data-i18n="checkupFee">رسوم الفحص (IQD)</label><input type="number" class="form-input" id="f-checkup-fee" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
-          <div class="form-group"><label class="form-label" data-i18n="amountPaid">المبلغ المدفوع (IQD)</label><input type="number" class="form-input" id="f-paid" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="frameCost">تكلفة الإطار (IQD)</label><input type="number" class="form-input" id="f-frame-cost" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="framePrice">سعر الإطار (IQD)</label><input type="number" class="form-input" id="f-frame-price" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="lensCost">تكلفة العدسة (IQD)</label><input type="number" class="form-input" id="f-lens-cost" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="lensPrice">سعر العدسة (IQD)</label><input type="number" class="form-input" id="f-lens-price" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="checkupFee">رسوم الفحص (IQD)</label><input type="number" class="form-input" id="f-checkup-fee" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="amountPaid">المبلغ المدفوع (IQD)</label><input type="number" class="form-input" id="f-paid" oninput="calcTotal()"></div>
         </div>
         <div style="margin-top:12px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
           <label class="toggle-switch" style="margin:0"><input type="checkbox" id="f-checkup" onchange="onCheckupToggle()"><span class="toggle-slider"></span></label>
@@ -2072,8 +2072,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         <div class="form-group"><label class="form-label">CYL</label><input type="number" class="form-input" id="l-cyl" step=".25"></div>
         <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><input type="number" class="form-input" id="l-qty" min="0"></div>
         <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><input type="number" class="form-input" id="l-min" min="0" value="2"></div>
-        <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="l-cost" min="0" step="1" inputmode="numeric"></div>
-        <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="l-sell" min="0" step="1" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="l-cost"></div>
+        <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="l-sell"></div>
         <div class="form-group full"><label class="form-label" data-i18n="coating">الطلاء</label><select class="form-select" id="l-coating"><option value="clear">Clear</option><option value="blue_cut">Blue Cut</option><option value="green_cut">Green Cut</option><option value="photochromic">Photochromic</option><option value="photo_blue">Photo Blue</option><option value="polarized">Polarized</option><option value="anti_reflective">Anti-Reflective</option><option value="tinted">Tinted</option><option value="uv400">UV400</option></select></div>
       </div>
     </div>
@@ -2093,8 +2093,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         <div class="form-group"><label class="form-label" data-i18n="color">اللون</label><input type="text" class="form-input" id="fr-color"></div>
         <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><input type="number" class="form-input" id="fr-qty" min="0"></div>
         <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><input type="number" class="form-input" id="fr-min" min="0" value="2"></div>
-        <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="fr-cost" min="0" step="1" inputmode="numeric"></div>
-        <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="fr-sell" min="0" step="1" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="fr-cost"></div>
+        <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="fr-sell"></div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-frame')" data-i18n="cancel">إلغاء</button><button class="btn btn-burgundy" onclick="saveFrame()" data-i18n="save">حفظ</button></div>
@@ -3093,53 +3093,9 @@ function intOrNull(id) {
   return val === '' ? null : parseInt(val);
 }
 
-// ── Fraction (VA/BCVA) input enforcement ──────────────────────────
-// Only digits and a single "/" are allowed. Clears non-conforming chars live.
-function enforceFraction(el) {
-  // Allow only digits and one slash
-  let v = el.value.replace(/[^\d/]/g, '');
-  // Only one slash allowed
-  const parts = v.split('/');
-  if (parts.length > 2) v = parts[0] + '/' + parts.slice(1).join('');
-  el.value = v;
-  el.style.borderColor = '';
-}
-
-function validateFraction(el) {
-  const v = el.value.trim();
-  if (!v) { el.style.borderColor = ''; return; }
-  // Must match digits/digits, e.g. 6/6, 20/200
-  if (!/^\d+\/\d+$/.test(v)) {
-    el.style.borderColor = 'var(--danger)';
-    el.title = 'Must be a fraction like 6/6 or 20/200';
-  } else {
-    el.style.borderColor = 'var(--success)';
-    el.title = '';
-  }
-}
-
-function fractionOrNull(id) {
-  const v = (document.getElementById(id)?.value || '').trim();
-  if (!v) return null;
-  if (!/^\d+\/\d+$/.test(v)) return null; // silently drop invalid
-  return v;
-}
-
 async function savePatient() {
   const name = document.getElementById('p-name').value.trim();
   if (!name) { toast(t('errorRequired'),'error'); switchPatientTab('info'); return; }
-
-  // Validate VA/BCVA: must be empty or a valid fraction like 6/6
-  const vaIds = ['rx-od-va','rx-od-bcva','rx-os-va','rx-os-bcva'];
-  for (const id of vaIds) {
-    const v = (document.getElementById(id)?.value || '').trim();
-    if (v && !/^\d+\/\d+$/.test(v)) {
-      toast('VA / BCVA must be a fraction like 6/6 or 20/200', 'error');
-      switchPatientTab('rx');
-      document.getElementById(id).focus();
-      return;
-    }
-  }
 
   const isNewPatient = !NOOR.editingPatientId;
   let pid = NOOR.editingPatientId;
@@ -3192,14 +3148,14 @@ async function savePatient() {
         od_cylinder:     numOrNull('rx-od-cyl'),
         od_axis:         intOrNull('rx-od-axis'),
         od_addition:     numOrNull('rx-od-add'),
-        od_va:           fractionOrNull('rx-od-va'),
-        od_bcva:         fractionOrNull('rx-od-bcva'),
+        od_va:           document.getElementById('rx-od-va').value||null,
+        od_bcva:         document.getElementById('rx-od-bcva').value||null,
         os_sphere:       numOrNull('rx-os-sph'),
         os_cylinder:     numOrNull('rx-os-cyl'),
         os_axis:         intOrNull('rx-os-axis'),
         os_addition:     numOrNull('rx-os-add'),
-        os_va:           fractionOrNull('rx-os-va'),
-        os_bcva:         fractionOrNull('rx-os-bcva'),
+        os_va:           document.getElementById('rx-os-va').value||null,
+        os_bcva:         document.getElementById('rx-os-bcva').value||null,
         ipd:             numOrNull('rx-ipd'),
         lens_type:       NOOR.patientModalMode === 'old_rx' ? null : document.getElementById('rx-lens-type').value,
         lens_material:   NOOR.patientModalMode === 'old_rx' ? null : document.getElementById('rx-material').value,

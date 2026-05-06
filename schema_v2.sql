@@ -134,6 +134,14 @@ CREATE TABLE IF NOT EXISTS clinic_settings (
   print_warning_text       TEXT,
   print_qr_url             TEXT,
   print_show_financials    BOOLEAN NOT NULL DEFAULT TRUE,
+  print_doctor_name        TEXT,
+  print_doctor_credentials TEXT,
+  print_logo_align         TEXT NOT NULL DEFAULT 'center',
+  print_logo_width         INTEGER NOT NULL DEFAULT 120,
+  print_logo_height        INTEGER NOT NULL DEFAULT 60,
+  print_logo_data          TEXT,
+  print_qr_data            TEXT,
+  print_associates         TEXT,
   default_checkup_fee      NUMERIC(12,0) NOT NULL DEFAULT 0,
   -- UI preference
   language                 TEXT NOT NULL DEFAULT 'ar'
@@ -145,6 +153,14 @@ ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_warning_text TEXT;
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_qr_url TEXT;
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_show_financials BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS default_checkup_fee NUMERIC(12,0) NOT NULL DEFAULT 0;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_doctor_name TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_doctor_credentials TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_logo_align TEXT NOT NULL DEFAULT 'center';
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_logo_width INTEGER NOT NULL DEFAULT 120;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_logo_height INTEGER NOT NULL DEFAULT 60;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_logo_data TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_qr_data TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_associates TEXT;
 
 -- ─────────────────────────────────────────────
 -- PATIENTS
