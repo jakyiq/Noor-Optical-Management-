@@ -995,15 +995,27 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   .bnav-extra{display:flex}
 }
 
-/* ── Print styles: full isolation, works on mobile & desktop ── */
+/* ── Print: only used when body has .printing-rx (mobile fallback) ── */
 @media print{
   @page{size:A5 portrait;margin:8mm 9mm}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-
-  /* Hide absolutely everything except the print iframe */
-  html,body{background:white!important;overflow:hidden!important}
-  body > *{display:none!important}
-  #noor-print-frame{display:block!important;position:fixed!important;inset:0!important;width:100%!important;height:100%!important;border:none!important;z-index:99999!important}
+  body.printing-rx > *{display:none!important}
+  body.printing-rx #rx-print-mount{
+    display:block!important;
+    position:fixed!important;inset:0!important;
+    background:white!important;
+    padding:0!important;margin:0!important;
+    z-index:99999!important;
+  }
+  body.printing-rx #rx-print-mount .rx-slip{
+    border:none!important;box-shadow:none!important;
+    padding:0!important;margin:0!important;
+    width:100%!important;font-size:9pt!important;line-height:1.5!important;
+  }
+  body.printing-rx #rx-print-mount table{border-collapse:collapse!important;width:100%!important;font-size:8.5pt!important}
+  body.printing-rx #rx-print-mount th,
+  body.printing-rx #rx-print-mount td{border:1px solid #ccc!important;padding:3px 5px!important}
+  body.printing-rx #rx-print-mount thead tr{background:#6b1a2a!important;color:#fff!important}
 }
 </style>
 </head>
@@ -3844,88 +3856,104 @@ function printRxSlip() {
   const patientName = (window._rxPrintPatientName || '').trim();
   const visitDate   = new Date().toISOString().slice(0, 10);
   const docTitle    = patientName
-    ? `Rx_${patientName.replace(/\s+/g,'_')}_${visitDate}`
+    ? 'Rx_' + patientName.replace(/\s+/g,'_') + '_' + visitDate
     : 'Prescription';
 
   const slipHTML = document.getElementById('rx-slip-content').innerHTML;
 
-  const printDoc = `<!DOCTYPE html>
-<html lang="${document.documentElement.lang}" dir="${document.documentElement.dir}">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${docTitle}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Amiri:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root{--burgundy:#6b1a2a;--burgundy-pale:#f5e8eb;--gold:#c49a3c;--cream:#faf6f0;--cream-dark:#f0ead8;--cream-border:#e8dcc8;--ink:#1a1410;--ink-mid:#4a3f35;--ink-light:#8a7d70;--ink-dark:#2a1f18;--surface:#ffffff;--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html,body{background:white;font-family:'Cairo','DM Sans',sans-serif;width:100%;overflow:hidden;}
-  .rx-slip{background:white;border:2px solid var(--burgundy);padding:13px 15px;width:100%;font-size:.81rem;line-height:1.45;}
-  .rx-slip-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-light)}
-  .rx-slip-val{font-weight:600;font-size:.93rem}
-  @page{size:A5 portrait;margin:8mm 9mm}
-  @media print{
-    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-    html,body{background:white!important;overflow:hidden!important}
-    .rx-slip{border:2px solid #6b1a2a!important;box-shadow:none!important;padding:0!important;width:100%!important;font-size:9pt!important;line-height:1.5!important;page-break-inside:avoid;break-inside:avoid;}
-    table{border-collapse:collapse!important;width:100%!important;font-size:8.5pt!important}
-    th,td{border:1px solid #ccc!important;padding:3px 5px!important}
-    thead tr{background:#6b1a2a!important;color:#fff!important}
-    .rx-slip-label{color:#8a7d70!important}
-  }
-</style>
-</head>
-<body>
-${slipHTML}
-<script>
-  document.fonts.ready.then(function(){setTimeout(function(){window.print();},150);});
-<\/script>
-</body>
-</html>`;
-
-  // Use hidden iframe — works on iOS Safari, Android Chrome, desktop.
-  // Never requires a popup (which mobile browsers block).
-  let frame = document.getElementById('noor-print-frame');
-  if (frame) frame.remove();
-
-  frame = document.createElement('iframe');
-  frame.id = 'noor-print-frame';
-  frame.setAttribute('title', 'Print Preview');
-  // Keep hidden — only the print dialog appears, no scroll bar or UI chrome visible
-  frame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:148mm;height:210mm;border:none;opacity:0;pointer-events:none;';
-  document.body.appendChild(frame);
-
-  try {
-    const iframeDoc = frame.contentDocument || frame.contentWindow.document;
-    iframeDoc.open();
-    iframeDoc.write(printDoc);
-    iframeDoc.close();
-
-    const doPrint = () => {
-      try {
-        frame.contentWindow.focus();
-        frame.contentWindow.print();
-      } catch(e) {
-        // Last-resort popup fallback for unusual browser configs
-        const pw = window.open('', '_blank', 'width=600,height=800');
-        if (pw) { pw.document.write(printDoc); pw.document.close(); }
-      }
-      setTimeout(() => { if (frame.parentNode) frame.remove(); }, 3000);
-    };
-
-    try {
-      frame.contentDocument.fonts.ready.then(() => setTimeout(doPrint, 150));
-    } catch (_) {
-      setTimeout(doPrint, 700);
+  // CSS for the print document — no border, no extra padding, clean A5
+  const printCSS = `
+    :root{--burgundy:#6b1a2a;--burgundy-pale:#f5e8eb;--cream:#faf6f0;--cream-dark:#f0ead8;--cream-border:#e8dcc8;--ink:#1a1410;--ink-mid:#4a3f35;--ink-light:#8a7d70;--ink-dark:#2a1f18;--surface:#fff;--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{background:white;font-family:'Cairo','DM Sans',sans-serif;width:100%;height:auto;}
+    .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9pt;line-height:1.5;}
+    .rx-slip-label{font-size:6.5pt;text-transform:uppercase;letter-spacing:.08em;color:#8a7d70}
+    .rx-slip-val{font-weight:600;font-size:9pt}
+    table{border-collapse:collapse;width:100%;font-size:8.5pt}
+    th,td{border:1px solid #ccc;padding:3px 5px}
+    thead tr{background:#6b1a2a;color:#fff}
+    @page{size:A5 portrait;margin:8mm 9mm}
+    @media print{
+      *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+      html,body{background:white!important;overflow:hidden!important;width:100%!important;}
     }
-  } catch(e) {
-    // Cross-origin or other error: fallback popup
-    if (frame.parentNode) frame.remove();
-    const pw = window.open('', '_blank', 'width=600,height=800');
-    if (pw) { pw.document.write(printDoc); pw.document.close(); }
+  `;
+
+  const printHTML = '<!DOCTYPE html>' +
+    '<html lang="' + document.documentElement.lang + '" dir="' + document.documentElement.dir + '">' +
+    '<head>' +
+    '<meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<title>' + docTitle + '</title>' +
+    '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Amiri:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">' +
+    '<style>' + printCSS + '</style>' +
+    '</head>' +
+    '<body>' + slipHTML + '</body>' +
+    '</html>';
+
+  // Desktop: open popup — reliable, no blank-page issues
+  const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (!isMobileDevice) {
+    const pw = window.open('', '_blank', 'width=650,height=850');
+    if (pw) {
+      pw.document.open();
+      pw.document.write(printHTML);
+      pw.document.close();
+      pw.document.fonts.ready.then(function() {
+        setTimeout(function() { pw.print(); }, 120);
+      });
+      return;
+    }
+    // If popup was blocked, fall through to mobile path
   }
+
+  // Mobile (or blocked popup): inject slip into this page, print, then remove
+  // Remove any existing mount
+  var existing = document.getElementById('rx-print-mount');
+  if (existing) existing.remove();
+
+  // Build a self-contained styled container — no border, no shadow
+  var mount = document.createElement('div');
+  mount.id = 'rx-print-mount';
+  mount.style.cssText = 'display:none;position:fixed;inset:0;background:white;z-index:99999;overflow:hidden;';
+
+  // Inject the print CSS into this page context via a <style> tag
+  var style = document.createElement('style');
+  style.id = 'rx-print-style';
+  style.textContent = [
+    '@page{size:A5 portrait;margin:8mm 9mm}',
+    '@media print{',
+    '  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}',
+    '  body.printing-rx > *:not(#rx-print-mount):not(#rx-print-style-tag){display:none!important}',
+    '  #rx-print-mount{display:block!important;position:fixed!important;inset:0!important;background:white!important;z-index:99999!important;}',
+    '  #rx-print-mount .rx-slip{border:none!important;box-shadow:none!important;padding:0!important;margin:0!important;width:100%!important;font-size:9pt!important;line-height:1.5!important;}',
+    '  #rx-print-mount table{border-collapse:collapse!important;width:100%!important;font-size:8.5pt!important}',
+    '  #rx-print-mount th,#rx-print-mount td{border:1px solid #ccc!important;padding:3px 5px!important}',
+    '  #rx-print-mount thead tr{background:#6b1a2a!important;color:#fff!important}',
+    '}'
+  ].join('');
+  style.id = 'rx-print-style-tag';
+  document.head.appendChild(style);
+
+  mount.innerHTML = slipHTML;
+  document.body.appendChild(mount);
+  document.body.classList.add('printing-rx');
+
+  // Small delay so browser can layout, then print
+  setTimeout(function() {
+    window.print();
+    // Clean up after the print dialog closes
+    setTimeout(function() {
+      document.body.classList.remove('printing-rx');
+      var m = document.getElementById('rx-print-mount');
+      if (m) m.remove();
+      var s = document.getElementById('rx-print-style-tag');
+      if (s) s.remove();
+    }, 1500);
+  }, 100);
 }
 
 // ══════════════════════════════════════════════════════════
