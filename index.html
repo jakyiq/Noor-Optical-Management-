@@ -995,45 +995,32 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   .bnav-extra{display:flex}
 }
 
+/* ── Print styles: fallback only (popup window is the primary path) ── */
 @media print{
-  @page{size:A5 portrait;margin:6mm 8mm}
-  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+  @page{size:A5 portrait;margin:8mm 9mm}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   body{background:white!important}
   body.printing-rx *{visibility:hidden!important}
   body.printing-rx #rx-slip-content,
   body.printing-rx #rx-slip-content *{visibility:visible!important}
   body.printing-rx #rx-slip-content{
     position:fixed;inset:0;width:100%;height:100%;
-    padding:0;margin:0;overflow:visible;z-index:99999;
+    padding:10mm 8mm;margin:0;z-index:99999;
+    background:white!important;box-sizing:border-box;
   }
   body.printing-rx .rx-slip{
-    border:none!important;box-shadow:none!important;
+    border:2px solid #6b1a2a!important;box-shadow:none!important;
     max-width:none!important;width:100%!important;
-    margin:0!important;padding:10mm 8mm!important;
-    font-size:9.5pt!important;line-height:1.5!important;
-    box-sizing:border-box!important;
-    background:white!important;
+    margin:0!important;padding:0!important;
+    font-size:9pt!important;line-height:1.5!important;
   }
-  body.printing-rx .rx-slip table{
-    font-size:8.5pt!important;width:100%!important;
-    border-collapse:collapse!important;
-  }
+  body.printing-rx .rx-slip table{font-size:8.5pt!important;border-collapse:collapse!important;width:100%!important}
   body.printing-rx .rx-slip table th,
-  body.printing-rx .rx-slip table td{
-    border:1px solid #ccc!important;
-    padding:4px 5px!important;
-  }
-  body.printing-rx .rx-slip table thead tr{
-    background:#6b1a2a!important;color:white!important;
-  }
+  body.printing-rx .rx-slip table td{border:1px solid #ccc!important;padding:3px 5px!important}
+  body.printing-rx .rx-slip table thead tr{background:#6b1a2a!important;color:white!important}
   body.printing-rx .no-print{display:none!important}
   body.printing-rx .modal-footer{display:none!important}
-  body.printing-rx .modal-header .modal-close{display:none!important}
-  /* Ensure clinic name never truncates */
-  body.printing-rx [style*="font-family:'Amiri'"]{
-    white-space:normal!important;overflow:visible!important;
-    text-overflow:clip!important;word-break:break-word!important;
-  }
+  body.printing-rx .modal-header{display:none!important}
 }
 </style>
 </head>
@@ -3871,19 +3858,120 @@ function _renderRxSlip(payload) {
 </div>`;
 }
 function printRxSlip() {
-  // Set document title to patient name so browser Save/Print dialog uses it as filename
   const patientName = (window._rxPrintPatientName || '').trim();
-  const originalTitle = document.title;
-  const visitDate = new Date().toISOString().slice(0,10);
-  if (patientName) {
-    document.title = `Rx_${patientName.replace(/\s+/g,'_')}_${visitDate}`;
+  const visitDate   = new Date().toISOString().slice(0, 10);
+  const docTitle    = patientName
+    ? `Rx_${patientName.replace(/\s+/g,'_')}_${visitDate}`
+    : 'Prescription';
+
+  // Grab only the slip's inner HTML — no modal chrome, no app shell
+  const slipHTML = document.getElementById('rx-slip-content').innerHTML;
+
+  // Open a clean blank window
+  const pw = window.open('', '_blank', 'width=600,height=800');
+  if (!pw) {
+    // Fallback if popup blocked: classic body-class approach
+    const orig = document.title;
+    document.title = docTitle;
+    document.body.classList.add('printing-rx');
+    window.print();
+    setTimeout(() => { document.body.classList.remove('printing-rx'); document.title = orig; }, 600);
+    return;
   }
-  document.body.classList.add('printing-rx');
-  window.print();
-  setTimeout(() => {
-    document.body.classList.remove('printing-rx');
-    document.title = originalTitle;
-  }, 500);
+
+  pw.document.write(`<!DOCTYPE html>
+<html lang="${document.documentElement.lang}" dir="${document.documentElement.dir}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${docTitle}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Amiri:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --burgundy:#6b1a2a;--burgundy-pale:#f5e8eb;
+    --gold:#c49a3c;
+    --cream:#faf6f0;--cream-dark:#f0ead8;--cream-border:#e8dcc8;
+    --ink:#1a1410;--ink-mid:#4a3f35;--ink-light:#8a7d70;--ink-dark:#2a1f18;
+    --surface:#ffffff;--danger:#c0392b;--success:#1e7e5a;
+    --radius-md:14px;--radius-sm:8px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+  /* ── Screen: center the slip nicely ── */
+  body{
+    background:#f4f0ea;
+    font-family:'Cairo','DM Sans',sans-serif;
+    display:flex;align-items:flex-start;justify-content:center;
+    min-height:100vh;padding:24px 16px;
+  }
+
+  .rx-slip{
+    background:white;
+    border:2px solid var(--burgundy);
+    border-radius:var(--radius-md);
+    padding:20px;
+    width:100%;
+    max-width:480px;
+    font-size:.85rem;
+    line-height:1.5;
+  }
+  .rx-slip-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-light)}
+  .rx-slip-val{font-weight:600;font-size:.93rem}
+
+  /* ── Print: exactly A5, 1 page, no extras ── */
+  @page{
+    size:A5 portrait;
+    margin:8mm 9mm;
+  }
+  @media print{
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    html,body{
+      background:white!important;
+      display:block!important;
+      padding:0!important;margin:0!important;
+      width:100%!important;height:auto!important;
+    }
+    .rx-slip{
+      border:2px solid #6b1a2a!important;
+      border-radius:0!important;
+      box-shadow:none!important;
+      padding:0!important;
+      max-width:none!important;
+      width:100%!important;
+      font-size:9pt!important;
+      line-height:1.5!important;
+      page-break-inside:avoid;
+      break-inside:avoid;
+    }
+    /* Force exactly 1 page */
+    body{overflow:hidden!important}
+    /* Table borders */
+    table{border-collapse:collapse!important;width:100%!important;font-size:8.5pt!important}
+    th,td{border:1px solid #ccc!important;padding:3px 5px!important}
+    thead tr{background:#6b1a2a!important;color:#fff!important}
+    /* Clinic name — never clip */
+    [style*="font-family:'Amiri'"],[style*='font-family:"Amiri"']{
+      white-space:normal!important;overflow:visible!important;
+      text-overflow:clip!important;word-break:break-word!important;
+    }
+    .rx-slip-label{color:#8a7d70!important}
+  }
+</style>
+</head>
+<body>
+${slipHTML}
+<script>
+  // Auto-print once fonts are ready, then close the window
+  document.fonts.ready.then(function(){
+    setTimeout(function(){ window.print(); }, 120);
+  });
+  window.addEventListener('afterprint', function(){ window.close(); });
+<\/script>
+</body>
+</html>`);
+  pw.document.close();
 }
 
 // ══════════════════════════════════════════════════════════
