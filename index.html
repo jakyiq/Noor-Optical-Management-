@@ -996,13 +996,15 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 }
 
 @media print{
-  @page{size:A5 portrait;margin:8mm}
+  @page{size:A5 portrait;margin:8mm 9mm}
   body{background:white}
   body.printing-rx *{visibility:hidden!important}
   body.printing-rx #rx-slip-content,
   body.printing-rx #rx-slip-content *{visibility:visible!important}
   body.printing-rx #rx-slip-content{position:absolute;inset:0;width:100%;padding:0}
-  body.printing-rx .rx-slip{border:none;box-shadow:none;max-width:none;margin:0;padding:0}
+  body.printing-rx .rx-slip{border:none;box-shadow:none;max-width:none;margin:0;padding:0;font-size:9pt}
+  body.printing-rx .rx-slip table{font-size:8pt}
+  body.printing-rx .no-print{display:none!important}
 }
 </style>
 </head>
@@ -1812,15 +1814,64 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <div class="settings-section">
             <div class="settings-section-header">A5 Prescription Print</div>
             <div class="settings-section-body">
+
+              <!-- ── HEADER / CLINIC IDENTITY ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin-bottom:10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Clinic Header</div>
               <div class="form-grid">
-                <div class="form-group full"><label class="form-label">Header text</label><input type="text" class="form-input" id="set-print-header"></div>
-                <div class="form-group full"><label class="form-label">Certification / optometrist text</label><input type="text" class="form-input" id="set-print-cert"></div>
-                <div class="form-group"><label class="form-label">Default checkup fee</label><input type="number" class="form-input" id="set-default-checkup-fee"></div>
-                <div class="form-group"><label class="form-label">QR code URL</label><input type="text" class="form-input" id="set-print-qr" placeholder="https://..."></div>
-                <div class="form-group full"><label class="form-label">Usage note / warning</label><textarea class="form-textarea" id="set-print-warning" rows="3"></textarea></div>
-                <div class="form-group full"><label class="toggle-row"><span class="toggle-label">Show financials on print</span><span class="toggle-switch"><input type="checkbox" id="set-print-financials"><span class="toggle-slider"></span></span></label></div>
+                <div class="form-group full"><label class="form-label">Doctor / Optometrist Name</label><input type="text" class="form-input" id="set-print-doctor-name" placeholder="Dr. Ahmed Al-Rashid"></div>
+                <div class="form-group full"><label class="form-label">Credentials / Degree</label><input type="text" class="form-input" id="set-print-doctor-cred" placeholder="OD, M.Sc. Optometry"></div>
+                <div class="form-group full"><label class="form-label">Additional header line (tagline, licence no., etc.)</label><input type="text" class="form-input" id="set-print-header"></div>
               </div>
-              <div style="margin-top:16px"><button class="btn btn-burgundy" onclick="savePrintSettings()" data-i18n="save">حفظ</button></div>
+
+              <!-- ── LOGO ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Clinic Logo</div>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label class="form-label">Upload logo image</label>
+                  <input type="file" accept="image/*" id="set-print-logo-file" class="form-input" style="padding:6px" onchange="handlePrintLogoUpload(event)">
+                  <div id="set-print-logo-preview" style="margin-top:8px;display:none"><img id="set-print-logo-img" style="max-height:70px;max-width:200px;object-fit:contain;border:1px solid var(--cream-border);border-radius:4px;padding:4px"></div>
+                  <div style="font-size:.75rem;color:var(--ink-light);margin-top:4px">Stored locally in settings. PNG/SVG with transparent background works best.</div>
+                </div>
+                <div class="form-group"><label class="form-label">Logo alignment</label>
+                  <select class="form-input" id="set-print-logo-align">
+                    <option value="left">Left</option>
+                    <option value="center" selected>Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Logo width (px)</label><input type="number" class="form-input" id="set-print-logo-w" value="120" min="30" max="300"></div>
+                <div class="form-group"><label class="form-label">Logo height (px)</label><input type="number" class="form-input" id="set-print-logo-h" value="60" min="20" max="200"></div>
+              </div>
+
+              <!-- ── ASSOCIATES ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Associates / Branch Contacts</div>
+              <div id="associates-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+              <button class="btn btn-outline btn-sm" onclick="addAssociateRow()" type="button" style="margin-bottom:4px">＋ Add associate / address</button>
+              <div style="font-size:.74rem;color:var(--ink-light)">Each entry appears at the bottom of the slip (name, role, phone, address).</div>
+
+              <!-- ── BOTTOM CONTENT ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Notes, Warnings & QR</div>
+              <div class="form-grid">
+                <div class="form-group full"><label class="form-label">Usage instructions / warnings (shown in a bordered box)</label><textarea class="form-textarea" id="set-print-warning" rows="3" placeholder="e.g. Wear glasses as prescribed. Follow-up if vision changes."></textarea></div>
+                <div class="form-group full">
+                  <label class="form-label">QR code image (upload)</label>
+                  <input type="file" accept="image/*" id="set-print-qr-file" class="form-input" style="padding:6px" onchange="handlePrintQrUpload(event)">
+                  <div id="set-print-qr-preview" style="margin-top:8px;display:none"><img id="set-print-qr-img" style="max-height:80px;max-width:80px;object-fit:contain;border:1px solid var(--cream-border);border-radius:4px;padding:4px"></div>
+                </div>
+              </div>
+
+              <!-- ── FINANCIALS & FEE ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Financials</div>
+              <div class="form-grid">
+                <div class="form-group"><label class="form-label">Default checkup fee</label><input type="number" class="form-input" id="set-default-checkup-fee"></div>
+                <div class="form-group" style="display:flex;align-items:flex-end"><label class="toggle-row"><span class="toggle-label">Show financials on print</span><span class="toggle-switch"><input type="checkbox" id="set-print-financials"><span class="toggle-slider"></span></span></label></div>
+              </div>
+
+              <div style="margin-top:20px;display:flex;gap:10px">
+                <button class="btn btn-burgundy" onclick="savePrintSettings()" data-i18n="save">حفظ</button>
+                <button class="btn btn-outline" onclick="clearPrintLogo()" type="button">Clear logo</button>
+                <button class="btn btn-outline" onclick="clearPrintQr()" type="button">Clear QR</button>
+              </div>
             </div>
           </div>
         </div>
@@ -3647,53 +3698,146 @@ function showRxSlipFromData(v) {
 }
 
 function _renderRxSlip(payload) {
-  const v = payload.visit || payload;
-  const p = payload.patient || getPatient(v.patient_id) || {};
-  const cl = payload.clinic || {name:NOOR.clinicName};
+  const v  = payload.visit || payload;
+  const p  = payload.patient || getPatient(v.patient_id) || {};
+  const cl = payload.clinic  || {name: NOOR.clinicName};
   const st = payload.settings || NOOR.settings || {};
   const showFinancials = st.print_show_financials !== false;
-  document.getElementById('rx-slip-content').innerHTML = `
-    <div class="rx-slip">
-    <div style="text-align:center;margin-bottom:10px">
-      ${cl.logo_url?`<img src="${escAttr(cl.logo_url)}" alt="" style="max-height:58px;max-width:160px;object-fit:contain;margin-bottom:6px">`:''}
-      <div class="rx-slip-clinic">${esc(cl.name || NOOR.clinicName)}</div>
-      ${st.print_header_text?`<div style="font-size:.82rem;color:var(--ink-mid);margin-top:3px">${esc(st.print_header_text)}</div>`:''}
-      ${st.print_certification_text?`<div style="font-size:.72rem;color:var(--ink-light);margin-top:2px">${esc(st.print_certification_text)}</div>`:''}
-    </div>
-    <div class="rx-slip-header">
-      <div><div style="font-size:.72rem;color:var(--ink-light)">${t('prescriptionSlip')}</div></div>
-      <div class="rx-slip-date">${fmtDate(v.visit_date)}</div>
-    </div>
-    <div class="rx-slip-patient">
-      <div style="display:grid;grid-template-columns:1.4fr .6fr .6fr;gap:8px">
-        <div><div class="rx-slip-label">${t('name')}</div><div class="rx-slip-val">${esc(p.full_name)}</div></div>
-        <div><div class="rx-slip-label">${t('age')}</div><div class="rx-slip-val">${esc(p.age)}</div></div>
-        <div><div class="rx-slip-label">${t('gender')}</div><div class="rx-slip-val">${p.gender?t(p.gender):'—'}</div></div>
-      </div>
-    </div>
-    <table class="rx-table" style="margin-bottom:16px">
-      <thead><tr><th>Eye</th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>VA</th></tr></thead>
-      <tbody>
-        <tr><td class="eye-label">OD (R)</td>${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va].map(x=>`<td style="text-align:center;padding:6px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
-        <tr><td class="eye-label">OS (L)</td>${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va].map(x=>`<td style="text-align:center;padding:6px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
-      </tbody>
-    </table>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem;margin-bottom:12px">
-      <div><span class="rx-slip-label">Lens</span><br>${esc((v.lens_type||'').replace(/_/g,' '))} · ${esc(v.lens_material)} · ${esc(v.lens_coating)}</div>
-      <div><span class="rx-slip-label">Frame</span><br>${esc(v.frame_brand)} ${v.frame_type?`· ${esc(v.frame_type.replace(/_/g,' '))}`:''}</div>
-    </div>
-    ${showFinancials?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:.78rem;border-top:1px dashed var(--cream-border);padding-top:10px;margin-bottom:10px">
-      <div><span class="rx-slip-label">${t('total')}</span><br>${fmtIQD(v.total_amount)}</div>
-      <div><span class="rx-slip-label">${t('paid')}</span><br>${fmtIQD(v.amount_paid)}</div>
-      <div><span class="rx-slip-label">${t('remaining')}</span><br>${fmtIQD(v.remaining)}</div>
-    </div>`:''}
-    ${st.print_warning_text?`<div style="font-size:.76rem;border:1px solid var(--cream-border);padding:8px;margin-bottom:10px">${esc(st.print_warning_text)}</div>`:''}
-    ${st.print_qr_url?`<div style="text-align:center"><img src="${escAttr(st.print_qr_url)}" alt="QR" style="width:72px;height:72px;object-fit:contain"></div>`:''}
-    <div style="font-size:.72rem;color:var(--ink-light);border-top:1px dashed var(--cream-border);padding-top:8px;margin-top:10px">${esc(cl.address||'')} ${cl.phone?` · ${esc(cl.phone)}`:''}</div>
-    </div>
-  `;
-}
 
+  // Logo
+  const logoSrc   = st.print_logo_data || cl.logo_url || '';
+  const logoW     = parseInt(st.print_logo_width)  || 120;
+  const logoH     = parseInt(st.print_logo_height) || 60;
+  const logoAlign = st.print_logo_align || 'center';
+  const logoStyle = logoAlign==='center'?'margin:0 auto':logoAlign==='right'?'margin-left:auto':'margin-right:auto';
+  const logoBlock = logoSrc
+    ? `<img src="${escAttr(logoSrc)}" alt="" style="width:${logoW}px;height:${logoH}px;object-fit:contain;display:block;${logoStyle}">`
+    : '';
+  const headerTA  = logoAlign;
+
+  // Header identity
+  const doctorName  = st.print_doctor_name || '';
+  const doctorCred  = st.print_doctor_credentials || st.print_certification_text || '';
+  const extraHeader = st.print_header_text || '';
+  const clinicPhone = cl.phone || '';
+
+  // Associates
+  let associates = [];
+  try { associates = JSON.parse(st.print_associates || '[]'); } catch(e) {}
+
+  // QR
+  const qrSrc = st.print_qr_data || st.print_qr_url || '';
+
+  // Dates
+  const visitDateStr = fmtDate(v.visit_date);
+  const nextVisitStr = v.next_visit_date ? fmtDate(v.next_visit_date) : '—';
+
+  // Lens / frame
+  const lensDesc  = [
+    (v.lens_type||'').replace(/_/g,' '),
+    v.lens_material,
+    v.lens_coating
+  ].filter(Boolean).join(' · ');
+  const frameDesc = [
+    v.frame_brand,
+    (v.frame_type||'').replace(/_/g,' ')
+  ].filter(Boolean).join(' · ');
+
+  // Associates block
+  const assocHTML = associates.length ? `
+    <div style="border-top:1px dashed var(--cream-border);padding-top:6px;margin-top:6px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:5px;font-size:.7rem;color:var(--ink-mid)">
+      ${associates.map(a => `<div>
+        ${a.name   ? `<div style="font-weight:700;color:var(--ink-dark)">${esc(a.name)}</div>` : ''}
+        ${a.role   ? `<div style="color:var(--ink-light)">${esc(a.role)}</div>` : ''}
+        ${a.phone  ? `<div>${esc(a.phone)}</div>` : ''}
+        ${a.address? `<div style="color:var(--ink-light)">${esc(a.address)}</div>` : ''}
+      </div>`).join('')}
+    </div>` : '';
+
+  document.getElementById('rx-slip-content').innerHTML = `
+<div class="rx-slip" style="box-sizing:border-box;width:100%;padding:13px 15px;font-size:.81rem;line-height:1.45">
+
+  <!-- HEADER -->
+  <div style="text-align:${headerTA};margin-bottom:9px">
+    ${logoBlock}
+    <div style="font-family:'Amiri',serif;font-size:1.04rem;font-weight:700;color:var(--burgundy);margin-top:${logoBlock?'5px':'0'}">${esc(cl.name || NOOR.clinicName)}</div>
+    ${doctorName  ? `<div style="font-size:.82rem;font-weight:600;color:var(--ink-dark);margin-top:1px">${esc(doctorName)}</div>` : ''}
+    ${doctorCred  ? `<div style="font-size:.73rem;color:var(--ink-light)">${esc(doctorCred)}</div>` : ''}
+    ${clinicPhone ? `<div style="font-size:.73rem;color:var(--ink-mid);margin-top:1px">📞 ${esc(clinicPhone)}</div>` : ''}
+    ${extraHeader ? `<div style="font-size:.73rem;color:var(--ink-light);margin-top:1px">${esc(extraHeader)}</div>` : ''}
+  </div>
+
+  <!-- DIVIDER BAR -->
+  <div style="border-top:2px solid var(--burgundy);border-bottom:1px solid var(--cream-border);display:flex;justify-content:space-between;align-items:center;padding:3px 0;margin-bottom:9px">
+    <span style="font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--burgundy)">${t('prescriptionSlip')}</span>
+    <span style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--ink-light)">${visitDateStr}</span>
+  </div>
+
+  <!-- PATIENT INFO -->
+  <div style="display:grid;grid-template-columns:1.6fr .7fr .7fr;gap:5px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
+    <div><div class="rx-slip-label">${t('name')}</div><div class="rx-slip-val" style="font-size:.87rem">${esc(p.full_name)}</div></div>
+    <div><div class="rx-slip-label">${t('age')}</div><div class="rx-slip-val">${esc(p.age)}</div></div>
+    <div><div class="rx-slip-label">${t('gender')}</div><div class="rx-slip-val">${p.gender ? t(p.gender) : '—'}</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
+    <div><div class="rx-slip-label">Visit Date</div><div class="rx-slip-val">${visitDateStr}</div></div>
+    <div><div class="rx-slip-label">Next Visit</div><div class="rx-slip-val">${nextVisitStr}</div></div>
+  </div>
+
+  <!-- RX TABLE -->
+  <table style="width:100%;margin-bottom:8px;border-collapse:collapse;font-size:.76rem">
+    <thead><tr style="background:var(--burgundy);color:white">
+      <th style="padding:4px 5px;text-align:left">Eye</th>
+      <th style="padding:4px 5px;text-align:center">SPH</th>
+      <th style="padding:4px 5px;text-align:center">CYL</th>
+      <th style="padding:4px 5px;text-align:center">AXIS</th>
+      <th style="padding:4px 5px;text-align:center">ADD</th>
+      <th style="padding:4px 5px;text-align:center">VA</th>
+    </tr></thead>
+    <tbody>
+      <tr style="background:var(--cream-bg)">
+        <td style="padding:4px 5px;font-weight:700;font-size:.73rem;border:1px solid var(--cream-border)">OD (R)</td>
+        ${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
+      </tr>
+      <tr>
+        <td style="padding:4px 5px;font-weight:700;font-size:.73rem;border:1px solid var(--cream-border)">OS (L)</td>
+        ${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- LENS / FRAME -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:.76rem;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
+    <div><span class="rx-slip-label">Lens Type</span><br>${esc(lensDesc||'—')}</div>
+    <div><span class="rx-slip-label">Frame</span><br>${esc(frameDesc||'—')}</div>
+  </div>
+
+  <!-- FINANCIALS -->
+  ${showFinancials ? `
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;font-size:.74rem;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--cream-border)">
+    <div><span class="rx-slip-label">${t('total')}</span><br>${fmtIQD(v.total_amount)}</div>
+    <div><span class="rx-slip-label">${t('paid')}</span><br>${fmtIQD(v.amount_paid)}</div>
+    <div><span class="rx-slip-label">${t('remaining')}</span><br>${fmtIQD(v.remaining)}</div>
+  </div>` : ''}
+
+  <!-- WARNINGS / INSTRUCTIONS -->
+  ${st.print_warning_text ? `
+  <div style="border:1px solid var(--cream-border);border-left:3px solid var(--burgundy);padding:6px 8px;margin-bottom:8px;font-size:.73rem;border-radius:2px;color:var(--ink-dark)">
+    <div style="font-size:.66rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--burgundy);margin-bottom:2px">Instructions</div>
+    ${esc(st.print_warning_text)}
+  </div>` : ''}
+
+  <!-- FOOTER: address + associates + QR -->
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;padding-top:7px;border-top:1px dashed var(--cream-border)">
+    <div style="font-size:.69rem;color:var(--ink-light);flex:1;padding-right:8px">
+      ${cl.address ? `<div style="margin-bottom:3px">${esc(cl.address)}</div>` : ''}
+      ${assocHTML}
+    </div>
+    ${qrSrc ? `<img src="${escAttr(qrSrc)}" alt="QR" style="width:66px;height:66px;object-fit:contain;flex-shrink:0">` : ''}
+  </div>
+
+</div>`;
+}
 function printRxSlip() {
   document.body.classList.add('printing-rx');
   window.print();
@@ -3716,11 +3860,27 @@ async function renderSettings() {
     document.getElementById('set-clinic-address').value = cl.address||'';
     document.getElementById('set-clinic-logo').value    = cl.logo_url||'';
     document.getElementById('set-print-header').value   = st.print_header_text||'';
-    document.getElementById('set-print-cert').value     = st.print_certification_text||'';
+    // set-print-cert removed — credentials now go to set-print-doctor-cred
     document.getElementById('set-print-warning').value  = st.print_warning_text||'';
-    document.getElementById('set-print-qr').value       = st.print_qr_url||'';
     document.getElementById('set-default-checkup-fee').value = st.default_checkup_fee||0;
     document.getElementById('set-print-financials').checked = st.print_show_financials !== false;
+    // New print fields
+    document.getElementById('set-print-doctor-name').value = st.print_doctor_name||'';
+    document.getElementById('set-print-doctor-cred').value = st.print_doctor_credentials||'';
+    document.getElementById('set-print-logo-align').value  = st.print_logo_align||'center';
+    document.getElementById('set-print-logo-w').value      = st.print_logo_width||120;
+    document.getElementById('set-print-logo-h').value      = st.print_logo_height||60;
+    if (st.print_logo_data) {
+      const prev = document.getElementById('set-print-logo-preview');
+      const img  = document.getElementById('set-print-logo-img');
+      if (prev && img) { img.src = st.print_logo_data; prev.style.display='block'; }
+    }
+    if (st.print_qr_data) {
+      const prev = document.getElementById('set-print-qr-preview');
+      const img  = document.getElementById('set-print-qr-img');
+      if (prev && img) { img.src = st.print_qr_data; prev.style.display='block'; }
+    }
+    _renderAssociateRows(JSON.parse(st.print_associates||'[]'));
     document.getElementById('wa-tpl-1').value = st.wa_template_1||'';
     document.getElementById('wa-tpl-2').value = st.wa_template_2||'';
     document.getElementById('wa-tpl-3').value = st.wa_template_3||'';
@@ -3797,18 +3957,113 @@ async function saveWATemplates() {
 
 async function savePrintSettings() {
   const body = {
-    print_header_text: document.getElementById('set-print-header').value,
-    print_certification_text: document.getElementById('set-print-cert').value,
-    print_warning_text: document.getElementById('set-print-warning').value,
-    print_qr_url: document.getElementById('set-print-qr').value,
-    default_checkup_fee: parseFloat(document.getElementById('set-default-checkup-fee').value)||0,
-    print_show_financials: document.getElementById('set-print-financials').checked,
+    print_header_text:        document.getElementById('set-print-header').value,
+    print_certification_text: document.getElementById('set-print-cert')?.value || '',
+    print_warning_text:       document.getElementById('set-print-warning').value,
+    default_checkup_fee:      parseFloat(document.getElementById('set-default-checkup-fee').value)||0,
+    print_show_financials:    document.getElementById('set-print-financials').checked,
+    // New fields
+    print_doctor_name:        document.getElementById('set-print-doctor-name').value,
+    print_doctor_credentials: document.getElementById('set-print-doctor-cred').value,
+    print_logo_align:         document.getElementById('set-print-logo-align').value,
+    print_logo_width:         parseInt(document.getElementById('set-print-logo-w').value)||120,
+    print_logo_height:        parseInt(document.getElementById('set-print-logo-h').value)||60,
+    print_logo_data:          (NOOR.settings._pendingLogoData !== undefined
+                                 ? NOOR.settings._pendingLogoData
+                                 : NOOR.settings.print_logo_data) || '',
+    print_qr_data:            (NOOR.settings._pendingQrData !== undefined
+                                 ? NOOR.settings._pendingQrData
+                                 : NOOR.settings.print_qr_data) || '',
+    print_associates:         JSON.stringify(_collectAssociateRows()),
   };
+  // Clear pending staging
+  delete NOOR.settings._pendingLogoData;
+  delete NOOR.settings._pendingQrData;
   try {
     await put('/api/settings', body);
     Object.assign(NOOR.settings, body);
     toast(t('successSaved'));
   } catch(e) { toast(e.message,'error'); }
+}
+
+function handlePrintLogoUpload(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = e.target.result;
+    NOOR.settings._pendingLogoData = data;
+    const img  = document.getElementById('set-print-logo-img');
+    const prev = document.getElementById('set-print-logo-preview');
+    if (img)  img.src = data;
+    if (prev) prev.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function handlePrintQrUpload(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const data = e.target.result;
+    NOOR.settings._pendingQrData = data;
+    const img  = document.getElementById('set-print-qr-img');
+    const prev = document.getElementById('set-print-qr-preview');
+    if (img)  img.src = data;
+    if (prev) prev.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPrintLogo() {
+  NOOR.settings._pendingLogoData = '';
+  const prev = document.getElementById('set-print-logo-preview');
+  if (prev) prev.style.display = 'none';
+  const inp = document.getElementById('set-print-logo-file');
+  if (inp) inp.value = '';
+}
+
+function clearPrintQr() {
+  NOOR.settings._pendingQrData = '';
+  const prev = document.getElementById('set-print-qr-preview');
+  if (prev) prev.style.display = 'none';
+  const inp = document.getElementById('set-print-qr-file');
+  if (inp) inp.value = '';
+}
+
+function _collectAssociateRows() {
+  const rows = document.querySelectorAll('#associates-list .associate-row');
+  return Array.from(rows).map(row => ({
+    name:    row.querySelector('.assoc-name')?.value  || '',
+    role:    row.querySelector('.assoc-role')?.value  || '',
+    phone:   row.querySelector('.assoc-phone')?.value || '',
+    address: row.querySelector('.assoc-addr')?.value  || '',
+  })).filter(a => a.name || a.phone || a.address);
+}
+
+function _renderAssociateRows(associates) {
+  const container = document.getElementById('associates-list');
+  if (!container) return;
+  container.innerHTML = '';
+  (associates || []).forEach(a => _addAssociateRowWith(a));
+}
+
+function addAssociateRow() { _addAssociateRowWith({}); }
+
+function _addAssociateRowWith(a) {
+  const container = document.getElementById('associates-list');
+  const div = document.createElement('div');
+  div.className = 'associate-row';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:6px;align-items:center';
+  div.innerHTML = `
+    <input type="text" class="form-input assoc-name"  placeholder="Name"    value="${escAttr(a.name||'')}">
+    <input type="text" class="form-input assoc-role"  placeholder="Role"    value="${escAttr(a.role||'')}">
+    <input type="text" class="form-input assoc-phone" placeholder="Phone"   value="${escAttr(a.phone||'')}">
+    <input type="text" class="form-input assoc-addr"  placeholder="Address" value="${escAttr(a.address||'')}">
+    <button class="btn btn-outline btn-sm" onclick="this.closest('.associate-row').remove()" type="button" style="padding:4px 8px;color:var(--burgundy)">✕</button>
+  `;
+  container.appendChild(div);
 }
 
 async function saveFollowupDefaults() {

@@ -1564,6 +1564,9 @@ def update_settings():
         "followup_months_default","wa_template_1","wa_template_2","wa_template_3",
         "print_header_text","print_certification_text","print_warning_text",
         "print_qr_url","print_show_financials","default_checkup_fee",
+        "print_doctor_name","print_doctor_credentials",
+        "print_logo_align","print_logo_width","print_logo_height",
+        "print_logo_data","print_qr_data","print_associates",
         "language",
     ]
     settings_upd = {k: v for k, v in body.items() if k in settings_fields}
