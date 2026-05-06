@@ -161,6 +161,7 @@ ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_logo_height INTEGER N
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_logo_data TEXT;
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_qr_data TEXT;
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_associates TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'ar';
 
 -- ─────────────────────────────────────────────
 -- PATIENTS
