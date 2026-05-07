@@ -1498,8 +1498,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <table>
               <thead><tr>
                 <th data-i18n="name">الاسم</th><th data-i18n="phone">الهاتف</th><th data-i18n="age">العمر</th>
-                <th data-i18n="lastVisit">آخر زيارة</th><th data-i18n="nextVisit">الزيارة القادمة</th>
-                <th data-i18n="remaining">المتبقي</th><th data-i18n="actions">إجراءات</th>
+                <th data-i18n="lastVisit">آخر زيارة</th><th data-i18n="actions">إجراءات</th>
               </tr></thead>
               <tbody id="patients-tbody"></tbody>
             </table>
@@ -2612,6 +2611,8 @@ async function checkSession() {
     NOOR.role     = data.data.role;
     NOOR.clinicId = data.data.clinic_id;
     NOOR.csrfToken = data.data.csrf_token;
+    // /api/me now always returns full_name; fallback to username if somehow missing
+    if (!NOOR.user.full_name) NOOR.user.full_name = NOOR.user.username || '?';
     if (data.data.grace_warning) {
       document.getElementById('license-banner-text').textContent = data.data.grace_warning;
       document.getElementById('license-banner').classList.add('show');
@@ -2732,12 +2733,26 @@ async function renderDashboard() {
     const cont = document.getElementById('dash-recent-patients');
     const recents = s.recent_visits || [];
     if (!recents.length) { cont.innerHTML = `<div class="empty-state"><p>${t('noPatients')}</p></div>`; return; }
-    // We need patient names — fetch patients list if not cached
-    if (!NOOR.patients.length) {
-      try { const pr = await get('/api/patients?limit=200'); NOOR.patients = pr.data || []; } catch(_){}
-    }
+
+    // Fetch only the specific patients we need for the dashboard panel
+    const recentPids = [...new Set(recents.map(v => v.patient_id))];
+    const patientsForDash = {};
+    try {
+      // Use the already-cached list first, fall back to targeted fetches
+      recentPids.forEach(pid => {
+        const cached = NOOR.patients.find(p => p.id === pid);
+        if (cached) patientsForDash[pid] = cached;
+      });
+      const missing = recentPids.filter(pid => !patientsForDash[pid]);
+      if (missing.length) {
+        const pr = await get('/api/patients?limit=200');
+        NOOR.patients = pr.data || [];
+        NOOR.patients.forEach(p => { patientsForDash[p.id] = p; });
+      }
+    } catch(_) {}
+
     cont.innerHTML = recents.map(v => {
-      const p = getPatient(v.patient_id);
+      const p = patientsForDash[v.patient_id] || {};
       return `<div class="mini-list-item">
         <div class="mini-avatar">${esc((p?.full_name||'?')[0])}</div>
         <div><div class="mini-name">${esc(p?.full_name)}</div><div class="mini-sub">${fmtDate(v.visit_date)}</div></div>
@@ -2793,7 +2808,7 @@ function filterPatients() {
       <td class="td-name" onclick="openPatientDetail('${escAttr(p.id)}')">${esc(p.full_name)}</td>
       <td class="td-phone" data-label="${t('phone')}">${esc(p.phone)}</td>
       <td data-label="${t('age')}">${esc(p.age)}</td>
-      <td data-label="${t('gender')}">${p.gender?t(p.gender):'—'}</td>
+      <td data-label="${t('lastVisit')}">${fmtDate(p.updated_at)}</td>
       <td class="td-actions-cell">
         <button class="btn btn-burgundy btn-sm" onclick="openPatientDetail('${escAttr(p.id)}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -3656,6 +3671,7 @@ async function loadReports() {
     const tbody = document.getElementById('reports-tbody');
     tbody.innerHTML = (s.visits||[]).map(v => {
       const p = getPatient(v.patient_id);
+      const cachedId = cacheRxSlip(v);
       return `<tr>
         <td class="td-name">${esc(p?.full_name)}</td>
         <td data-label="${t('date')}">${fmtDate(v.visit_date)}</td>
@@ -3664,7 +3680,7 @@ async function loadReports() {
         <td data-label="${t('paid')}" style="font-family:'DM Mono',monospace">${fmtNum(v.amount_paid)}</td>
         <td data-label="${t('remaining')}" style="font-family:'DM Mono',monospace;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</td>
         <td class="td-actions-cell">
-          <button class="btn btn-outline btn-sm" onclick="showRxSlipFromData(${JSON.stringify(v).replace(/"/g,'&quot;')})">${t('slip')}</button>
+          <button class="btn btn-outline btn-sm" onclick="showRxSlipFromData('${escAttr(cachedId)}')">${t('slip')}</button>
         </td>
       </tr>`;
     }).join('');
@@ -3822,7 +3838,15 @@ async function showRxSlip(vid) {
 }
 
 // Rx Slip — from already-loaded visit object (reports table)
-function showRxSlipFromData(v) {
+// Store visit data in a map keyed by visit id to avoid inline JSON in onclick attrs
+NOOR._rxSlipCache = {};
+function cacheRxSlip(v) {
+  NOOR._rxSlipCache[v.id] = v;
+  return v.id;
+}
+function showRxSlipFromData(vid) {
+  const v = NOOR._rxSlipCache[vid];
+  if (!v) { toast('Visit data not found','error'); return; }
   _renderRxSlip({ visit: v, patient: getPatient(v.patient_id), clinic: {name:NOOR.clinicName}, settings: NOOR.settings });
   openModal('modal-rx-slip');
 }
