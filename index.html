@@ -7,7 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -474,10 +474,24 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .rx-input:focus{background:var(--cream);border-radius:4px}
 /* Sign toggle button — single button that flips positive ↔ negative */
 .rx-sign-wrap{display:flex;align-items:center;gap:0;position:relative}
-.rx-sign-wrap .rx-input{flex:1;min-width:0}
-.rx-sign-btn{flex-shrink:0;width:26px;height:28px;border:1.5px solid var(--cream-border);border-radius:0 4px 4px 0;background:var(--cream);color:var(--ink-mid);font-size:.65rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;transition:background .12s,color .12s,border-color .12s;letter-spacing:-.5px;user-select:none}
+.rx-sign-wrap .rx-input{flex:1;min-width:0;border-start-start-radius:0!important;border-end-start-radius:0!important}
+/* Sign toggle badge — shows + or − in front of the input */
+.rx-sign-btn{
+  flex-shrink:0;width:30px;height:32px;
+  border:1.5px solid var(--cream-border);
+  border-inline-end:none;
+  border-radius:4px 0 0 4px;
+  background:var(--cream);color:var(--ink-mid);
+  font-size:.9rem;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  line-height:1;padding:0;
+  transition:background .12s,color .12s,border-color .12s;
+  user-select:none;
+  min-width:30px;
+}
+.rx-sign-btn::before{content:'+'}
+.rx-sign-btn.is-negative::before{content:'−'}
 .rx-sign-btn:hover{background:var(--burgundy-pale);border-color:var(--burgundy);color:var(--burgundy)}
-.rx-sign-btn:active{background:var(--burgundy);color:white;border-color:var(--burgundy)}
 .rx-sign-btn.is-negative{background:var(--burgundy-pale);border-color:var(--burgundy);color:var(--burgundy)}
 
 /* INV MATCH */
@@ -549,21 +563,33 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .report-grid{display:grid;grid-template-columns:minmax(300px,1.1fr) minmax(300px,.9fr);gap:18px;margin-bottom:22px}
 .report-card{background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-md);padding:18px;box-shadow:var(--shadow-sm)}
 .report-card-title{font-size:.78rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.donut-layout{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:center}
-.donut-wrap{position:relative;width:220px;height:220px;margin:auto}
-.donut-wrap svg{width:220px;height:220px;transform:rotate(-90deg)}
-.donut-seg{cursor:pointer;transition:opacity .15s,stroke-width .15s}
-.donut-seg:hover{opacity:.78;stroke-width:34}
-.donut-center{position:absolute;inset:52px;border-radius:50%;background:var(--cream);display:flex;align-items:center;justify-content:center;text-align:center;padding:12px}
-.donut-center-val{font-family:'DM Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--burgundy)}
-.donut-center-label{font-size:.68rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
-.donut-legend{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;padding-inline-end:4px}
-.donut-legend-item{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;border:1px solid var(--cream-border);border-radius:var(--radius-sm);padding:8px 10px;background:var(--cream);cursor:pointer;transition:opacity .15s,background .15s}
-.donut-legend-item.hidden{opacity:.42;background:transparent}
-.donut-dot{width:10px;height:10px;border-radius:50%}
-.donut-legend-name{font-size:.84rem;font-weight:600;color:var(--ink)}
-.donut-legend-meta{font-size:.7rem;color:var(--ink-light)}
-.donut-legend-val{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--ink-mid)}
+.donut-layout{display:flex;flex-direction:column;gap:16px;align-items:stretch}
+.donut-wrap{position:relative;width:240px;height:240px;margin:0 auto 4px}
+.donut-wrap svg{width:240px;height:240px;transform:rotate(-90deg);filter:drop-shadow(0 4px 12px rgba(107,26,42,.12))}
+.donut-seg{cursor:pointer;transition:opacity .2s,stroke-width .2s}
+.donut-seg:hover{opacity:.82;stroke-width:36}
+.donut-center{position:absolute;inset:56px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;box-shadow:inset 0 1px 4px rgba(26,20,16,.05)}
+.donut-center-val{font-family:'DM Mono',monospace;font-size:1rem;font-weight:700;color:var(--burgundy);line-height:1.1}
+.donut-center-label{font-size:.6rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+/* Redesigned legend: horizontal pill grid */
+.donut-legend{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px 0}
+.donut-legend-item{
+  display:flex;align-items:center;gap:8px;
+  border:1.5px solid var(--cream-border);
+  border-radius:var(--radius-sm);
+  padding:8px 10px;
+  background:white;
+  cursor:pointer;
+  transition:all .18s;
+  box-shadow:var(--shadow-sm);
+}
+.donut-legend-item:hover{border-color:var(--burgundy);background:var(--burgundy-pale)}
+.donut-legend-item.hidden{opacity:.35;background:var(--cream);border-style:dashed;box-shadow:none}
+.donut-dot{width:10px;height:10px;flex-shrink:0;border-radius:3px}
+.donut-legend-text{flex:1;min-width:0}
+.donut-legend-name{font-size:.78rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.donut-legend-meta{font-size:.65rem;color:var(--ink-light)}
+.donut-legend-val{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--burgundy);font-weight:700;margin-inline-start:auto;flex-shrink:0}
 .quick-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
 .quick-form .full{grid-column:1/-1}
 .mini-report-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto}
@@ -572,7 +598,7 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .mini-report-title{font-size:.86rem;font-weight:700;color:var(--ink)}
 .mini-report-sub{font-size:.72rem;color:var(--ink-light)}
 .mini-report-val{font-family:'DM Mono',monospace;font-size:.82rem;color:var(--burgundy)}
-@media(max-width:980px){.report-grid{grid-template-columns:1fr}.donut-layout{grid-template-columns:1fr}.donut-wrap{width:200px;height:200px}.donut-wrap svg{width:200px;height:200px}.donut-center{inset:48px}.quick-form{grid-template-columns:1fr}}
+@media(max-width:980px){.report-grid{grid-template-columns:1fr}.donut-layout{flex-direction:column}.donut-wrap{width:200px;height:200px}.donut-wrap svg{width:200px;height:200px}.donut-center{inset:48px}.donut-legend{grid-template-columns:1fr 1fr}.quick-form{grid-template-columns:1fr}}
 
 /* VISIT CARD INNER GRID */
 .patient-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
@@ -1062,11 +1088,11 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
     <div class="lp-hero">
       <div class="lp-hero-title" id="lp-hero-title">إدارة عيادتك البصرية بكل سهولة</div>
       <div class="lp-gold-bar"></div>
-      <div class="lp-hero-sub" id="lp-hero-sub">نظام متكامل لإدارة المرضى، الوصفات، المخزون والتقارير المالية — في مكان واحد.</div>
+      <div class="lp-hero-sub" id="lp-hero-sub">نظام متكامل لإدارة المراجعين، الوصفات، المخزون والتقارير المالية — في مكان واحد.</div>
       <div class="lp-features" style="margin-top:28px">
         <div class="lp-feature">
           <div class="lp-feature-dot"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-          <span class="lp-feature-text" data-i18n-lp="featurePatients">إدارة المرضى والوصفات</span>
+          <span class="lp-feature-text" data-i18n-lp="featurePatients">إدارة المراجعين والوصفات</span>
         </div>
         <div class="lp-feature">
           <div class="lp-feature-dot"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg></div>
@@ -1234,7 +1260,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       </button>
       <button class="bnav-item bnav-extra" data-section="patients" onclick="navigate('patients')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-        <span class="bnav-label" data-i18n="patients">المرضى</span>
+        <span class="bnav-label" data-i18n="patients">المراجعون</span>
       </button>
       <button class="bnav-item" data-section="followups" onclick="navigate('followups')" id="bnav-followups">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -1312,7 +1338,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       </div>
       <div class="nav-item" data-section="patients" onclick="navigate('patients')">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-        <span class="nav-label" data-i18n="patients">المرضى</span>
+        <span class="nav-label" data-i18n="patients">المراجعون</span>
         <span class="nav-tooltip">Patients</span>
       </div>
       <div class="nav-item" data-section="followups" onclick="navigate('followups')">
@@ -1391,7 +1417,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       <div class="topbar-title" id="topbar-title">لوحة التحكم</div>
       <div class="search-wrap" style="display:none">
         <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="search" id="global-search" placeholder="بحث عن مريض..." oninput="onGlobalSearch(this.value)">
+        <input type="search" id="global-search" placeholder="بحث عن مراجع..." oninput="onGlobalSearch(this.value)">
         <div class="search-results" id="search-results"></div>
       </div>
       <div class="topbar-actions">
@@ -1426,7 +1452,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         <div class="stats-grid">
           <div class="stat-card" onclick="navigate('patients')">
             <div class="stat-card-icon burgundy"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
-            <div class="stat-card-label" data-i18n="todayPatients">مرضى اليوم</div>
+            <div class="stat-card-label" data-i18n="todayPatients">مراجعو اليوم</div>
             <div class="stat-card-value" id="stat-today-patients">—</div>
             <div class="stat-card-sub" data-i18n="visits">زيارة</div>
           </div>
@@ -1462,7 +1488,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <div class="chart-wrap"><div class="chart-bars" id="chart-bars"></div></div>
           </div>
           <div class="dash-card">
-            <div class="dash-card-title" data-i18n="recentPatients">آخر المرضى</div>
+            <div class="dash-card-title" data-i18n="recentPatients">آخر المراجعين</div>
             <div id="dash-recent-patients"></div>
           </div>
         </div>
@@ -1474,7 +1500,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <div class="page-header">
             <div class="page-header-left">
               <div class="page-header-eyebrow" data-i18n="management">إدارة</div>
-              <div class="page-header-title" data-i18n="patients">المرضى</div>
+              <div class="page-header-title" data-i18n="patients">المراجعون</div>
               <div class="page-header-sub"><span data-i18n="total">الإجمالي</span>: <span id="patients-total" style="font-family:'DM Mono',monospace;font-weight:700">0</span></div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1482,7 +1508,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
               <button class="btn btn-outline btn-sm" onclick="exportPDF()">PDF</button>
               <button class="btn btn-burgundy" onclick="openAddPatient()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                <span data-i18n="addPatient">إضافة مريض</span>
+                <span data-i18n="addPatient">إضافة مراجع</span>
               </button>
             </div>
           </div>
@@ -1504,15 +1530,15 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             </table>
             <div class="empty-state" id="patients-empty" style="display:none">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <h3 data-i18n="noPatients">لا يوجد مرضى</h3><p data-i18n="addFirstPatient">أضف مريضك الأول للبدء</p>
+              <h3 data-i18n="noPatients">لا يوجد مراجعين</h3><p data-i18n="addFirstPatient">أضف مراجعك الأول للبدء</p>
             </div>
           </div>
         </div>
         <div id="patients-detail-view" style="display:none">
-          <div class="breadcrumb"><a onclick="navigate('patients')" data-i18n="patients">المرضى</a><span class="breadcrumb-sep">›</span><span id="patient-detail-name">—</span></div>
+          <div class="breadcrumb"><a onclick="navigate('patients')" data-i18n="patients">المراجعون</a><span class="breadcrumb-sep">›</span><span id="patient-detail-name">—</span></div>
           <div class="page-header">
             <div class="page-header-left">
-              <div class="page-header-eyebrow" data-i18n="patientRecord">ملف المريض</div>
+              <div class="page-header-eyebrow" data-i18n="patientRecord">ملف المراجع</div>
               <div class="page-header-title" id="patient-detail-name2">—</div>
               <div class="page-header-sub" id="patient-detail-info"></div>
             </div>
@@ -1555,7 +1581,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <div class="empty-state" id="followups-empty" style="display:none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             <h3 data-i18n="noFollowups">لا توجد متابعات قريبة</h3>
-            <p data-i18n="noFollowupsSub">ممتاز! لا يوجد مرضى لمتابعتهم.</p>
+            <p data-i18n="noFollowupsSub">ممتاز! لا يوجد مراجعين لمتابعتهم.</p>
           </div>
         </div>
       </section>
@@ -1685,15 +1711,15 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <div class="report-stat"><div class="report-stat-val" id="rep-outstanding">—</div><div class="report-stat-label" data-i18n="totalOutstanding">الديون المعلقة (IQD)</div></div>
           <div class="report-stat"><div class="report-stat-val" id="rep-expenses">—</div><div class="report-stat-label" data-i18n="operatingCosts">Operational Costs</div></div>
           <div class="report-stat"><div class="report-stat-val" id="rep-profit">—</div><div class="report-stat-label" data-i18n="grossProfit">Gross Profit</div></div>
-          <div class="report-stat"><div class="report-stat-val" id="rep-patients">—</div><div class="report-stat-label" data-i18n="patientsSeen">مرضى تمت رؤيتهم</div></div>
-          <div class="report-stat"><div class="report-stat-val" id="rep-new-patients">—</div><div class="report-stat-label" data-i18n="newPatients">مرضى جدد</div></div>
+          <div class="report-stat"><div class="report-stat-val" id="rep-patients">—</div><div class="report-stat-label" data-i18n="patientsSeen">مراجعون تمت رؤيتهم</div></div>
+          <div class="report-stat"><div class="report-stat-val" id="rep-new-patients">—</div><div class="report-stat-label" data-i18n="newPatients">مراجعون جدد</div></div>
         </div>
         <div class="report-grid">
           <div class="report-card">
             <div class="report-card-title"><span data-i18n="salesMix">Sales / Cost Mix</span><span id="donut-active-count"></span></div>
             <div class="donut-layout">
               <div class="donut-wrap">
-                <svg viewBox="0 0 220 220" id="report-donut"></svg>
+                <svg viewBox="0 0 240 240" id="report-donut"></svg>
                 <div class="donut-center"><div><div class="donut-center-val" id="donut-total">0</div><div class="donut-center-label">IQD</div></div></div>
               </div>
               <div class="donut-legend" id="donut-legend"></div>
@@ -1747,7 +1773,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th data-i18n="date">التاريخ</th><th data-i18n="name">المريض</th><th>نوع العدسة</th>
+              <th data-i18n="date">التاريخ</th><th data-i18n="name">المراجع</th><th>نوع العدسة</th>
               <th data-i18n="total">الإجمالي</th><th data-i18n="paid">المدفوع</th><th data-i18n="remaining">المتبقي</th><th data-i18n="slip">الوصفة</th>
             </tr></thead>
             <tbody id="reports-tbody"></tbody>
@@ -1947,7 +1973,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 <div class="modal-overlay" id="modal-patient">
   <div class="modal" style="width:min(760px,100%)">
     <div class="modal-header">
-      <div class="modal-title" id="modal-patient-title">إضافة مريض</div>
+      <div class="modal-title" id="modal-patient-title">إضافة مراجع</div>
       <button class="modal-close" onclick="closeModal('modal-patient')">✕</button>
     </div>
     <div class="modal-body">
@@ -1983,13 +2009,13 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
                 <td>
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-od-sph" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-od-sph')">
-                    <button type="button" class="rx-sign-btn" id="rx-od-sph-sign" onclick="toggleRxSign('rx-od-sph')" tabindex="-1" title="Toggle sign">+/−</button>
+                    <button type="button" class="rx-sign-btn" id="rx-od-sph-sign" onclick="toggleRxSign('rx-od-sph')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
                 <td>
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-od-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-od-cyl')">
-                    <button type="button" class="rx-sign-btn" id="rx-od-cyl-sign" onclick="toggleRxSign('rx-od-cyl')" tabindex="-1" title="Toggle sign">+/−</button>
+                    <button type="button" class="rx-sign-btn" id="rx-od-cyl-sign" onclick="toggleRxSign('rx-od-cyl')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
                 <td><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="180" placeholder="0"></td>
@@ -2002,13 +2028,13 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
                 <td>
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-os-sph" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-os-sph')">
-                    <button type="button" class="rx-sign-btn" id="rx-os-sph-sign" onclick="toggleRxSign('rx-os-sph')" tabindex="-1" title="Toggle sign">+/−</button>
+                    <button type="button" class="rx-sign-btn" id="rx-os-sph-sign" onclick="toggleRxSign('rx-os-sph')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
                 <td>
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-os-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-os-cyl')">
-                    <button type="button" class="rx-sign-btn" id="rx-os-cyl-sign" onclick="toggleRxSign('rx-os-cyl')" tabindex="-1" title="Toggle sign">+/−</button>
+                    <button type="button" class="rx-sign-btn" id="rx-os-cyl-sign" onclick="toggleRxSign('rx-os-cyl')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
                 <td><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="180" placeholder="0"></td>
@@ -2227,23 +2253,23 @@ const LANG_DATA = {
   ar: {
     brand:'نور',brandTagline:'نظام إدارة العيادات',clinic:'العيادة',
     navMain:'الرئيسية',navInventory:'المخزون',navReports:'التقارير والإعدادات',
-    dashboard:'لوحة التحكم',patients:'المرضى',followups:'المتابعات',
+    dashboard:'لوحة التحكم',patients:'المراجعون',followups:'المتابعات',
     lenses:'العدسات',frames:'الإطارات',reports:'التقارير',settings:'الإعدادات',
     auditLog:'سجل التدقيق',language:'اللغة',management:'إدارة',inventory:'المخزون',
-    analytics:'تحليلات',security:'الأمان',addPatient:'إضافة مريض',
+    analytics:'تحليلات',security:'الأمان',addPatient:'إضافة مراجع',
     addOldPrescription:'إضافة وصفة قديمة',oldPrescription:'وصفة قديمة',topUpRemaining:'تسديد المتبقي',printA5:'طباعة A5',latestVisit:'آخر زيارة',visitDate:'تاريخ الزيارة',
     operatingCosts:'التكاليف التشغيلية',grossProfit:'إجمالي الربح',salesMix:'مزيج المبيعات والتكاليف',retailSales:'مبيعات إضافية',addSale:'إضافة بيع',addExpense:'إضافة تكلفة',
     addLens:'إضافة عدسة',addFrame:'إضافة إطار',addUser:'إضافة مستخدم',
-    save:'حفظ',cancel:'إلغاء',edit:'تعديل',delete:'حذف',restock:'إعادة تخزين',
+    save:'حفظ',cancel:'إلغاء',edit:'تعديل',view:'عرض',delete:'حذف',restock:'إعادة تخزين',
     actions:'إجراءات',name:'الاسم',phone:'الهاتف',age:'العمر',gender:'الجنس',
     address:'العنوان',notes:'ملاحظات',fullName:'الاسم الكامل',male:'ذكر',female:'أنثى',
     lastVisit:'آخر زيارة',nextVisit:'الزيارة القادمة',remaining:'المتبقي',
-    total:'الإجمالي',paid:'المدفوع',todayPatients:'مرضى اليوم',
+    total:'الإجمالي',paid:'المدفوع',todayPatients:'مراجعو اليوم',
     todayEarnings:'إيرادات اليوم',outstandingDebt:'الديون المعلقة',
     lowStock:'مخزون منخفض',monthlyRevenue:'إيرادات الشهر',visits:'زيارة',items:'صنف',
-    last7days:'الإيرادات — آخر 7 أيام',recentPatients:'آخر المرضى',
-    allGenders:'الجنس (الكل)',noPatients:'لا يوجد مرضى',
-    addFirstPatient:'أضف مريضك الأول للبدء',patientRecord:'ملف المريض',
+    last7days:'الإيرادات — آخر 7 أيام',recentPatients:'آخر المراجعين',
+    allGenders:'الجنس (الكل)',noPatients:'لا يوجد مراجعين',
+    addFirstPatient:'أضف مراجعك الأول للبدء',patientRecord:'ملف المراجع',
     newVisit:'زيارة جديدة',patientInfo:'المعلومات',prescription:'الوصفة',
     frame:'الإطار',financials:'المالية',previousRx:'الوصفة السابقة',
     importAsCurrent:'استيراد كوصفة حالية',lensType:'نوع العدسة',material:'المادة',
@@ -2256,7 +2282,7 @@ const LANG_DATA = {
     checkupFee:'رسوم الفحص (IQD)',amountPaid:'المبلغ المدفوع (IQD)',
     didCheckup:'تم إجراء الفحص',nextVisitDate:'تاريخ الزيارة القادمة',
     followupMonths:'أشهر المتابعة',noFollowups:'لا توجد متابعات قريبة',
-    noFollowupsSub:'ممتاز! لا يوجد مرضى لمتابعتهم.',
+    noFollowupsSub:'ممتاز! لا يوجد مراجعين لمتابعتهم.',
     daysLeft:'الأيام المتبقية',whatsapp:'واتساب',
     template1:'قالب 1',template2:'قالب 2',template3:'قالب 3',
     allTypes:'كل الأنواع',allMaterials:'كل المواد',qty:'الكمية',
@@ -2265,7 +2291,7 @@ const LANG_DATA = {
     noLensesSub:'أضف عدسة يدوياً',brand:'العلامة',type:'النوع',color:'اللون',
     noFrames:'لا توجد إطارات',noFramesSub:'أضف إطاراتك للبدء',
     totalRevenue:'إجمالي الإيرادات (IQD)',totalOutstanding:'الديون المعلقة (IQD)',
-    patientsSeen:'مرضى تمت رؤيتهم',newPatients:'مرضى جدد',date:'التاريخ',slip:'وصفة',
+    patientsSeen:'مراجعون تمت رؤيتهم',newPatients:'مراجعون جدد',date:'التاريخ',slip:'وصفة',
     clinicProfile:'ملف العيادة',whatsappTemplates:'قوالب واتساب',
     receptionistPermissions:'صلاحيات الاستقبال',userManagement:'إدارة المستخدمين',
     followupDefaults:'إعدادات المتابعة',clinicName:'اسم العيادة',logoUpload:'الشعار (URL)',
@@ -2293,7 +2319,7 @@ const LANG_DATA = {
     addPatient:'Add Patient',addLens:'Add Lens',addFrame:'Add Frame',addUser:'Add User',
     addOldPrescription:'Add Old Rx',oldPrescription:'Old Prescription',topUpRemaining:'Top Up Remaining',printA5:'Print A5',latestVisit:'Latest Visit',visitDate:'Visit Date',
     operatingCosts:'Operational Costs',grossProfit:'Gross Profit',salesMix:'Sales / Cost Mix',retailSales:'Retail Sales',addSale:'Add Sale',addExpense:'Add Expense',
-    save:'Save',cancel:'Cancel',edit:'Edit',delete:'Delete',restock:'Restock',
+    save:'Save',cancel:'Cancel',edit:'Edit',view:'View',delete:'Delete',restock:'Restock',
     actions:'Actions',name:'Name',phone:'Phone',age:'Age',gender:'Gender',
     address:'Address',notes:'Notes',fullName:'Full Name',male:'Male',female:'Female',
     lastVisit:'Last Visit',nextVisit:'Next Visit',remaining:'Remaining',
@@ -2410,7 +2436,7 @@ function applyLang() {
   setT('lbl-reset-email',  'البريد الإلكتروني',            'Email');
   setT('lbl-back',         'العودة لتسجيل الدخول',         'Back to Sign In');
   setT('lp-hero-title',    'إدارة عيادتك البصرية بكل سهولة','Manage your optical clinic with ease');
-  setT('lp-hero-sub',      'نظام متكامل لإدارة المرضى، الوصفات، المخزون والتقارير المالية — في مكان واحد.','A complete system for patients, prescriptions, inventory, and financials — all in one place.');
+  setT('lp-hero-sub',      'نظام متكامل لإدارة المراجعين، الوصفات، المخزون والتقارير المالية — في مكان واحد.','A complete system for patients, prescriptions, inventory, and financials — all in one place.');
   // lang btn states across both panels
   const langBtns = ['sb-lang-ar','sb-lang-en','login-lang-ar','login-lang-en','signup-lang-ar','signup-lang-en'];
   langBtns.forEach(id => document.getElementById(id)?.classList.remove('active'));
@@ -2804,15 +2830,19 @@ function filterPatients() {
   if (!list.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
   tbody.innerHTML = list.map(p => {
-    return `<tr>
-      <td class="td-name" onclick="openPatientDetail('${escAttr(p.id)}')">${esc(p.full_name)}</td>
+    const hasDebt = parseFloat(p.remaining_total || 0) > 0;
+    return `<tr class="${hasDebt?'row-debt':''}">
+      <td class="td-name" onclick="openPatientDetail('${escAttr(p.id)}')" style="cursor:pointer">
+        ${esc(p.full_name)}
+        ${hasDebt?`<span class="badge badge-danger" style="margin-inline-start:6px;font-size:.6rem">${fmtNum(p.remaining_total)} IQD</span>`:''}
+      </td>
       <td class="td-phone" data-label="${t('phone')}">${esc(p.phone)}</td>
       <td data-label="${t('age')}">${esc(p.age)}</td>
       <td data-label="${t('lastVisit')}">${fmtDate(p.updated_at)}</td>
       <td class="td-actions-cell">
         <button class="btn btn-burgundy btn-sm" onclick="openPatientDetail('${escAttr(p.id)}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          ${t('edit')}
+          ${t('view')}
         </button>
         <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deletePatient('${escAttr(p.id)}')">${t('delete')}</button>
       </td>
@@ -2853,15 +2883,18 @@ function renderPatientSummary(p, visits) {
   const latestLens = latest.id ? [latest.lens_type, latest.lens_material, latest.lens_coating].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
   const latestFrame = latest.id ? [latest.frame_brand, latest.frame_type].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
   const nextVisit = visits.find(v => v.next_visit_date)?.next_visit_date;
+  const savedDate = p.created_at ? fmtDate(p.created_at) : '—';
   document.getElementById('patient-summary').innerHTML = `
     <div class="patient-summary-grid">
       <div class="patient-summary-card"><div class="patient-summary-label">${t('outstandingDebt')}</div><div class="patient-summary-value ${outstanding>0?'danger':''}">${fmtIQD(outstanding)}</div><div class="patient-summary-sub">${visits.length} ${t('visits')}</div></div>
       <div class="patient-summary-card"><div class="patient-summary-label">${t('latestVisit')}</div><div class="patient-summary-value">${latest.visit_date?fmtDate(latest.visit_date):'—'}</div><div class="patient-summary-sub">${nextVisit?`${t('nextVisit')}: ${fmtDate(nextVisit)}`:''}</div></div>
       <div class="patient-summary-card"><div class="patient-summary-label">RX</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestRx)}</div><div class="patient-summary-sub">IPD: ${esc(latest.ipd||'—')}</div></div>
       <div class="patient-summary-card"><div class="patient-summary-label">${t('lensType')} / ${t('frame')}</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestLens)}</div><div class="patient-summary-sub">${esc(latestFrame)}</div></div>
+      <div class="patient-summary-card"><div class="patient-summary-label">${NOOR.lang==='ar'?'تاريخ التسجيل':'Registered'}</div><div class="patient-summary-value" style="font-size:.9rem">${savedDate}</div></div>
     </div>
     <div class="patient-detail-actions">
       ${outstanding>0?`<button class="btn btn-gold" onclick="topUpPatientRemaining()">${t('topUpRemaining')}: ${fmtIQD(outstanding)}</button>`:''}
+      ${latest.id && !latest.did_checkup?`<button class="btn btn-outline" style="border-color:var(--success);color:var(--success)" onclick="markCheckupDone('${escAttr(latest.id)}')">✓ ${NOOR.lang==='ar'?'تسجيل تمام الفحص':'Mark Checkup Done'}</button>`:''}
       ${latest.id?`<button class="btn btn-outline" onclick="showRxSlip('${escAttr(latest.id)}')">${t('printA5')}</button>`:''}
       ${latest.id && p.phone?`<button class="wa-btn" onclick="sendRxWhatsApp('${escAttr(latest.id)}','${escAttr(p.phone||'')}','${escAttr(p.full_name||'')}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg> Send Rx via WhatsApp</button>`:''}
     </div>
@@ -2925,12 +2958,17 @@ function openAddPatient() {
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
   document.getElementById('modal-patient-title').textContent = t('addPatient');
   clearPatientForm(); switchPatientTab('info');
+  // Show all tabs
+  ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = '';
+  });
   populateFrameInventory(); openModal('modal-patient');
 }
 
 async function openNewVisit() {
   NOOR.patientModalMode = 'visit';
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
+  ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
   clearPatientForm(); switchPatientTab('rx');
   document.getElementById('visit-date-group').style.display = 'block';
   document.getElementById('f-visit-date').value = todayStr();
@@ -2939,6 +2977,7 @@ async function openNewVisit() {
     try {
       const data = await get(`/api/patients/${NOOR.editingPatientId}`);
       fillPatientForm(data.data || {});
+      await populateFrameInventory();
       const visits = data.data?.visits || [];
       if (visits.length) {
         const lv = visits[0];
@@ -2946,10 +2985,54 @@ async function openNewVisit() {
         document.getElementById('prev-rx-display').textContent =
           `OD: SPH ${lv.od_sphere}  CYL ${lv.od_cylinder}  AXIS ${lv.od_axis} | OS: SPH ${lv.os_sphere}  CYL ${lv.os_cylinder}  AXIS ${lv.os_axis}`;
         NOOR._lastVisit = lv;
+        // Pre-fill RX from last visit
+        fillVisitForm(lv);
       }
     } catch(_){}
   }
   openModal('modal-patient');
+}
+
+function fillVisitForm(v) {
+  if (!v) return;
+  // RX fields
+  const setRx = (id, val) => { const el = document.getElementById(id); if (el && val !== null && val !== undefined) { el.value = val; el.disabled = false; } };
+  setRx('rx-od-sph', v.od_sphere); setRx('rx-od-cyl', v.od_cylinder);
+  setRx('rx-od-axis', v.od_axis);  setRx('rx-od-add', v.od_addition);
+  setRx('rx-od-va', v.od_va);      setRx('rx-od-bcva', v.od_bcva);
+  setRx('rx-os-sph', v.os_sphere); setRx('rx-os-cyl', v.os_cylinder);
+  setRx('rx-os-axis', v.os_axis);  setRx('rx-os-add', v.os_addition);
+  setRx('rx-os-va', v.os_va);      setRx('rx-os-bcva', v.os_bcva);
+  setRx('rx-ipd', v.ipd);
+  // Sync sign buttons
+  ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'].forEach(id => {
+    const val = parseFloat(document.getElementById(id)?.value);
+    const btn = document.getElementById(id + '-sign');
+    if (btn) btn.classList.toggle('is-negative', !isNaN(val) && val < 0);
+  });
+  // Lens type/material
+  if (v.lens_type) { const el = document.getElementById('rx-lens-type'); if (el) el.value = v.lens_type; }
+  if (v.lens_material) { const el = document.getElementById('rx-material'); if (el) el.value = v.lens_material; }
+  if (v.lens_count) { const el = document.getElementById('rx-lens-count'); if (el) el.value = v.lens_count; }
+  // Coating chips
+  if (v.lens_coating) {
+    const coatings = v.lens_coating.split(',');
+    document.querySelectorAll('.coating-chip').forEach(c => {
+      c.classList.toggle('selected', coatings.includes(c.dataset.val));
+    });
+  }
+  // Frame fields
+  if (v.frame_brand) { const el = document.getElementById('p-frame-brand'); if (el) el.value = v.frame_brand; }
+  if (v.frame_type) { const el = document.getElementById('p-frame-type'); if (el) el.value = v.frame_type; }
+  if (v.frame_material) { const el = document.getElementById('p-frame-material'); if (el) el.value = v.frame_material; }
+  // Financial fields — keep blank for new visit (fresh payment)
+  // But auto-fill prices from last visit as a convenience
+  if (v.frame_price) { const el = document.getElementById('f-frame-price'); if (el) el.value = v.frame_price; }
+  if (v.frame_cost)  { const el = document.getElementById('f-frame-cost');  if (el) el.value = v.frame_cost; }
+  if (v.lens_price)  { const el = document.getElementById('f-lens-price');  if (el) el.value = v.lens_price; }
+  if (v.lens_cost)   { const el = document.getElementById('f-lens-cost');   if (el) el.value = v.lens_cost; }
+  calcTotal();
+  onRxChange();
 }
 
 async function openOldPrescription() {
@@ -2959,6 +3042,10 @@ async function openOldPrescription() {
   document.getElementById('modal-patient').classList.add('old-rx-mode');
   document.getElementById('modal-patient-title').textContent = t('oldPrescription');
   document.getElementById('f-visit-date').value = '';
+  // Restore tabs (openNewVisit already does this, but make sure)
+  ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = '';
+  });
   switchPatientTab('info');
 }
 
@@ -2969,6 +3056,10 @@ async function openEditPatient() {
   clearPatientForm();
   switchPatientTab('info');
   document.getElementById('modal-patient-title').textContent = t('edit');
+  // Hide RX/frame/financials tabs in edit mode (info only)
+  ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
   try {
     const data = await get(`/api/patients/${NOOR.editingPatientId}`);
     fillPatientForm(data.data || {});
@@ -3232,6 +3323,27 @@ async function savePatient() {
   }
 
   const isNewPatient = !NOOR.editingPatientId;
+  
+  // Duplicate check on new patient
+  if (isNewPatient) {
+    const phone = document.getElementById('p-phone').value.trim();
+    if (phone) {
+      const dupByPhone = (NOOR.patients || []).find(p => p.phone && p.phone.replace(/\s/g,'') === phone.replace(/\s/g,''));
+      if (dupByPhone) {
+        const msg = NOOR.lang === 'ar'
+          ? `يوجد مراجع بنفس رقم الهاتف: ${dupByPhone.full_name}. هل تريد الاستمرار على أي حال؟`
+          : `A patient with this phone already exists: ${dupByPhone.full_name}. Continue anyway?`;
+        if (!confirm(msg)) return;
+      }
+    }
+    const dupByName = (NOOR.patients || []).find(p => p.full_name && p.full_name.trim().toLowerCase() === name.toLowerCase());
+    if (dupByName) {
+      const msg = NOOR.lang === 'ar'
+        ? `يوجد مراجع بنفس الاسم: ${dupByName.full_name}. هل تريد الاستمرار؟`
+        : `A patient with this name already exists: ${dupByName.full_name}. Continue?`;
+      if (!confirm(msg)) return;
+    }
+  }
   let pid = NOOR.editingPatientId;
 
   try {
@@ -3323,14 +3435,79 @@ async function savePatient() {
   }
 }
 
-async function topUpPatientRemaining() {
+function topUpPatientRemaining() {
   const detail = NOOR._currentPatientDetail || {};
   const visits = (detail.visits || []).filter(v => (parseFloat(v.remaining)||0) > 0);
+  if (!visits.length) return;
+  const totalOutstanding = visits.reduce((s,v) => s + (parseFloat(v.remaining)||0), 0);
+  NOOR._topUpVisits = visits;
+  NOOR._topUpMax = totalOutstanding;
+  // Build a small inline top-up modal
+  const existing = document.getElementById('modal-topup');
+  if (existing) existing.remove();
+  const mo = document.createElement('div');
+  mo.className = 'modal-overlay';
+  mo.id = 'modal-topup';
+  mo.style.cssText = 'display:flex;z-index:1001';
+  mo.innerHTML = `<div class="modal" style="width:min(400px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">${NOOR.lang==='ar'?'تسديد المتبقي':'Pay Outstanding'}</div>
+      <button class="modal-close" onclick="document.getElementById('modal-topup').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:.88rem;color:var(--ink-mid);margin-bottom:16px">
+        ${NOOR.lang==='ar'?'المبلغ المتبقي الإجمالي':'Total Outstanding'}: <strong style="color:var(--danger)">${fmtIQD(totalOutstanding)}</strong>
+      </div>
+      <div class="form-group">
+        <label class="form-label">${NOOR.lang==='ar'?'المبلغ المدفوع الآن':'Amount to Pay'} (IQD)</label>
+        <input type="number" class="form-input" id="topup-amount" min="1" max="${totalOutstanding}" step="1"
+          value="${totalOutstanding}" inputmode="numeric" placeholder="${totalOutstanding}">
+        <div style="font-size:.75rem;color:var(--ink-light);margin-top:4px">${NOOR.lang==='ar'?'الحد الأقصى':'Max'}: ${fmtNum(totalOutstanding)} IQD</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('modal-topup').remove()">${t('cancel')}</button>
+      <button class="btn btn-burgundy" onclick="confirmTopUp()">${t('save')}</button>
+    </div>
+  </div>`;
+  // Enforce max on input
+  mo.querySelector('#topup-amount').addEventListener('input', function() {
+    if (parseFloat(this.value) > NOOR._topUpMax) this.value = NOOR._topUpMax;
+    if (parseFloat(this.value) < 0) this.value = 0;
+  });
+  document.body.appendChild(mo);
+}
+
+async function markCheckupDone(vid) {
+  const months = NOOR.settings.followup_months_default || 3;
+  const base = new Date();
+  base.setMonth(base.getMonth() + parseInt(months));
+  const nextDate = base.toISOString().split('T')[0];
   try {
+    await put(`/api/visits/${vid}`, { did_checkup: true, next_visit_date: nextDate });
+    toast(NOOR.lang==='ar'?'تم تسجيل الفحص وإضافة المراجع للمتابعات':'Checkup marked & added to follow-ups');
+    await renderPatients();
+    await openPatientDetail(NOOR.editingPatientId);
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function confirmTopUp() {
+  const detail = NOOR._currentPatientDetail || {};
+  const visits = NOOR._topUpVisits || [];
+  const totalOutstanding = NOOR._topUpMax || 0;
+  let payAmount = parseFloat(document.getElementById('topup-amount')?.value) || 0;
+  if (payAmount <= 0) { toast(NOOR.lang==='ar'?'أدخل مبلغاً صحيحاً':'Enter a valid amount','error'); return; }
+  if (payAmount > totalOutstanding) payAmount = totalOutstanding;
+  try {
+    let remaining = payAmount;
     for (const v of visits) {
-      const remaining = parseFloat(v.remaining) || 0;
-      await put(`/api/visits/${v.id}`, { amount_paid: (parseFloat(v.amount_paid)||0) + remaining });
+      if (remaining <= 0) break;
+      const vRem = parseFloat(v.remaining) || 0;
+      const toPay = Math.min(remaining, vRem);
+      await put(`/api/visits/${v.id}`, { amount_paid: (parseFloat(v.amount_paid)||0) + toPay });
+      remaining -= toPay;
     }
+    document.getElementById('modal-topup')?.remove();
     toast(t('successSaved'));
     await renderPatients();
     await openPatientDetail(detail.id || NOOR.editingPatientId);
@@ -3338,7 +3515,7 @@ async function topUpPatientRemaining() {
 }
 
 async function deletePatient(id) {
-  if (!confirm(NOOR.lang==='ar'?'هل أنت متأكد من حذف هذا المريض؟':'Delete this patient?')) return;
+  if (!confirm(NOOR.lang==='ar'?'هل أنت متأكد من حذف هذا المراجع؟':'Delete this patient?')) return;
   try {
     await del(`/api/patients/${id}`);
     toast(t('successDeleted'));
@@ -3718,22 +3895,26 @@ function renderReportDonut() {
   document.getElementById('donut-total').textContent = fmtNum(total);
   document.getElementById('donut-active-count').textContent = `${items.length}/${all.length}`;
   if (!total) {
-    svg.innerHTML = `<circle cx="110" cy="110" r="82" fill="none" stroke="var(--cream-border)" stroke-width="30"></circle>`;
+    svg.innerHTML = `<circle cx="120" cy="120" r="88" fill="none" stroke="var(--cream-border)" stroke-width="32"></circle>`;
     legend.innerHTML = `<div class="mini-report-sub">No report items yet</div>`;
     return;
   }
   let angle = 0;
   svg.innerHTML = items.map((item, i) => {
     const size = (parseFloat(item.amount)||0) / total * 360;
-    const path = donutArc(110, 110, 82, angle, angle + size);
+    const path = donutArc(120, 120, 88, angle, angle + size);
     angle += size;
-    return `<path class="donut-seg" data-key="${escAttr(item.key)}" d="${path}" fill="none" stroke="${reportColor(i,item.kind)}" stroke-width="30" stroke-linecap="round" onclick="toggleReportItem(this.dataset.key)"><title>${esc(item.label)}: ${fmtIQD(item.amount)}</title></path>`;
+    if (size < 1) return ""; return `<path class="donut-seg" data-key="${escAttr(item.key)}" d="${path}" fill="none" stroke="${reportColor(i,item.kind)}" stroke-width="32" onclick="toggleReportItem(this.dataset.key)"><title>${esc(item.label)}: ${fmtIQD(item.amount)}</title></path>`;
   }).join('');
   legend.innerHTML = all.map((item, i) => {
     const hidden = NOOR.reportHiddenItems.has(item.key);
-    return `<div class="donut-legend-item ${hidden?'hidden':''}" data-key="${escAttr(item.key)}" onclick="toggleReportItem(this.dataset.key)">
+    const pct = total > 0 ? ((parseFloat(item.amount)||0)/total*100).toFixed(1) : '0';
+    return `<div class="donut-legend-item ${hidden?'hidden':''}" data-key="${escAttr(item.key)}" onclick="toggleReportItem(this.dataset.key)" title="${esc(item.label)}: ${fmtIQD(item.amount)}">
       <span class="donut-dot" style="background:${reportColor(i,item.kind)}"></span>
-      <span><span class="donut-legend-name">${esc(item.label)}</span><br><span class="donut-legend-meta">${esc(item.kind)} · ${item.count||0} item(s)</span></span>
+      <span class="donut-legend-text">
+        <span class="donut-legend-name">${esc(item.label)}</span>
+        <span class="donut-legend-meta">${pct}% · ${item.count||0}</span>
+      </span>
       <span class="donut-legend-val">${fmtNum(item.amount)}</span>
     </div>`;
   }).join('');
@@ -3849,6 +4030,13 @@ function showRxSlipFromData(vid) {
   if (!v) { toast('Visit data not found','error'); return; }
   _renderRxSlip({ visit: v, patient: getPatient(v.patient_id), clinic: {name:NOOR.clinicName}, settings: NOOR.settings });
   openModal('modal-rx-slip');
+}
+
+function buildRxSlipHTML(v, p, cl, st) {
+  // Build the slip HTML without setting innerHTML — returns the HTML string
+  const payload = { visit: v, patient: p, clinic: cl, settings: st };
+  _renderRxSlip(payload);
+  return document.getElementById('rx-slip-content').innerHTML;
 }
 
 function _renderRxSlip(payload) {
@@ -4009,7 +4197,7 @@ function printRxSlip() {
   const printCSS = `
     :root{--burgundy:#6b1a2a;--burgundy-pale:#f5e8eb;--cream:#faf6f0;--cream-dark:#f0ead8;--cream-border:#e8dcc8;--ink:#1a1410;--ink-mid:#4a3f35;--ink-light:#8a7d70;--ink-dark:#2a1f18;--surface:#fff;--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{background:white;font-family:'Cairo','DM Sans',sans-serif;width:100%;height:auto;}
+    html,body{background:white;font-family:'Cairo','Noto Naskh Arabic','Amiri','DM Sans',sans-serif;width:100%;height:auto;}
     .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9pt;line-height:1.5;}
     .rx-slip-label{font-size:6.5pt;text-transform:uppercase;letter-spacing:.08em;color:#8a7d70}
     .rx-slip-val{font-weight:600;font-size:9pt}
@@ -4031,10 +4219,10 @@ function printRxSlip() {
     '<title>' + docTitle + '</title>' +
     '<link rel="preconnect" href="https://fonts.googleapis.com">' +
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-    '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Amiri:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">' +
+    '<link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&family=Amiri:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">' +
     '<style>' + printCSS + '</style>' +
     '</head>' +
-    '<body onload="document.fonts.ready.then(function(){setTimeout(function(){window.print();},200)})">' + slipHTML + '</body>' +
+    '<body onload="document.fonts.ready.then(function(){setTimeout(function(){window.print();},400)})">' + slipHTML + '</body>' +
     '</html>';
 
   // Blob URL approach: fully isolated page, no app UI bleed-through on any device
@@ -4069,7 +4257,7 @@ function printRxSlip() {
 // ══════════════════════════════════════════════════════════
 async function sendRxWhatsApp(vid, phone, patientName) {
   if (!phone) { toast('No phone number for this patient', 'error'); return; }
-  toast('Preparing Rx PDF…', 'success');
+  toast(NOOR.lang==='ar'?'جاري تجهيز الوصفة...':'Preparing Rx…', 'success');
 
   try {
     const res = await get(`/api/visits/${vid}/print`);
@@ -4084,627 +4272,31 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const nextVisit  = v.next_visit_date ? fmtDate(v.next_visit_date) : '—';
     const clinicName = cl.name || NOOR.clinicName || 'Noor Optical';
 
-    // WhatsApp text message (always sent regardless of PDF)
-    const msg = `مرحباً ${patientName},\nوصفتك البصرية بتاريخ ${visitDate}.\nالموعد القادم: ${nextVisit}\n— ${clinicName}`;
+    // WhatsApp text message
+    const msg = NOOR.lang === 'ar'
+      ? `مرحباً ${patientName}،\nوصفتك البصرية بتاريخ ${visitDate}.\nالموعد القادم: ${nextVisit}\n— ${clinicName}`
+      : `Hello ${patientName},\nYour prescription dated ${visitDate}.\nNext visit: ${nextVisit}\n— ${clinicName}`;
     const waURL = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
 
-    if (window.jspdf) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
-      const W = 148, L = 10, R = W - 10;
-      let y = 12;
+    // Generate the same HTML slip used for A5 printing and open it as a printable page
+    // This correctly handles Arabic and English text
+    window._rxPrintPatientName = p.full_name || patientName;
+    window._rxPrintVisitDate   = v.visit_date || new Date().toISOString().slice(0,10);
 
-      const hline = (yy, thick) => {
-        doc.setDrawColor(...(thick ? [107,26,42] : [220,200,180]));
-        doc.setLineWidth(thick ? 0.5 : 0.2);
-        doc.line(L, yy, R, yy);
-      };
-      const txt = (s, x, yy, size, style, color) => {
-        doc.setFontSize(size || 9);
-        doc.setFont('helvetica', style || 'normal');
-        doc.setTextColor(...(color || [30, 20, 16]));
-        doc.text(String(s ?? '—'), x, yy);
-      };
+    // Build the slip HTML using the existing buildRxSlipHTML function
+    const slipHTML = buildRxSlipHTML(v, p, cl, st);
+    document.getElementById('rx-slip-content').innerHTML = slipHTML;
 
-      // Clinic header
-      doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(107,26,42);
-      doc.text(clinicName, W/2, y, { align:'center' }); y += 5;
-      if (st.print_doctor_name) {
-        txt(st.print_doctor_name, W/2, y, 9, 'normal', [60,50,40]);
-        doc.setFontSize(9); doc.text(st.print_doctor_name, W/2, y, {align:'center'}); y += 4;
-      }
-      if (st.print_doctor_credentials) {
-        doc.setFontSize(7); doc.setFont('helvetica','italic'); doc.setTextColor(120,110,100);
-        doc.text(st.print_doctor_credentials, W/2, y, {align:'center'}); y += 4;
-      }
-      if (cl.phone) {
-        doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(120,110,100);
-        doc.text('Tel: ' + cl.phone, W/2, y, {align:'center'}); y += 4;
-      }
-      hline(y, true); y += 3;
+    // Use the HTML print approach — fully supports Arabic and English
+    printRxSlip();
 
-      // Title row
-      txt('PRESCRIPTION', L, y, 8, 'bold', [107,26,42]);
-      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(120,110,100);
-      doc.text(visitDate, R, y, {align:'right'});
-      y += 2; hline(y, false); y += 5;
-
-      // Patient info
-      txt('Patient: ' + (p.full_name || '—'), L, y, 9, 'bold');
-      txt('Age: ' + (p.age || '—'), 95, y, 9);
-      txt(p.gender ? p.gender.charAt(0).toUpperCase()+p.gender.slice(1) : '', 120, y, 9);
-      y += 4;
-      txt('Next Visit: ' + nextVisit, L, y, 8, 'normal', [80,70,60]);
-      y += 2; hline(y, false); y += 5;
-
-      // Rx table
-      const cols = [L, 38, 62, 86, 106, 122];
-      const headers = ['Eye','SPH','CYL','AXIS','ADD','VA'];
-      doc.setFillColor(107,26,42);
-      doc.rect(L, y-4, R-L, 6, 'F');
-      headers.forEach((h,i) => {
-        doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
-        doc.text(h, cols[i]+1, y);
-      });
-      y += 3;
-
-      const rxRow = (eye, s, c, a, add, va, bg) => {
-        doc.setFillColor(...bg);
-        doc.rect(L, y-3, R-L, 6, 'F');
-        txt(eye, cols[0]+1, y, 8, 'bold', [107,26,42]);
-        [s,c,a,add,va].forEach((val,i) => txt(val, cols[i+1]+1, y, 8));
-        y += 6;
-      };
-      rxRow('OD (R)', v.od_sphere, v.od_cylinder, v.od_axis, v.od_addition, v.od_va, [250,246,240]);
-      rxRow('OS (L)', v.os_sphere, v.os_cylinder, v.os_axis, v.os_addition, v.os_va, [245,240,235]);
-
-      if (v.ipd) { y += 1; txt('IPD: ' + v.ipd + ' mm', L, y, 8, 'normal', [80,70,60]); y += 5; }
-      else y += 3;
-
-      hline(y, false); y += 4;
-
-      // Lens & frame
-      const lensDesc  = [v.lens_type, v.lens_material, v.lens_coating].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ');
-      const frameDesc = [v.frame_brand, v.frame_type ? String(v.frame_type).replace(/_/g,' ') : ''].filter(Boolean).join(' · ');
-      txt('Lens: ' + (lensDesc || '—'), L, y, 8); y += 4;
-      txt('Frame: ' + (frameDesc || '—'), L, y, 8); y += 4;
-
-      // Financials
-      if (st.print_show_financials !== false) {
-        hline(y, false); y += 4;
-        txt('Total: ' + fmtIQD(v.total_amount), L, y, 8);
-        txt('Paid: ' + fmtIQD(v.amount_paid), 65, y, 8);
-        const remColor = (v.remaining||0) > 0 ? [192,57,43] : [30,126,90];
-        txt('Remaining: ' + fmtIQD(v.remaining), 107, y, 8, 'normal', remColor);
-        y += 5;
-      }
-
-      // Warning / instructions
-      if (st.print_warning_text) {
-        hline(y, false); y += 4;
-        doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(107,26,42);
-        doc.text('Instructions:', L, y); y += 3;
-        doc.setFont('helvetica','normal'); doc.setTextColor(60,50,40);
-        const lines = doc.splitTextToSize(st.print_warning_text, R-L);
-        doc.text(lines, L, y); y += lines.length * 3.5 + 2;
-      }
-
-      // Footer
-      hline(y, false); y += 3;
-      doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(140,130,120);
-      doc.text(clinicName + (cl.address ? ' · ' + cl.address : ''), L, y);
-
-      // Open PDF in new tab (user downloads & shares manually)
-      const pdfBlob = doc.output('blob');
-      const blobURL = URL.createObjectURL(pdfBlob);
-      window.open(blobURL, '_blank');
-      setTimeout(() => URL.revokeObjectURL(blobURL), 60000);
-      // Open WhatsApp with pre-filled text
-      setTimeout(() => window.open(waURL, '_blank'), 700);
-      toast('PDF opened — save it, then send via WhatsApp', 'success');
-
-    } else {
-      // jsPDF not available — text-only WhatsApp message
-      window.open(waURL, '_blank');
-      toast('Sent as WhatsApp text (PDF library not loaded yet)', 'warning');
-    }
+    // Open WhatsApp after a short delay
+    setTimeout(() => window.open(waURL, '_blank'), 1200);
+    toast(NOOR.lang==='ar'?'افتح الصفحة واطبع بـ Ctrl+P ثم احفظها PDF وأرسلها':'Print the page (Ctrl+P) → Save as PDF → Send via WhatsApp', 'success');
 
   } catch(e) {
     toast('Error: ' + e.message, 'error');
   }
 }
 
-async function renderSettings() {
-  try {
-    const data = await get('/api/settings');
-    const cl = data.data?.clinic || {};
-    const st = data.data?.settings || {};
-    NOOR.settings = st;
-    NOOR.clinicName = cl.name || NOOR.clinicName;
-    document.getElementById('sidebar-clinic-name').textContent = NOOR.clinicName;
-    document.getElementById('set-clinic-name').value    = cl.name||'';
-    document.getElementById('set-clinic-phone').value   = cl.phone||'';
-    document.getElementById('set-clinic-address').value = cl.address||'';
-    document.getElementById('set-clinic-logo').value    = cl.logo_url||'';
-    document.getElementById('set-print-header').value   = st.print_header_text||'';
-    // set-print-cert removed — credentials now go to set-print-doctor-cred
-    document.getElementById('set-print-warning').value  = st.print_warning_text||'';
-    document.getElementById('set-default-checkup-fee').value = st.default_checkup_fee||0;
-    document.getElementById('set-print-financials').checked = st.print_show_financials !== false;
-    // New print fields
-    document.getElementById('set-print-doctor-name').value = st.print_doctor_name||'';
-    document.getElementById('set-print-doctor-cred').value = st.print_doctor_credentials||'';
-    document.getElementById('set-print-logo-align').value  = st.print_logo_align||'center';
-    document.getElementById('set-print-logo-w').value      = st.print_logo_width||120;
-    document.getElementById('set-print-logo-h').value      = st.print_logo_height||60;
-    if (st.print_logo_data) {
-      const prev = document.getElementById('set-print-logo-preview');
-      const img  = document.getElementById('set-print-logo-img');
-      if (prev && img) { img.src = st.print_logo_data; prev.style.display='block'; }
-    }
-    if (st.print_qr_data) {
-      const prev = document.getElementById('set-print-qr-preview');
-      const img  = document.getElementById('set-print-qr-img');
-      if (prev && img) { img.src = st.print_qr_data; prev.style.display='block'; }
-    }
-    _renderAssociateRows(JSON.parse(st.print_associates||'[]'));
-    document.getElementById('wa-tpl-1').value = st.wa_template_1||'';
-    document.getElementById('wa-tpl-2').value = st.wa_template_2||'';
-    document.getElementById('wa-tpl-3').value = st.wa_template_3||'';
-    document.getElementById('set-followup-months').value = st.followup_months_default||3;
-    NOOR.waTemplates = { wa_template_1: st.wa_template_1||'', wa_template_2: st.wa_template_2||'', wa_template_3: st.wa_template_3||'' };
-    renderPermissionsToggles();
-    await renderUsersTable();
-  } catch(e) { toast(e.message,'error'); }
-}
 
-function switchSettingsTab(tab) {
-  const tabs = ['clinic','whatsapp','permissions','users','followup-defaults','print'];
-  tabs.forEach(t2 => {
-    document.getElementById(`settings-tab-${t2}`)?.classList.toggle('active', t2===tab);
-  });
-  document.querySelectorAll('#settings-tabs .tab-btn').forEach((btn,i) => {
-    btn.classList.toggle('active', tabs[i]===tab);
-  });
-}
-
-function renderPermissionsToggles() {
-  const perms = [
-    {key:'recept_view_patients',   ar:'عرض المرضى',          en:'View Patients'},
-    {key:'recept_edit_patients',   ar:'إضافة/تعديل المرضى',  en:'Add/Edit Patients'},
-    {key:'recept_view_financials', ar:'عرض المالية',          en:'View Financials'},
-    {key:'recept_edit_financials', ar:'تعديل المالية',        en:'Edit Financials'},
-    {key:'recept_access_inventory',ar:'الوصول للمخزون',       en:'Access Inventory'},
-    {key:'recept_export_reports',  ar:'تصدير التقارير',       en:'Export Reports'},
-    {key:'recept_view_audit',      ar:'عرض سجل التدقيق',     en:'View Audit Log'},
-  ];
-  document.getElementById('permissions-toggles').innerHTML = perms.map(p => `
-    <div class="toggle-row">
-      <div class="toggle-label">${NOOR.lang==='ar'?p.ar:p.en}</div>
-      <label class="toggle-switch"><input type="checkbox" id="perm-${p.key}" ${NOOR.settings[p.key]?'checked':''}><span class="toggle-slider"></span></label>
-    </div>
-  `).join('');
-}
-
-async function savePermissions() {
-  const body = {};
-  ['recept_view_patients','recept_edit_patients','recept_view_financials','recept_edit_financials','recept_access_inventory','recept_export_reports','recept_view_audit'].forEach(k => {
-    const el = document.getElementById(`perm-${k}`); if(el) body[k]=el.checked;
-  });
-  try { await put('/api/settings', body); toast(t('successSaved')); } catch(e) { toast(e.message,'error'); }
-}
-
-async function saveClinicSettings() {
-  const body = {
-    name:     document.getElementById('set-clinic-name').value,
-    phone:    document.getElementById('set-clinic-phone').value,
-    address:  document.getElementById('set-clinic-address').value,
-    logo_url: document.getElementById('set-clinic-logo').value,
-  };
-  try {
-    await put('/api/settings', body);
-    NOOR.clinicName = body.name || NOOR.clinicName;
-    document.getElementById('sidebar-clinic-name').textContent = NOOR.clinicName;
-    toast(t('successSaved'));
-  } catch(e) { toast(e.message,'error'); }
-}
-
-async function saveWATemplates() {
-  const body = {
-    wa_template_1: document.getElementById('wa-tpl-1').value,
-    wa_template_2: document.getElementById('wa-tpl-2').value,
-    wa_template_3: document.getElementById('wa-tpl-3').value,
-  };
-  try {
-    await put('/api/settings', body);
-    NOOR.waTemplates = body;
-    toast(t('successSaved'));
-  } catch(e) { toast(e.message,'error'); }
-}
-
-async function savePrintSettings() {
-  const body = {
-    print_header_text:        document.getElementById('set-print-header').value,
-    print_certification_text: document.getElementById('set-print-cert')?.value || '',
-    print_warning_text:       document.getElementById('set-print-warning').value,
-    default_checkup_fee:      parseFloat(document.getElementById('set-default-checkup-fee').value)||0,
-    print_show_financials:    document.getElementById('set-print-financials').checked,
-    // New fields
-    print_doctor_name:        document.getElementById('set-print-doctor-name').value,
-    print_doctor_credentials: document.getElementById('set-print-doctor-cred').value,
-    print_logo_align:         document.getElementById('set-print-logo-align').value,
-    print_logo_width:         parseInt(document.getElementById('set-print-logo-w').value)||120,
-    print_logo_height:        parseInt(document.getElementById('set-print-logo-h').value)||60,
-    print_logo_data:          (NOOR.settings._pendingLogoData !== undefined
-                                 ? NOOR.settings._pendingLogoData
-                                 : NOOR.settings.print_logo_data) || '',
-    print_qr_data:            (NOOR.settings._pendingQrData !== undefined
-                                 ? NOOR.settings._pendingQrData
-                                 : NOOR.settings.print_qr_data) || '',
-    print_associates:         JSON.stringify(_collectAssociateRows()),
-  };
-  // Clear pending staging
-  delete NOOR.settings._pendingLogoData;
-  delete NOOR.settings._pendingQrData;
-  try {
-    await put('/api/settings', body);
-    Object.assign(NOOR.settings, body);
-    toast(t('successSaved'));
-  } catch(e) { toast(e.message,'error'); }
-}
-
-function handlePrintLogoUpload(evt) {
-  const file = evt.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const data = e.target.result;
-    NOOR.settings._pendingLogoData = data;
-    const img  = document.getElementById('set-print-logo-img');
-    const prev = document.getElementById('set-print-logo-preview');
-    if (img)  img.src = data;
-    if (prev) prev.style.display = 'block';
-  };
-  reader.readAsDataURL(file);
-}
-
-function handlePrintQrUpload(evt) {
-  const file = evt.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const data = e.target.result;
-    NOOR.settings._pendingQrData = data;
-    const img  = document.getElementById('set-print-qr-img');
-    const prev = document.getElementById('set-print-qr-preview');
-    if (img)  img.src = data;
-    if (prev) prev.style.display = 'block';
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearPrintLogo() {
-  NOOR.settings._pendingLogoData = '';
-  const prev = document.getElementById('set-print-logo-preview');
-  if (prev) prev.style.display = 'none';
-  const inp = document.getElementById('set-print-logo-file');
-  if (inp) inp.value = '';
-}
-
-function clearPrintQr() {
-  NOOR.settings._pendingQrData = '';
-  const prev = document.getElementById('set-print-qr-preview');
-  if (prev) prev.style.display = 'none';
-  const inp = document.getElementById('set-print-qr-file');
-  if (inp) inp.value = '';
-}
-
-function _collectAssociateRows() {
-  const rows = document.querySelectorAll('#associates-list .associate-row');
-  return Array.from(rows).map(row => ({
-    name:    row.querySelector('.assoc-name')?.value  || '',
-    role:    row.querySelector('.assoc-role')?.value  || '',
-    phone:   row.querySelector('.assoc-phone')?.value || '',
-    address: row.querySelector('.assoc-addr')?.value  || '',
-  })).filter(a => a.name || a.phone || a.address);
-}
-
-function _renderAssociateRows(associates) {
-  const container = document.getElementById('associates-list');
-  if (!container) return;
-  container.innerHTML = '';
-  (associates || []).forEach(a => _addAssociateRowWith(a));
-}
-
-function addAssociateRow() { _addAssociateRowWith({}); }
-
-function _addAssociateRowWith(a) {
-  const container = document.getElementById('associates-list');
-  const div = document.createElement('div');
-  div.className = 'associate-row';
-  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:6px;align-items:center';
-  div.innerHTML = `
-    <input type="text" class="form-input assoc-name"  placeholder="Name"    value="${escAttr(a.name||'')}">
-    <input type="text" class="form-input assoc-role"  placeholder="Role"    value="${escAttr(a.role||'')}">
-    <input type="text" class="form-input assoc-phone" placeholder="Phone"   value="${escAttr(a.phone||'')}">
-    <input type="text" class="form-input assoc-addr"  placeholder="Address" value="${escAttr(a.address||'')}">
-    <button class="btn btn-outline btn-sm" onclick="this.closest('.associate-row').remove()" type="button" style="padding:4px 8px;color:var(--burgundy)">✕</button>
-  `;
-  container.appendChild(div);
-}
-
-async function saveFollowupDefaults() {
-  const body = { followup_months_default: parseInt(document.getElementById('set-followup-months').value)||3 };
-  try { await put('/api/settings', body); toast(t('successSaved')); } catch(e) { toast(e.message,'error'); }
-}
-
-async function renderUsersTable() {
-  try {
-    const data = await get('/api/users');
-    NOOR.users = data.data || [];
-    document.getElementById('users-tbody').innerHTML = NOOR.users.map(u => `<tr>
-      <td class="td-name">${esc(u.full_name)}</td>
-      <td data-label="${t('username')}" style="font-family:'DM Mono',monospace">${esc(u.username)}</td>
-      <td data-label="${t('role')}"><span class="badge badge-${u.role==='doctor'?'burgundy':'neutral'}">${t(u.role)}</span></td>
-      <td data-label="${t('status')}"><span class="badge badge-${u.is_active?'success':'danger'}">${u.is_active?(NOOR.lang==='ar'?'نشط':'Active'):(NOOR.lang==='ar'?'معطل':'Disabled')}</span></td>
-      <td class="td-actions-cell"><button class="btn btn-outline btn-sm" onclick="toggleUserActive('${escAttr(u.id)}',${!u.is_active})">${u.is_active?(NOOR.lang==='ar'?'تعطيل':'Disable'):(NOOR.lang==='ar'?'تفعيل':'Enable')}</button></td>
-    </tr>`).join('');
-  } catch(_){}
-}
-
-function openAddUser() { openModal('modal-user'); }
-
-async function saveUser() {
-  const name  = document.getElementById('u-name').value;
-  const uname = document.getElementById('u-username').value;
-  const pass  = document.getElementById('u-password').value;
-  if (!name||!uname||!pass) { toast(t('errorRequired'),'error'); return; }
-  try {
-    await post('/api/users', { full_name:name, username:uname, password:pass, role:document.getElementById('u-role').value });
-    closeModal('modal-user'); toast(t('successSaved')); await renderUsersTable();
-  } catch(e) { toast(e.message,'error'); }
-}
-
-async function toggleUserActive(id, active) {
-  try { await put(`/api/users/${id}`, { is_active: active }); await renderUsersTable(); } catch(e) { toast(e.message,'error'); }
-}
-
-// ══════════════════════════════════════════════════════════
-// AUDIT LOG
-// ══════════════════════════════════════════════════════════
-async function renderAuditLog() {
-  const from   = document.getElementById('audit-from').value;
-  const to     = document.getElementById('audit-to').value;
-  const params = new URLSearchParams();
-  if (from) params.set('from', from);
-  if (to)   params.set('to', to);
-  try {
-    const data = await get('/api/audit?' + params.toString());
-    const rows = data.data || [];
-    document.getElementById('audit-tbody').innerHTML = rows.map(a => `<tr>
-      <td class="td-name" style="font-size:.9rem">${esc(a.username||a.full_name)} · <span class="audit-action audit-${escAttr(a.action)}">${esc(a.action)}</span></td>
-      <td data-label="${t('timestamp')}" style="font-family:'DM Mono',monospace;font-size:.82rem">${new Date(a.created_at).toLocaleString(NOOR.lang==='ar'?'ar-IQ':'en-GB')}</td>
-      <td data-label="${t('entity')}">${esc(a.entity_type)}</td>
-      <td data-label="${t('details')}" style="font-size:.85rem;color:var(--ink-mid)">${esc(a.details)}</td>
-    </tr>`).join('');
-  } catch(e) { toast(e.message,'error'); }
-}
-
-// ══════════════════════════════════════════════════════════
-// SUPER ADMIN
-// ══════════════════════════════════════════════════════════
-async function renderSuperAdmin() {
-  if (NOOR.role !== 'super_admin') return;
-  try {
-    const data = await get('/api/admin/clinics');
-    NOOR.clinics = data.data || [];
-    document.getElementById('admin-clinics-tbody').innerHTML = NOOR.clinics.map(c => {
-      const lic = c.license || {};
-      const exp = lic.expires_at ? daysDiff(lic.expires_at) : null;
-      const st  = !lic.is_active?'danger':exp!==null&&exp<0?'danger':exp!==null&&exp<7?'warning':'success';
-      const sl  = !lic.is_active?'Inactive':exp!==null&&exp<0?'Expired':exp!==null&&exp<7?'Expiring Soon':'Active';
-      const banned = !!c.is_banned;
-      return `<tr>
-        <td class="td-name">${esc(c.name)}</td>
-        <td data-label="Owner">${esc(c.owner_email || c.users?.[0]?.email || '')}</td>
-        <td data-label="Phone">${esc(c.phone)}</td>
-        <td data-label="Plan"><span class="badge badge-burgundy">${esc(lic.plan)}</span></td>
-        <td data-label="Expires" style="font-family:'DM Mono',monospace">${esc(lic.expires_at||'Lifetime')}</td>
-        <td data-label="Status"><span class="badge badge-${banned?'danger':st}">${banned?'Banned':sl}</span></td>
-        <td class="td-actions-cell">
-          <button class="btn btn-outline btn-sm" onclick="impersonateClinic('${escAttr(c.id)}')">Impersonate</button>
-          <button class="btn btn-outline btn-sm" onclick="toggleClinicBan('${escAttr(c.id)}', ${banned?'false':'true'})">${banned?'Unban':'Ban'}</button>
-          <button class="btn btn-outline btn-sm" onclick="backupClinic('${escAttr(c.id)}')">Backup</button>
-          <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteClinic('${escAttr(c.id)}')">Delete</button>
-        </td>
-      </tr>`;
-    }).join('');
-  } catch(e) { toast(e.message,'error'); }
-}
-
-function openAddClinic() { openModal('modal-clinic'); }
-
-async function saveClinic() {
-  const name = document.getElementById('nc-name').value; if(!name){toast('Name required','error');return;}
-  try {
-    await post('/api/admin/clinics', {
-      name, phone: document.getElementById('nc-phone').value,
-      owner_email: document.getElementById('nc-email').value,
-      doctor_username: document.getElementById('nc-user').value,
-      doctor_password: document.getElementById('nc-pass').value,
-      plan: document.getElementById('nc-plan').value,
-    });
-    closeModal('modal-clinic'); toast('Clinic added'); await renderSuperAdmin();
-  } catch(e) { toast(e.message,'error'); }
-}
-
-async function toggleClinicBan(cid, banned) {
-  const reason = banned ? prompt('Ban reason?') || 'Manual ban' : '';
-  try {
-    await put(`/api/admin/clinics/${cid}`, { is_banned: banned, banned_reason: reason });
-    toast(banned ? 'Clinic banned' : 'Clinic unbanned');
-    await renderSuperAdmin();
-  } catch(e) { toast(e.message,'error'); }
-}
-
-async function deleteClinic(cid) {
-  if (!confirm('Delete this clinic and all its data?')) return;
-  try {
-    await del(`/api/admin/clinics/${cid}`);
-    toast('Clinic deleted');
-    await renderSuperAdmin();
-  } catch(e) { toast(e.message,'error'); }
-}
-
-async function backupClinic(cid) {
-  try {
-    const data = await post(`/api/admin/clinics/${cid}/backup`, {});
-    const blob = new Blob([JSON.stringify(data.data.backup, null, 2)], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `noor-backup-${cid}-${todayStr()}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    toast('Backup created');
-  } catch(e) { toast(e.message,'error'); }
-}
-
-async function impersonateClinic(cid) {
-  try {
-    const data = await post(`/api/admin/impersonate/${cid}`);
-    NOOR.clinicName = data.data?.clinic?.name || '';
-    NOOR.clinicId   = cid;
-    document.getElementById('sidebar-clinic-name').textContent = NOOR.clinicName;
-    toast(`Impersonating: ${NOOR.clinicName}`, 'warning');
-    navigate('dashboard');
-  } catch(e) { toast(e.message,'error'); }
-}
-
-// ══════════════════════════════════════════════════════════
-// CHANGE PASSWORD
-// ══════════════════════════════════════════════════════════
-async function saveNewPassword() {
-  const pw   = document.getElementById('new-pw').value;
-  const conf = document.getElementById('new-pw-confirm').value;
-  if (!pw || pw.length<6)  { toast('Min 6 characters','error'); return; }
-  if (pw !== conf)         { toast('Passwords do not match','error'); return; }
-  try {
-    await post('/api/change-password', { password: pw });
-    closeModal('modal-change-password'); toast(t('successSaved'));
-  } catch(e) { toast(e.message,'error'); }
-}
-
-// ══════════════════════════════════════════════════════════
-// GLOBAL SEARCH
-// ══════════════════════════════════════════════════════════
-let _searchTimer;
-function onGlobalSearch(q) {
-  clearTimeout(_searchTimer);
-  const res = document.getElementById('search-results');
-  if (!q || q.length < 2) { res.classList.remove('show'); return; }
-  _searchTimer = setTimeout(async () => {
-    try {
-      const data = await get(`/api/patients?q=${encodeURIComponent(q)}&limit=6`);
-      const matches = data.data || [];
-      if (!matches.length) { res.classList.remove('show'); return; }
-      res.innerHTML = matches.map(p => `
-        <div class="search-result-item" onclick="goToPatient('${escAttr(p.id)}')">
-          <div class="search-result-avatar">${esc((p.full_name||'?')[0])}</div>
-          <div><div class="search-result-name">${esc(p.full_name)}</div><div class="search-result-phone">${esc(p.phone)}</div></div>
-        </div>
-      `).join('');
-      res.classList.add('show');
-    } catch(_){}
-  }, 250);
-}
-
-function goToPatient(pid) {
-  document.getElementById('search-results').classList.remove('show');
-  document.getElementById('global-search').value = '';
-  navigate('patients');
-  setTimeout(() => openPatientDetail(pid), 50);
-}
-
-// ══════════════════════════════════════════════════════════
-// SIDEBAR / RESPONSIVE
-// ══════════════════════════════════════════════════════════
-const COLLAPSE_KEY = 'noor_sidebar_collapsed';
-
-function isMobile() { return window.innerWidth <= 1024; }
-
-function toggleSidebar() {
-  const sb = document.getElementById('sidebar');
-  const ov = document.getElementById('sidebar-overlay');
-  if (isMobile()) {
-    const open = sb.classList.toggle('open');
-    ov.classList.toggle('show', open);
-  } else {
-    toggleCollapse();
-  }
-}
-
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').classList.remove('show');
-}
-
-function toggleCollapse() {
-  const sb   = document.getElementById('sidebar');
-  const main = document.getElementById('main-content');
-  const collapsed = sb.classList.toggle('collapsed');
-  main.classList.toggle('collapsed', collapsed);
-  localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
-}
-
-function handleResize() {
-  const sb   = document.getElementById('sidebar');
-  const main = document.getElementById('main-content');
-  const bnav = document.getElementById('bottom-nav');
-  if (isMobile()) {
-    // Mobile/tablet: bottom nav handles navigation, no topbar hamburger needed
-    bnav.style.display = 'flex';
-    sb.classList.remove('collapsed');
-    main.classList.remove('collapsed');
-    main.style.marginInlineStart = '0';
-  } else {
-    // Desktop: sidebar visible, bottom nav hidden
-    bnav.style.display = 'none';
-    sb.classList.remove('open');
-    document.getElementById('sidebar-overlay').classList.remove('show');
-    const wasCollapsed = localStorage.getItem(COLLAPSE_KEY) === '1';
-    sb.classList.toggle('collapsed', wasCollapsed);
-    main.classList.toggle('collapsed', wasCollapsed);
-    main.style.marginInlineStart = '';
-  }
-}
-
-window.addEventListener('resize', handleResize);
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('.search-wrap'))
-    document.getElementById('search-results').classList.remove('show');
-  if (isMobile() &&
-      document.getElementById('sidebar').classList.contains('open') &&
-      !e.target.closest('.sidebar') &&
-      !e.target.closest('#sidebar-toggle') &&
-      !e.target.closest('.bottom-nav'))
-    closeSidebar();
-});
-
-// ══════════════════════════════════════════════════════════
-// KEYBOARD
-// ══════════════════════════════════════════════════════════
-document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
-document.getElementById('login-username').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-password').focus(); });
-document.getElementById('signup-password')?.addEventListener('keydown', e => { if(e.key==='Enter') doSignup(); });
-document.getElementById('reset-email')?.addEventListener('keydown', e => { if(e.key==='Enter') doResetPassword(); });
-
-// ══════════════════════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════════════════════
-applyLang();
-handleResize();
-checkSession();  // restores session on page reload without showing login screen
-</script>
-</body>
-</html>
