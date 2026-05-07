@@ -417,6 +417,7 @@ def login():
         "clinic_id":            clinic_id,
         "must_change_password": user.get("must_change_password", False),
         "grace_warning":        grace_warning,
+        "expires_at":           f"{session.get('expires_at')}Z" if session.get("expires_at") else None,
         "csrf_token":           csrf_token,
         "license":              license_summary,
     })
@@ -557,6 +558,7 @@ def me():
         "username":             username,
         "must_change_password": bool(session.get("must_change_password", False)),
         "grace_warning":        grace_warning,
+        "expires_at":           f"{session.get('expires_at')}Z" if session.get("expires_at") else None,
         "csrf_token":           _csrf_token(),
         "license":              license_summary,
     })
@@ -714,6 +716,17 @@ def list_patients():
     total = len(rows)
     rows  = rows[offset: offset + limit]
 
+    patient_ids = [r["id"] for r in rows]
+    if patient_ids:
+        visits = db.table("visits").select("patient_id,remaining").eq("clinic_id", cid).execute()
+        remaining_by_patient = {}
+        for visit in (visits.data or []):
+            pid = visit.get("patient_id")
+            if pid in patient_ids:
+                remaining_by_patient[pid] = remaining_by_patient.get(pid, 0) + float(visit.get("remaining") or 0)
+        for row in rows:
+            row["outstanding_remaining"] = remaining_by_patient.get(row["id"], 0)
+
     return ok(rows, total=total, page=page, limit=limit)
 
 
@@ -789,6 +802,25 @@ def update_patient(pid):
     res = db.table("patients").update(updates).eq("clinic_id", cid).eq("id", pid).execute()
     _write_audit(cid, uid, "update", "patient", pid, old_value=old.data, new_value=res.data[0])
     return ok(res.data[0])
+
+
+@app.route("/api/visits/<vid>", methods=["DELETE"])
+@_auth(roles=["doctor", "super_admin"])
+def delete_visit(vid):
+    cid = session["clinic_id"]
+    uid = session["user_id"]
+
+    old = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).single().execute()
+    if not old.data:
+        return err("Visit not found", 404)
+
+    patient_id = old.data.get("patient_id")
+    db.table("visits").delete().eq("clinic_id", cid).eq("id", vid).execute()
+    if patient_id:
+        db.table("patients").update({"updated_at": now_iso()}).eq("clinic_id", cid).eq("id", patient_id).execute()
+
+    _write_audit(cid, uid, "delete", "visit", vid, old_value=old.data)
+    return ok()
 
 
 @app.route("/api/patients/<pid>", methods=["DELETE"])

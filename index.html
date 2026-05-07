@@ -631,6 +631,11 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .toast.success{background:var(--success)}
 .toast.error{background:var(--danger)}
 .toast.warning{background:var(--warning)}
+.session-warning{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9200;background:var(--ink);color:white;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);padding:12px 14px;display:none;align-items:center;gap:12px;max-width:min(520px,calc(100vw - 32px));font-size:.86rem}
+.session-warning.show{display:flex}
+.session-warning button{border:1px solid rgba(255,255,255,.35);background:white;color:var(--ink);border-radius:var(--radius-sm);padding:7px 11px;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+.debt-pill{display:inline-flex;align-items:center;justify-content:center;min-width:72px;padding:4px 8px;border-radius:999px;background:#fef2f2;border:1px solid #fecaca;color:var(--danger);font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700}
+.debt-pill.clear{background:#ecfdf5;border-color:#a7f3d0;color:var(--success)}
 @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 
 /* ── DESKTOP: sidebar collapses to icon-only rail ── */
@@ -1525,7 +1530,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <table>
               <thead><tr>
                 <th data-i18n="name">الاسم</th><th data-i18n="phone">الهاتف</th><th data-i18n="age">العمر</th>
-                <th data-i18n="lastVisit">آخر زيارة</th><th data-i18n="actions">إجراءات</th>
+                <th data-i18n="lastVisit">آخر زيارة</th><th data-i18n="remaining">المتبقي</th><th data-i18n="actions">إجراءات</th>
               </tr></thead>
               <tbody id="patients-tbody"></tbody>
             </table>
@@ -2045,6 +2050,10 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 </div>
 
 <div class="toast-container" id="toast-container"></div>
+<div class="session-warning" id="session-warning">
+  <span id="session-warning-text">Session expires soon.</span>
+  <button type="button" onclick="renewSession()" id="session-renew-btn">Renew session</button>
+</div>
 
 <!-- ══════════ MODALS ══════════ -->
 
@@ -2165,6 +2174,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <div class="form-group"><label class="form-label" data-i18n="lensPrice">سعر العدسة (IQD)</label><input type="number" class="form-input" id="f-lens-price" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
           <div class="form-group"><label class="form-label" data-i18n="checkupFee">رسوم الفحص (IQD)</label><input type="number" class="form-input" id="f-checkup-fee" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
           <div class="form-group"><label class="form-label" data-i18n="amountPaid">المبلغ المدفوع (IQD)</label><input type="number" class="form-input" id="f-paid" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
+          <div class="form-group full"><label class="form-label" data-i18n="visitNotes">ملاحظات الزيارة</label><textarea class="form-textarea" id="f-visit-notes" rows="3"></textarea></div>
         </div>
         <div style="margin-top:12px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
           <label class="toggle-switch" style="margin:0"><input type="checkbox" id="f-checkup" onchange="onCheckupToggle()"><span class="toggle-slider"></span></label>
@@ -2341,7 +2351,7 @@ const LANG_DATA = {
     addLens:'إضافة عدسة',addFrame:'إضافة إطار',addUser:'إضافة مستخدم',
     save:'حفظ',cancel:'إلغاء',edit:'تعديل',delete:'حذف',restock:'إعادة تخزين',
     actions:'إجراءات',name:'الاسم',phone:'الهاتف',age:'العمر',gender:'الجنس',
-    address:'العنوان',notes:'ملاحظات',fullName:'الاسم الكامل',male:'ذكر',female:'أنثى',
+    address:'العنوان',notes:'ملاحظات',visitNotes:'ملاحظات الزيارة',fullName:'الاسم الكامل',male:'ذكر',female:'أنثى',
     lastVisit:'آخر زيارة',nextVisit:'الزيارة القادمة',remaining:'المتبقي',
     total:'الإجمالي',paid:'المدفوع',todayPatients:'مراجعين اليوم',
     todayEarnings:'إيرادات اليوم',outstandingDebt:'الديون المعلقة',
@@ -2404,7 +2414,7 @@ const LANG_DATA = {
     operatingCosts:'Operational Costs',grossProfit:'Gross Profit',salesMix:'Sales / Cost Mix',retailSales:'Retail Sales',addSale:'Add Sale',addExpense:'Add Expense',
     save:'Save',cancel:'Cancel',edit:'Edit',delete:'Delete',restock:'Restock',
     actions:'Actions',name:'Name',phone:'Phone',age:'Age',gender:'Gender',
-    address:'Address',notes:'Notes',fullName:'Full Name',male:'Male',female:'Female',
+    address:'Address',notes:'Notes',visitNotes:'Visit Notes',fullName:'Full Name',male:'Male',female:'Female',
     lastVisit:'Last Visit',nextVisit:'Next Visit',remaining:'Remaining',
     total:'Total',paid:'Paid',todayPatients:"Today's Patients",
     todayEarnings:"Today's Earnings",outstandingDebt:'Outstanding Debt',
@@ -2471,6 +2481,10 @@ const NOOR = {
   patientModalMode: 'create',
   restockTarget: null,
   editingVisitId: null,
+  patientFormSnapshot: '',
+  patientFormDirty: false,
+  sessionWarningTimer: null,
+  sessionExpiryTimer: null,
   // cached data (refreshed from API on each section visit)
   patients: [], lenses: [], frames: [], visits: [],
   users: [], auditLog: [], clinics: [],
@@ -2616,6 +2630,7 @@ async function doLogin() {
       document.getElementById('license-banner-text').textContent = data.data.grace_warning;
       document.getElementById('license-banner').classList.add('show');
     }
+    scheduleSessionWarning(data.data.expires_at);
     bootApp();
     if (data.data.must_change_password) openModal('modal-change-password');
   } catch(e) {
@@ -2693,12 +2708,49 @@ async function doLogout() {
   try { await post('/api/logout'); } catch(_) {}
   NOOR.user = null; NOOR.role = null;
   NOOR.csrfToken = null;
+  clearSessionTimers();
   document.getElementById('app').classList.remove('ready');
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-password').value = '';
   // Return to sign-in pane on logout
   switchAuthPane('signin');
+}
+
+function clearSessionTimers() {
+  clearTimeout(NOOR.sessionWarningTimer);
+  clearTimeout(NOOR.sessionExpiryTimer);
+  NOOR.sessionWarningTimer = null;
+  NOOR.sessionExpiryTimer = null;
+  document.getElementById('session-warning')?.classList.remove('show');
+}
+
+function scheduleSessionWarning(expiresAt) {
+  clearSessionTimers();
+  if (!expiresAt) return;
+  const expiry = new Date(expiresAt).getTime();
+  if (!expiry) return;
+  const warnAt = Math.max(0, expiry - Date.now() - 5 * 60 * 1000);
+  const expireAt = Math.max(0, expiry - Date.now());
+  NOOR.sessionWarningTimer = setTimeout(() => {
+    const text = document.getElementById('session-warning-text');
+    const btn = document.getElementById('session-renew-btn');
+    if (text) text.textContent = NOOR.lang === 'ar' ? 'ستنتهي الجلسة قريباً.' : 'Your session will expire soon.';
+    if (btn) btn.textContent = NOOR.lang === 'ar' ? 'تجديد الجلسة' : 'Renew session';
+    document.getElementById('session-warning')?.classList.add('show');
+  }, warnAt);
+  NOOR.sessionExpiryTimer = setTimeout(() => toast(NOOR.lang === 'ar' ? 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' : 'Session expired. Please sign in again.', 'warning'), expireAt);
+}
+
+async function renewSession() {
+  try {
+    const data = await get('/api/me');
+    NOOR.csrfToken = data.data.csrf_token;
+    scheduleSessionWarning(data.data.expires_at);
+    toast(NOOR.lang === 'ar' ? 'تم تجديد الجلسة' : 'Session renewed');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
 }
 
 function bootApp() {
@@ -2731,6 +2783,7 @@ async function checkSession() {
       document.getElementById('license-banner-text').textContent = data.data.grace_warning;
       document.getElementById('license-banner').classList.add('show');
     }
+    scheduleSessionWarning(data.data.expires_at);
     bootApp();
     if (data.data.must_change_password) openModal('modal-change-password');
   } catch(_) {
@@ -2813,8 +2866,41 @@ function toast(msg, type='success') {
   setTimeout(()=>el.remove(), 3500);
 }
 
-function openModal(id){ document.getElementById(id).classList.add('show'); }
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+function openModal(id){
+  document.getElementById(id).classList.add('show');
+  if (id === 'modal-patient') setTimeout(markPatientFormClean, 0);
+}
+function closeModal(id){
+  if (id === 'modal-patient' && NOOR.patientFormDirty && !confirmUnsavedPatientForm()) return;
+  document.getElementById(id).classList.remove('show');
+  if (id === 'modal-patient') markPatientFormClean();
+}
+
+function patientFormState() {
+  const modal = document.getElementById('modal-patient');
+  if (!modal) return '';
+  const fields = [...modal.querySelectorAll('input,select,textarea')].map(el => ({
+    id: el.id || el.name || '',
+    value: el.type === 'checkbox' ? el.checked : el.value,
+    selected: el.classList.contains('selected'),
+  }));
+  const chips = [...modal.querySelectorAll('.coating-chip')].map(el => [el.dataset.val, el.classList.contains('selected')]);
+  return JSON.stringify({ mode: NOOR.patientModalMode, fields, chips });
+}
+function markPatientFormClean() {
+  NOOR.patientFormSnapshot = patientFormState();
+  NOOR.patientFormDirty = false;
+}
+function updatePatientFormDirty() {
+  const modal = document.getElementById('modal-patient');
+  if (!modal?.classList.contains('show')) return;
+  NOOR.patientFormDirty = patientFormState() !== NOOR.patientFormSnapshot;
+}
+function confirmUnsavedPatientForm() {
+  return confirm(NOOR.lang === 'ar'
+    ? 'لديك تغييرات غير محفوظة. هل تريد إغلاق النموذج؟'
+    : 'You have unsaved changes. Close this form?');
+}
 
 // ══════════════════════════════════════════════════════════
 // DASHBOARD
@@ -2923,6 +3009,7 @@ function filterPatients() {
       <td class="td-phone" data-label="${t('phone')}">${esc(p.phone)}</td>
       <td data-label="${t('age')}">${esc(p.age)}</td>
       <td data-label="${t('lastVisit')}">${fmtDate(p.updated_at)}</td>
+      <td data-label="${t('remaining')}"><span class="debt-pill ${(parseFloat(p.outstanding_remaining)||0)>0?'':'clear'}">${(parseFloat(p.outstanding_remaining)||0)>0?fmtNum(p.outstanding_remaining):'0'}</span></td>
       <td class="td-actions-cell">
         <button class="btn btn-burgundy btn-sm" onclick="openPatientDetail('${escAttr(p.id)}')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -3024,6 +3111,7 @@ function renderVisitHistory(visits) {
               <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--cream-border)"><span style="color:var(--ink-light)">${t('paid')}</span><span style="font-family:'DM Mono',monospace">${fmtNum(v.amount_paid)}</span></div>
               <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(${v.remaining>0?'--danger':'--success'})">${t('remaining')}</span><span style="font-family:'DM Mono',monospace;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</span></div>
             </div>
+            ${v.notes ? `<div style="font-size:.8rem;color:var(--ink-mid);margin-top:12px;padding:10px;border:1px solid var(--cream-border);border-radius:var(--radius-sm);background:var(--cream)"><strong>${t('visitNotes')}:</strong> ${esc(v.notes)}</div>` : ''}
           </div>
         </div>
         <div class="visit-action-row">
@@ -3035,6 +3123,7 @@ function renderVisitHistory(visits) {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             ${NOOR.lang==='ar'?'تعديل':'Edit'}
           </button>
+          ${NOOR.role==='doctor' || NOOR.role==='super_admin' ? `<button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteVisit('${escAttr(v.id)}')">${t('delete')}</button>` : ''}
         </div>
       </div>
     </div>
@@ -3189,6 +3278,7 @@ function fillVisitForm(v) {
   document.getElementById('followup-date-row').style.display = v.did_checkup ? 'grid' : 'none';
   document.getElementById('f-next-visit').value = v.next_visit_date || '';
   document.getElementById('f-followup-months').value = v.followup_months || NOOR.settings.followup_months_default || 3;
+  document.getElementById('f-visit-notes').value = v.notes || '';
   onLensTypeChange();
   calcTotal();
 }
@@ -3198,7 +3288,7 @@ function clearPatientForm() {
   if (dateHint) dateHint.style.display = 'none';
   ['p-name','p-phone','p-age','p-address','p-notes','p-frame-brand'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
   ['rx-od-sph','rx-od-cyl','rx-od-axis','rx-od-add','rx-od-va','rx-od-bcva','rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva','rx-ipd'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
-  ['f-frame-cost','f-frame-price','f-lens-cost','f-lens-price','f-checkup-fee','f-paid'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
+  ['f-frame-cost','f-frame-price','f-lens-cost','f-lens-price','f-checkup-fee','f-paid','f-visit-notes'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
   document.querySelectorAll('.coating-chip').forEach(c=>c.classList.remove('selected'));
   document.getElementById('f-checkup').checked = false;
   document.getElementById('f-followup-months').value = NOOR.settings.followup_months_default || 3;
@@ -3240,7 +3330,7 @@ function onLensTypeChange() {
   }
 }
 
-function toggleCoating(el){ el.classList.toggle('selected'); }
+function toggleCoating(el){ el.classList.toggle('selected'); updatePatientFormDirty(); }
 
 function _clampRxInput(id) {
   const el = document.getElementById(id);
@@ -3528,8 +3618,9 @@ async function savePatient() {
     const hasRx = rxIds.some(id => document.getElementById(id).value !== '');
     const hasFrame = NOOR.patientModalMode !== 'old_rx' && ['p-frame-brand','p-frame-type','p-frame-material','p-frame-inv'].some(id => document.getElementById(id).value !== '');
     const hasCheckup = NOOR.patientModalMode !== 'old_rx' && (document.getElementById('f-checkup').checked || document.getElementById('f-next-visit').value !== '');
+    const hasVisitNotes = (document.getElementById('f-visit-notes').value || '').trim() !== '';
 
-    if (total > 0 || hasRx || hasFrame || hasCheckup) {
+    if (total > 0 || hasRx || hasFrame || hasCheckup || hasVisitNotes) {
       const coatings = [...document.querySelectorAll('.coating-chip.selected')].map(c=>c.dataset.val).join(',');
       const visitPayload = {
         patient_id:      pid,
@@ -3565,11 +3656,13 @@ async function savePatient() {
         lens_price:      NOOR.patientModalMode === 'old_rx' ? 0 : lp,
         checkup_fee:     NOOR.patientModalMode === 'old_rx' ? 0 : cf,
         amount_paid:     NOOR.patientModalMode === 'old_rx' ? 0 : pd,
+        notes:           document.getElementById('f-visit-notes').value,
       };
       if (NOOR.patientModalMode === 'edit' && NOOR.editingVisitId) await put(`/api/visits/${NOOR.editingVisitId}`, visitPayload);
       else await post('/api/visits', visitPayload);
     }
 
+    markPatientFormClean();
     closeModal('modal-patient');
     toast(t('successSaved'));
     await renderPatients();
@@ -3667,6 +3760,7 @@ async function openEditVisit(visitId) {
   document.getElementById('f-checkup-fee').value  = visit.checkup_fee || '';
   document.getElementById('f-paid').value         = visit.amount_paid || '';
   document.getElementById('f-next-visit').value   = visit.next_visit_date || '';
+  document.getElementById('f-visit-notes').value  = visit.notes || '';
 
   if (visit.did_checkup) {
     document.getElementById('f-checkup').checked = true;
@@ -3788,6 +3882,17 @@ async function deletePatient(id) {
     toast(t('successDeleted'));
     await renderPatients();
   } catch(e) { toast(e.message,'error'); }
+}
+
+async function deleteVisit(id) {
+  if (!confirm(NOOR.lang === 'ar' ? 'حذف هذه الزيارة؟' : 'Delete this visit?')) return;
+  try {
+    await del(`/api/visits/${id}`);
+    toast(t('successDeleted'));
+    const detail = NOOR._currentPatientDetail || {};
+    await renderPatients();
+    if (detail.id || NOOR.editingPatientId) await openPatientDetail(detail.id || NOOR.editingPatientId);
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -5201,6 +5306,25 @@ document.getElementById('login-password').addEventListener('keydown', e => { if(
 document.getElementById('login-username').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-password').focus(); });
 document.getElementById('signup-password')?.addEventListener('keydown', e => { if(e.key==='Enter') doSignup(); });
 document.getElementById('reset-email')?.addEventListener('keydown', e => { if(e.key==='Enter') doResetPassword(); });
+document.addEventListener('keydown', e => {
+  const target = e.target;
+  const typing = target && ['INPUT','TEXTAREA','SELECT'].includes(target.tagName);
+  if (typing || e.ctrlKey || e.metaKey || e.altKey || !NOOR.user) return;
+  if (e.key && e.key.toLowerCase() === 'n') {
+    e.preventDefault();
+    if (NOOR.currentSection !== 'patients') navigate('patients');
+    openAddPatient();
+  }
+});
+document.addEventListener('input', e => {
+  if (e.target.closest?.('#modal-patient')) updatePatientFormDirty();
+});
+document.addEventListener('change', e => {
+  if (e.target.closest?.('#modal-patient')) updatePatientFormDirty();
+});
+document.getElementById('modal-patient')?.addEventListener('mousedown', e => {
+  if (e.target === e.currentTarget) closeModal('modal-patient');
+});
 
 // ══════════════════════════════════════════════════════════
 // INIT
