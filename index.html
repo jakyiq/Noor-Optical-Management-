@@ -3233,7 +3233,7 @@ function _clampRxInput(id) {
   else if (v < -20) { el.value = -20; }
 }
 
-function onRxChange() {
+async function onRxChange() {
   const os = parseFloat(document.getElementById('rx-od-sph').value)||0;
   const oc = parseFloat(document.getElementById('rx-od-cyl').value)||0;
   const ls = parseFloat(document.getElementById('rx-os-sph').value)||0;
