@@ -35,12 +35,14 @@ app.config["SESSION_COOKIE_SAMESITE"] = "None"   # Required for cross-origin on 
 app.config["SESSION_COOKIE_SECURE"] = True        # Required when SameSite=None
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=8)
 
-# Allow the frontend to send cookies cross-origin on Vercel
-CORS(app, supports_credentials=True, origins=[
-    "https://noor-optical-management-n8tgntf5n-1jaky.vercel.app",
+# Allow the frontend to send cookies cross-origin on Vercel.
+# Set CORS_ORIGINS env var to a comma-separated list of allowed origins.
+_cors_origins_env = os.environ.get("CORS_ORIGINS", "")
+_cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()] or [
     "http://localhost:5000",
     "http://127.0.0.1:5000",
-])
+]
+CORS(app, supports_credentials=True, origins=_cors_origins)
 
 limiter = Limiter(
     get_remote_address,
@@ -542,10 +544,17 @@ def me():
     # Refresh session expiry
     session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat()
 
+    # Re-fetch full_name from DB so it's always accurate on session restore
+    user_row = db.table("users").select("full_name,username").eq("id", session["user_id"]).single().execute()
+    full_name = (user_row.data or {}).get("full_name", "")
+    username  = (user_row.data or {}).get("username", "")
+
     return ok({
         "user_id":              session["user_id"],
         "clinic_id":            clinic_id,
         "role":                 role,
+        "full_name":            full_name,
+        "username":             username,
         "must_change_password": bool(session.get("must_change_password", False)),
         "grace_warning":        grace_warning,
         "csrf_token":           _csrf_token(),
@@ -718,13 +727,21 @@ def create_patient():
     body = request.get_json() or {}
 
     full_name = (body.get("full_name") or "").strip()
+    phone = (body.get("phone") or "").strip()
     if not full_name:
         return err("full_name is required")
+
+    existing = db.table("patients").select("id,full_name,phone").eq("clinic_id", cid).execute()
+    for patient in (existing.data or []):
+        same_phone = phone and (patient.get("phone") or "").strip() == phone
+        same_name = (patient.get("full_name") or "").strip().lower() == full_name.lower()
+        if same_phone or same_name:
+            return err("A patient with the same name or phone already exists", 409)
 
     row = {
         "clinic_id":  cid,
         "full_name":  full_name,
-        "phone":      body.get("phone"),
+        "phone":      phone,
         "age":        body.get("age"),
         "gender":     body.get("gender"),
         "address":    body.get("address"),
@@ -903,6 +920,8 @@ def create_visit():
         "remaining":     remaining,
         "notes":         (body.get("notes") or "").strip() or None,
         "created_by":    uid,
+        # Inventory reference
+        "lens_id":       body.get("lens_id") or None,
     }
 
     # ── Inventory deduction (transactional guard) ──
@@ -968,7 +987,7 @@ def get_visit_print_payload(vid):
 
 
 @app.route("/api/visits/<vid>", methods=["PUT"])
-@_auth(setting="recept_edit_financials")
+@_auth(setting="recept_edit_patients")
 def update_visit(vid):
     cid  = session["clinic_id"]
     uid  = session["user_id"]
@@ -1039,8 +1058,10 @@ def list_followups():
     cutoff = (date.today() + timedelta(days=days_ahead)).isoformat()
 
     res = db.table("visits").select(
-        "id,patient_id,visit_date,next_visit_date,lens_type"
-    ).eq("clinic_id", cid).lte("next_visit_date", cutoff).not_.is_("next_visit_date", "null") \
+        "id,patient_id,visit_date,next_visit_date,lens_type,lens_material,lens_coating,frame_brand,frame_type,total_amount,amount_paid,remaining,od_sphere,od_cylinder,od_axis,os_sphere,os_cylinder,os_axis"
+    ).eq("clinic_id", cid).eq("did_checkup", True) \
+     .not_.is_("next_visit_date", "null") \
+     .lte("next_visit_date", cutoff) \
      .order("next_visit_date").execute()
 
     rows = res.data or []
@@ -1358,7 +1379,7 @@ def _add_chart_item(items, key, label, kind, amount=0, cost=0, count=0):
 
 @app.route("/api/reports/summary", methods=["GET"])
 @limiter.limit("60 per hour")
-@_auth(setting="recept_export_reports")
+@_auth(setting="recept_view_financials")
 def reports_summary():
     cid       = session["clinic_id"]
     date_from = request.args.get("from", date.today().replace(day=1).isoformat())
@@ -1458,7 +1479,7 @@ def reports_summary():
 
 
 @app.route("/api/retail-sales", methods=["GET"])
-@_auth(setting="recept_export_reports")
+@_auth(setting="recept_view_financials")
 def list_retail_sales():
     cid = session["clinic_id"]
     date_from = request.args.get("from", date.today().replace(day=1).isoformat())
@@ -1470,7 +1491,7 @@ def list_retail_sales():
 
 
 @app.route("/api/retail-sales", methods=["POST"])
-@_auth(setting="recept_export_reports")
+@_auth(setting="recept_edit_financials")
 def create_retail_sale():
     cid = session["clinic_id"]
     uid = session["user_id"]
@@ -1495,7 +1516,7 @@ def create_retail_sale():
 
 
 @app.route("/api/operating-expenses", methods=["GET"])
-@_auth(setting="recept_export_reports")
+@_auth(setting="recept_view_financials")
 def list_operating_expenses():
     cid = session["clinic_id"]
     res = db.table("operating_expenses").select("*").eq("clinic_id", cid) \
@@ -1504,7 +1525,7 @@ def list_operating_expenses():
 
 
 @app.route("/api/operating-expenses", methods=["POST"])
-@_auth(setting="recept_export_reports")
+@_auth(setting="recept_edit_financials")
 def create_operating_expense():
     cid = session["clinic_id"]
     uid = session["user_id"]
