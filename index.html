@@ -1027,6 +1027,30 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   body.printing-rx #rx-print-mount td{border:1px solid #ccc!important;padding:3px 5px!important}
   body.printing-rx #rx-print-mount thead tr{background:#6b1a2a!important;color:#fff!important}
 }
+
+/* Top-up modal quick buttons */
+#topup-quick-btns .btn {
+  flex: 1;
+  flex-direction: column;
+  min-width: 60px;
+  line-height: 1.2;
+  padding: 6px 4px;
+  font-size: .78rem;
+}
+#topup-amount-input {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.15rem !important;
+  font-weight: 700;
+  letter-spacing: -.5px;
+}
+/* old-rx date hint */
+#old-rx-date-hint .form-group {
+  background: var(--cream-bg);
+  border: 1.5px solid var(--burgundy);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
 </style>
 </head>
 <body>
@@ -2061,17 +2085,17 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
                 <td class="eye-label">OD (R)</td>
                 <td>
                   <div class="rx-sign-wrap">
-                    <input class="rx-input" id="rx-od-sph" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-od-sph')">
+                    <input class="rx-input" id="rx-od-sph" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-od-sph')" onblur="applyPendingSign('rx-od-sph')">
                     <button type="button" class="rx-sign-btn" id="rx-od-sph-sign" onclick="toggleRxSign('rx-od-sph')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
                 <td>
                   <div class="rx-sign-wrap">
-                    <input class="rx-input" id="rx-od-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-od-cyl')">
+                    <input class="rx-input" id="rx-od-cyl" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-od-cyl')" onblur="applyPendingSign('rx-od-cyl')">
                     <button type="button" class="rx-sign-btn" id="rx-od-cyl-sign" onclick="toggleRxSign('rx-od-cyl')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="180" placeholder="0"></td>
+                <td><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
                 <td><input class="rx-input" id="rx-od-add" type="number" step=".25" placeholder="0.00"></td>
                 <td><input class="rx-input" id="rx-od-va" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
                 <td><input class="rx-input" id="rx-od-bcva" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
@@ -2080,17 +2104,17 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
                 <td class="eye-label">OS (L)</td>
                 <td>
                   <div class="rx-sign-wrap">
-                    <input class="rx-input" id="rx-os-sph" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-os-sph')">
+                    <input class="rx-input" id="rx-os-sph" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-os-sph')" onblur="applyPendingSign('rx-os-sph')">
                     <button type="button" class="rx-sign-btn" id="rx-os-sph-sign" onclick="toggleRxSign('rx-os-sph')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
                 <td>
                   <div class="rx-sign-wrap">
-                    <input class="rx-input" id="rx-os-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-os-cyl')">
+                    <input class="rx-input" id="rx-os-cyl" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-os-cyl')" onblur="applyPendingSign('rx-os-cyl')">
                     <button type="button" class="rx-sign-btn" id="rx-os-cyl-sign" onclick="toggleRxSign('rx-os-cyl')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="180" placeholder="0"></td>
+                <td><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
                 <td><input class="rx-input" id="rx-os-add" type="number" step=".25" placeholder="0.00"></td>
                 <td><input class="rx-input" id="rx-os-va" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
                 <td><input class="rx-input" id="rx-os-bcva" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
@@ -3044,8 +3068,40 @@ async function openOldPrescription() {
   NOOR.patientModalMode = 'old_rx';
   document.getElementById('modal-patient').classList.add('old-rx-mode');
   document.getElementById('modal-patient-title').textContent = t('oldPrescription');
+  // Clear the date so the user must consciously pick the original visit date
   document.getElementById('f-visit-date').value = '';
-  switchPatientTab('info');
+  // Go straight to the Rx tab — the date field is shown inline above the Rx table
+  // via the old-rx-mode date injection; user fills date + Rx in one step.
+  switchPatientTab('rx');
+  // Show the date field inside the Rx tab for old-rx mode
+  _showOldRxDateHint();
+}
+
+function _showOldRxDateHint() {
+  // Inject a date row at the top of the Rx tab if not already there
+  const rxTab = document.getElementById('ptab-rx');
+  if (!rxTab) return;
+  let dateHint = document.getElementById('old-rx-date-hint');
+  if (!dateHint) {
+    dateHint = document.createElement('div');
+    dateHint.id = 'old-rx-date-hint';
+    dateHint.style.cssText = 'display:none;padding:12px 0 4px;';
+    dateHint.innerHTML = `<div class="form-group" style="max-width:220px">
+      <label class="form-label" style="font-weight:700;color:var(--burgundy)" id="old-rx-date-lbl">تاريخ الوصفة القديمة</label>
+      <input type="date" class="form-input" id="f-visit-date-oldcopy"
+        oninput="document.getElementById('f-visit-date').value=this.value">
+    </div>`;
+    rxTab.insertBefore(dateHint, rxTab.firstChild);
+  }
+  dateHint.style.display = 'block';
+  // Sync value
+  const copyInput = document.getElementById('f-visit-date-oldcopy');
+  const isAr = NOOR.lang === 'ar';
+  if (copyInput) {
+    copyInput.value = document.getElementById('f-visit-date').value || '';
+    const lbl = document.getElementById('old-rx-date-lbl');
+    if (lbl) lbl.textContent = isAr ? 'تاريخ الوصفة القديمة' : 'Date of Original Prescription';
+  }
 }
 
 async function openEditPatient() {
@@ -3120,6 +3176,8 @@ function fillVisitForm(v) {
 }
 
 function clearPatientForm() {
+  const dateHint = document.getElementById('old-rx-date-hint');
+  if (dateHint) dateHint.style.display = 'none';
   ['p-name','p-phone','p-age','p-address','p-notes','p-frame-brand'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
   ['rx-od-sph','rx-od-cyl','rx-od-axis','rx-od-add','rx-od-va','rx-od-bcva','rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva','rx-ipd'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
   ['f-frame-cost','f-frame-price','f-lens-cost','f-lens-price','f-checkup-fee','f-paid'].forEach(id=>{ const el=document.getElementById(id); if(el)el.value=''; });
@@ -3166,7 +3224,16 @@ function onLensTypeChange() {
 
 function toggleCoating(el){ el.classList.toggle('selected'); }
 
-async function onRxChange() {
+function _clampRxInput(id) {
+  const el = document.getElementById(id);
+  if (!el || el.value === '') return;
+  let v = parseFloat(el.value);
+  if (isNaN(v)) return;
+  if (v > 20) { el.value = 20; }
+  else if (v < -20) { el.value = -20; }
+}
+
+function onRxChange() {
   const os = parseFloat(document.getElementById('rx-od-sph').value)||0;
   const oc = parseFloat(document.getElementById('rx-od-cyl').value)||0;
   const ls = parseFloat(document.getElementById('rx-os-sph').value)||0;
@@ -3370,6 +3437,43 @@ async function savePatient() {
     }
   }
 
+  // Validate Sphere / Cylinder: -20 to +20, no 3-digit numbers
+  const sphCylIds = ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'];
+  const isAr = NOOR.lang === 'ar';
+  for (const id of sphCylIds) {
+    const raw = document.getElementById(id)?.value;
+    if (raw === '' || raw === null || raw === undefined) continue;
+    const val = parseFloat(raw);
+    if (isNaN(val)) continue;
+    if (Math.abs(val) > 20) {
+      toast(isAr ? 'قيمة SPH / CYL يجب أن تكون بين -20 و +20' : 'SPH / CYL must be between -20 and +20', 'error');
+      switchPatientTab('rx');
+      document.getElementById(id).focus();
+      return;
+    }
+    // No 3-digit integer part
+    if (Math.abs(Math.trunc(val)) >= 100) {
+      toast(isAr ? 'قيمة SPH / CYL لا يمكن أن تكون رقماً من 3 خانات' : 'SPH / CYL cannot be a 3-digit number', 'error');
+      switchPatientTab('rx');
+      document.getElementById(id).focus();
+      return;
+    }
+  }
+
+  // Validate Axis: 0–360
+  const axisIds = ['rx-od-axis','rx-os-axis'];
+  for (const id of axisIds) {
+    const raw = document.getElementById(id)?.value;
+    if (raw === '' || raw === null || raw === undefined) continue;
+    const val = parseInt(raw);
+    if (!isNaN(val) && (val < 0 || val > 360)) {
+      toast(isAr ? 'قيمة المحور (Axis) يجب أن تكون بين 0 و 360' : 'Axis must be between 0 and 360', 'error');
+      switchPatientTab('rx');
+      document.getElementById(id).focus();
+      return;
+    }
+  }
+
   const isNewPatient = !NOOR.editingPatientId;
   let pid = NOOR.editingPatientId;
 
@@ -3411,7 +3515,7 @@ async function savePatient() {
       const coatings = [...document.querySelectorAll('.coating-chip.selected')].map(c=>c.dataset.val).join(',');
       const visitPayload = {
         patient_id:      pid,
-        visit_date:      document.getElementById('f-visit-date').value || todayStr(),
+        visit_date:      (NOOR.patientModalMode === 'old_rx' ? (document.getElementById('f-visit-date-oldcopy')?.value || document.getElementById('f-visit-date').value) : document.getElementById('f-visit-date').value) || todayStr(),
         od_sphere:       numOrNull('rx-od-sph'),
         od_cylinder:     numOrNull('rx-od-cyl'),
         od_axis:         intOrNull('rx-od-axis'),
@@ -3459,17 +3563,90 @@ async function savePatient() {
   }
 }
 
-async function topUpPatientRemaining() {
+function topUpPatientRemaining() {
   const detail = NOOR._currentPatientDetail || {};
   const visits = (detail.visits || []).filter(v => (parseFloat(v.remaining)||0) > 0);
   const outstanding = visits.reduce((sum, v) => sum + (parseFloat(v.remaining)||0), 0);
   if (outstanding <= 0) return;
-  const raw = prompt(`${t('topUpRemaining')} (${fmtIQD(outstanding)})`, String(outstanding));
-  if (raw === null) return;
-  let amount = parseFloat(raw);
-  if (!amount || amount <= 0) return toast(t('errorRequired'), 'error');
-  if (amount > outstanding) amount = outstanding;
+  const isAr = NOOR.lang === 'ar';
+
+  NOOR._topupVisits = visits;
+  NOOR._topupOutstanding = outstanding;
+
+  // Set modal text
+  const setT = (id, ar, en) => { const el = document.getElementById(id); if (el) el.textContent = isAr ? ar : en; };
+  setT('topup-modal-title',    'تسديد المتبقي',       'Top Up Payment');
+  setT('topup-outstanding-label', 'المبلغ المتبقي',   'Outstanding Amount');
+  setT('topup-amount-label',   'المبلغ المدفوع (IQD)','Amount Paid (IQD)');
+  setT('topup-cancel-btn',     'إلغاء',               'Cancel');
+  setT('topup-submit-btn',     'تأكيد التسديد',       'Confirm Payment');
+
+  document.getElementById('topup-outstanding-val').textContent = fmtIQD(outstanding);
+
+  // Visits breakdown summary
+  const summaryEl = document.getElementById('topup-visits-summary');
+  if (visits.length === 1) {
+    summaryEl.textContent = isAr ? `زيارة واحدة • ${visits[0].visit_date || ''}` : `1 visit • ${visits[0].visit_date || ''}`;
+  } else {
+    summaryEl.textContent = isAr ? `${visits.length} زيارات بمبالغ متبقية` : `${visits.length} visits with outstanding amounts`;
+  }
+
+  // Quick-fill buttons: 25%, 50%, 100%
+  const qbtns = document.getElementById('topup-quick-btns');
+  qbtns.innerHTML = ['25%','50%','75%','100%'].map(pct => {
+    const val = Math.round(outstanding * parseInt(pct) / 100 / 1000) * 1000;
+    return `<button type="button" class="btn btn-sm btn-outline" onclick="setTopupQuick(${val})">${pct}<br><span style="font-size:.7rem;opacity:.7">${fmtNum(val)}</span></button>`;
+  }).join('');
+
+  // Pre-fill with full amount
+  const inp = document.getElementById('topup-amount-input');
+  inp.value = outstanding;
+  inp.max = outstanding;
+  document.getElementById('topup-error').textContent = '';
+  onTopupInput();
+  openModal('modal-topup');
+  setTimeout(() => inp.select(), 50);
+}
+
+function setTopupQuick(val) {
+  document.getElementById('topup-amount-input').value = val;
+  onTopupInput();
+}
+
+function onTopupInput() {
+  const inp = document.getElementById('topup-amount-input');
+  const errEl = document.getElementById('topup-error');
+  const submitBtn = document.getElementById('topup-submit-btn');
+  const outstanding = NOOR._topupOutstanding || 0;
+  const val = parseFloat(inp.value) || 0;
+  const isAr = NOOR.lang === 'ar';
+
+  if (val <= 0) {
+    errEl.textContent = isAr ? 'يجب أن يكون المبلغ أكبر من صفر' : 'Amount must be greater than zero';
+    submitBtn.disabled = true;
+  } else if (val > outstanding) {
+    errEl.textContent = isAr ? `لا يمكن تجاوز المبلغ المتبقي (${fmtIQD(outstanding)})` : `Cannot exceed outstanding amount (${fmtIQD(outstanding)})`;
+    // Clamp the value
+    inp.value = outstanding;
+    errEl.textContent = '';
+    submitBtn.disabled = false;
+  } else {
+    errEl.textContent = '';
+    submitBtn.disabled = false;
+  }
+}
+
+async function submitTopUp() {
+  const inp = document.getElementById('topup-amount-input');
+  let amount = parseFloat(inp.value) || 0;
+  const outstanding = NOOR._topupOutstanding || 0;
+  if (amount <= 0 || amount > outstanding) return;
+
+  const submitBtn = document.getElementById('topup-submit-btn');
+  submitBtn.disabled = true;
+
   try {
+    const visits = NOOR._topupVisits || [];
     for (const v of visits) {
       if (amount <= 0) break;
       const remaining = parseFloat(v.remaining) || 0;
@@ -3477,10 +3654,16 @@ async function topUpPatientRemaining() {
       await put(`/api/visits/${v.id}`, { amount_paid: (parseFloat(v.amount_paid)||0) + applied });
       amount -= applied;
     }
+    closeModal('modal-topup');
     toast(t('successSaved'));
+    const detail = NOOR._currentPatientDetail || {};
     await renderPatients();
     await openPatientDetail(detail.id || NOOR.editingPatientId);
-  } catch(e) { toast(e.message,'error'); }
+  } catch(e) {
+    toast(e.message, 'error');
+  } finally {
+    submitBtn.disabled = false;
+  }
 }
 
 async function deletePatient(id) {
@@ -3979,7 +4162,35 @@ async function exportPDF() {
     const rows = data.data || [];
     const dir = NOOR.lang === 'ar' ? 'rtl' : 'ltr';
     const bodyRows = rows.map(r => `<tr><td>${esc(r.Date)}</td><td>${esc(r.Patient)}</td><td>${esc(r.Phone)}</td><td>${esc(r['Lens Type'])}</td><td>${esc(r.Total)}</td><td>${esc(r.Paid)}</td><td>${esc(r.Remaining)}</td></tr>`).join('');
-    const html = `<!doctype html><html lang="${NOOR.lang}" dir="${dir}"><head><meta charset="utf-8"><title>Noor Report</title><style>body{font-family:Arial,Tahoma,sans-serif;padding:24px;color:#1a1410}h1{font-size:22px;margin:0 0 6px;color:#6b1a2a}.meta{color:#666;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:7px;text-align:start}th{background:#faf6f0;color:#6b1a2a}@media print{@page{size:A4;margin:12mm}}</style></head><body><h1>Noor Optical Clinic - Report</h1><div class="meta">${esc(from)} - ${esc(to)}</div><table><thead><tr><th>Date</th><th>Patient</th><th>Phone</th><th>Lens</th><th>Total</th><th>Paid</th><th>Remaining</th></tr></thead><tbody>${bodyRows}</tbody></table></body></html>`;
+    const html = `<!doctype html><html lang="${NOOR.lang}" dir="${dir}"><head><meta charset="utf-8"><title>Noor Report</title><style>body{font-family:Arial,Tahoma,sans-serif;padding:24px;color:#1a1410}h1{font-size:22px;margin:0 0 6px;color:#6b1a2a}.meta{color:#666;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:7px;text-align:start}th{background:#faf6f0;color:#6b1a2a}@media print{@page{size:A4;margin:12mm}}</style></head><body><h1>Noor Optical Clinic - Report</h1><div class="meta">${esc(from)} - ${esc(to)}</div><table><thead><tr><th>Date</th><th>Patient</th><th>Phone</th><th>Lens</th><th>Total</th><th>Paid</th><th>Remaining</th></tr></thead><tbody>${bodyRows}</tbody></table>
+<!-- Top-Up Modal -->
+<div class="modal-overlay" id="modal-topup">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modal-header">
+      <div class="modal-title" id="topup-modal-title">تسديد المتبقي</div>
+      <button class="modal-close" onclick="closeModal('modal-topup')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--cream-bg);border:1px solid var(--cream-border);border-radius:10px;padding:16px;margin-bottom:20px">
+        <div style="font-size:.78rem;color:var(--ink-light);margin-bottom:4px" id="topup-outstanding-label">المبلغ المتبقي</div>
+        <div style="font-size:1.6rem;font-weight:800;color:var(--danger);font-family:'DM Mono',monospace;letter-spacing:-.5px" id="topup-outstanding-val">0 IQD</div>
+        <div style="font-size:.75rem;color:var(--ink-light);margin-top:6px" id="topup-visits-summary"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:8px">
+        <label class="form-label" id="topup-amount-label">المبلغ المدفوع (IQD)</label>
+        <input type="number" class="form-input" id="topup-amount-input" min="1" step="1000"
+               oninput="onTopupInput()" style="font-size:1.1rem;font-weight:600;text-align:start">
+        <div style="margin-top:6px;display:flex;gap:8px" id="topup-quick-btns"></div>
+      </div>
+      <div id="topup-error" style="color:var(--danger);font-size:.82rem;min-height:18px;margin-bottom:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-topup')" id="topup-cancel-btn">إلغاء</button>
+      <button class="btn btn-burgundy" onclick="submitTopUp()" id="topup-submit-btn">تأكيد التسديد</button>
+    </div>
+  </div>
+</div>
+</body></html>`;
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();

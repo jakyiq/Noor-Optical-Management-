@@ -1781,7 +1781,8 @@ def restore_backup():
     fmt  = meta.get("format_version")
     src_clinic = meta.get("clinic_id")
 
-    if fmt != BACKUP_FORMAT_VERSION:
+    # Accept backups that have no _meta (e.g. older admin exports) by treating them as v1-compatible
+    if fmt and fmt != BACKUP_FORMAT_VERSION:
         return err(f"Unsupported backup format version: {fmt}. Expected {BACKUP_FORMAT_VERSION}.", 400)
 
     if src_clinic and src_clinic != cid:
