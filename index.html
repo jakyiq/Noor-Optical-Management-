@@ -2997,12 +2997,12 @@ function renderVisitHistory(visits) {
       <div class="visit-card-header" onclick="toggleVisit('vc${v.id}')">
         <div>
           <span style="font-weight:700">${fmtDate(v.visit_date)}</span>
-          <span style="margin:0 10px;color:var(--ink-light)">${esc((v.lens_type||'').replace(/_/g,' '))}</span>
+          ${v.lens_type===null && (parseFloat(v.total_amount)||0)===0 ? `<span class="badge badge-neutral" style="margin:0 8px">${NOOR.lang==='ar'?'وصفة قديمة':'Old Rx'}</span>` : `<span style="margin:0 10px;color:var(--ink-light)">${esc((v.lens_type||'').replace(/_/g,' '))}</span>`}
           ${v.remaining>0?`<span class="badge badge-danger">${fmtNum(v.remaining)} IQD ${t('remaining')}</span>`:`<span class="badge badge-success">Paid</span>`}
         </div>
         <span style="font-family:'DM Mono',monospace;font-size:.9rem;color:var(--ink-mid)">${fmtNum(v.total_amount)} IQD</span>
       </div>
-      <div class="visit-card-body${i===0?' open':''}" id="vc${v.id}">
+      <div class="visit-card-body${i===0 && !(v.lens_type===null && (parseFloat(v.total_amount)||0)===0) ? ' open':''}" id="vc${v.id}">
         <div class="visit-body-grid">
           <div>
             <div style="font-size:.72rem;font-weight:700;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Rx</div>
@@ -4275,35 +4275,7 @@ async function exportPDF() {
     const rows = data.data || [];
     const dir = NOOR.lang === 'ar' ? 'rtl' : 'ltr';
     const bodyRows = rows.map(r => `<tr><td>${esc(r.Date)}</td><td>${esc(r.Patient)}</td><td>${esc(r.Phone)}</td><td>${esc(r['Lens Type'])}</td><td>${esc(r.Total)}</td><td>${esc(r.Paid)}</td><td>${esc(r.Remaining)}</td></tr>`).join('');
-    const html = `<!doctype html><html lang="${NOOR.lang}" dir="${dir}"><head><meta charset="utf-8"><title>Noor Report</title><style>body{font-family:Arial,Tahoma,sans-serif;padding:24px;color:#1a1410}h1{font-size:22px;margin:0 0 6px;color:#6b1a2a}.meta{color:#666;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:7px;text-align:start}th{background:#faf6f0;color:#6b1a2a}@media print{@page{size:A4;margin:12mm}}</style></head><body><h1>Noor Optical Clinic - Report</h1><div class="meta">${esc(from)} - ${esc(to)}</div><table><thead><tr><th>Date</th><th>Patient</th><th>Phone</th><th>Lens</th><th>Total</th><th>Paid</th><th>Remaining</th></tr></thead><tbody>${bodyRows}</tbody></table>
-<!-- Top-Up Modal -->
-<div class="modal-overlay" id="modal-topup">
-  <div class="modal" style="width:min(420px,100%)">
-    <div class="modal-header">
-      <div class="modal-title" id="topup-modal-title">تسديد المتبقي</div>
-      <button class="modal-close" onclick="closeModal('modal-topup')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div style="background:var(--cream-bg);border:1px solid var(--cream-border);border-radius:10px;padding:16px;margin-bottom:20px">
-        <div style="font-size:.78rem;color:var(--ink-light);margin-bottom:4px" id="topup-outstanding-label">المبلغ المتبقي</div>
-        <div style="font-size:1.6rem;font-weight:800;color:var(--danger);font-family:'DM Mono',monospace;letter-spacing:-.5px" id="topup-outstanding-val">0 IQD</div>
-        <div style="font-size:.75rem;color:var(--ink-light);margin-top:6px" id="topup-visits-summary"></div>
-      </div>
-      <div class="form-group" style="margin-bottom:8px">
-        <label class="form-label" id="topup-amount-label">المبلغ المدفوع (IQD)</label>
-        <input type="number" class="form-input" id="topup-amount-input" min="1" step="1000"
-               oninput="onTopupInput()" style="font-size:1.1rem;font-weight:600;text-align:start">
-        <div style="margin-top:6px;display:flex;gap:8px" id="topup-quick-btns"></div>
-      </div>
-      <div id="topup-error" style="color:var(--danger);font-size:.82rem;min-height:18px;margin-bottom:4px"></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-topup')" id="topup-cancel-btn">إلغاء</button>
-      <button class="btn btn-burgundy" onclick="submitTopUp()" id="topup-submit-btn">تأكيد التسديد</button>
-    </div>
-  </div>
-</div>
-</body></html>`;
+    const html = `<!doctype html><html lang="${NOOR.lang}" dir="${dir}"><head><meta charset="utf-8"><title>Noor Report</title><style>body{font-family:Arial,Tahoma,sans-serif;padding:24px;color:#1a1410}h1{font-size:22px;margin:0 0 6px;color:#6b1a2a}.meta{color:#666;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:7px;text-align:start}th{background:#faf6f0;color:#6b1a2a}@media print{@page{size:A4;margin:12mm}}</style></head><body><h1>Noor Optical Clinic - Report</h1><div class="meta">${esc(from)} - ${esc(to)}</div><table><thead><tr><th>Date</th><th>Patient</th><th>Phone</th><th>Lens</th><th>Total</th><th>Paid</th><th>Remaining</th></tr></thead><tbody>${bodyRows}</tbody></table></body></html>`;
     const win = window.open('', '_blank');
     win.document.write(html);
     win.document.close();
@@ -5474,5 +5446,34 @@ function cancelRestore() {
 
 checkSession();  // restores session on page reload without showing login screen
 </script>
+
+<!-- Top-Up Modal -->
+<div class="modal-overlay" id="modal-topup">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modal-header">
+      <div class="modal-title" id="topup-modal-title">تسديد المتبقي</div>
+      <button class="modal-close" onclick="closeModal('modal-topup')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--cream);border:1px solid var(--cream-border);border-radius:10px;padding:16px;margin-bottom:20px">
+        <div style="font-size:.78rem;color:var(--ink-light);margin-bottom:4px" id="topup-outstanding-label">المبلغ المتبقي</div>
+        <div style="font-size:1.6rem;font-weight:800;color:var(--danger);font-family:'DM Mono',monospace;letter-spacing:-.5px" id="topup-outstanding-val">0 IQD</div>
+        <div style="font-size:.75rem;color:var(--ink-light);margin-top:6px" id="topup-visits-summary"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:8px">
+        <label class="form-label" id="topup-amount-label">المبلغ المدفوع (IQD)</label>
+        <input type="number" class="form-input" id="topup-amount-input" min="1" step="1000"
+               oninput="onTopupInput()" style="font-size:1.1rem;font-weight:600;text-align:start">
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap" id="topup-quick-btns"></div>
+      </div>
+      <div id="topup-error" style="color:var(--danger);font-size:.82rem;min-height:18px;margin-bottom:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-topup')" id="topup-cancel-btn">إلغاء</button>
+      <button class="btn btn-burgundy" onclick="submitTopUp()" id="topup-submit-btn">تأكيد التسديد</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
