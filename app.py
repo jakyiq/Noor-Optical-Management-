@@ -1665,6 +1665,196 @@ def update_settings():
 
 
 # ─────────────────────────────────────────────────────────────
+# BACKUP & RESTORE
+# ─────────────────────────────────────────────────────────────
+
+BACKUP_FORMAT_VERSION = "2"
+BACKUP_TABLES = [
+    "patients", "visits", "frames", "lenses",
+    "retail_sales", "operating_expenses", "clinic_settings",
+]
+
+@app.route("/api/backup", methods=["POST"])
+@_auth(roles=["doctor", "super_admin"])
+def create_backup():
+    """Create a full clinic backup and record it in backup_log."""
+    cid = session["clinic_id"]
+    uid = session["user_id"]
+
+    clinic = db.table("clinics").select("*").eq("id", cid).single().execute()
+    if not clinic.data:
+        return err("Clinic not found", 404)
+
+    payload = {
+        "_meta": {
+            "format_version": BACKUP_FORMAT_VERSION,
+            "app": "noor-optical",
+            "clinic_id": cid,
+            "created_at": now_iso(),
+            "created_by": uid,
+        },
+        "clinic": clinic.data,
+    }
+
+    for table in BACKUP_TABLES:
+        query = db.table(table).select("*").eq("clinic_id", cid)
+        payload[table] = query.execute().data or []
+
+    row_counts = {k: len(v) for k, v in payload.items() if isinstance(v, list)}
+
+    backup_res = db.table("backup_log").insert({
+        "clinic_id": cid,
+        "created_by": uid,
+        "kind": "manual",
+        "row_counts": row_counts,
+        "backup_data": payload,
+        "created_at": now_iso(),
+    }).execute()
+
+    _write_audit(cid, uid, "create", "backup", None,
+                 new_value={"row_counts": row_counts})
+
+    return ok({
+        "backup_id": backup_res.data[0]["id"] if backup_res.data else None,
+        "created_at": payload["_meta"]["created_at"],
+        "row_counts": row_counts,
+        "backup": payload,
+    })
+
+
+@app.route("/api/backup/history", methods=["GET"])
+@_auth(roles=["doctor", "super_admin"])
+def backup_history():
+    """List past backups for this clinic (metadata only, no backup_data blob)."""
+    cid = session["clinic_id"]
+    res = (
+        db.table("backup_log")
+        .select("id,clinic_id,created_by,kind,row_counts,created_at")
+        .eq("clinic_id", cid)
+        .order("created_at", desc=True)
+        .limit(50)
+        .execute()
+    )
+    return ok(res.data or [])
+
+
+@app.route("/api/backup/<backup_id>/download", methods=["GET"])
+@_auth(roles=["doctor", "super_admin"])
+def download_backup(backup_id):
+    """Return the full backup payload for a specific backup_id."""
+    cid = session["clinic_id"]
+    res = (
+        db.table("backup_log")
+        .select("*")
+        .eq("id", backup_id)
+        .eq("clinic_id", cid)
+        .single()
+        .execute()
+    )
+    if not res.data:
+        return err("Backup not found", 404)
+    return ok(res.data)
+
+
+@app.route("/api/restore", methods=["POST"])
+@_auth(roles=["doctor", "super_admin"])
+def restore_backup():
+    """
+    Restore clinic data from a backup JSON.
+    Strategy: upsert (insert or update by id) so existing records are
+    updated and missing records are re-created.  Records not in the backup
+    are left untouched — this is a *merge* restore, not a wipe-and-replace,
+    which is safer for SaaS multi-tenant use.
+    Pass { confirm: true } to proceed, otherwise returns a dry-run summary.
+    """
+    cid  = session["clinic_id"]
+    uid  = session["user_id"]
+    body = request.get_json() or {}
+
+    backup = body.get("backup")
+    confirm = bool(body.get("confirm", False))
+
+    if not backup or not isinstance(backup, dict):
+        return err("No backup data provided", 400)
+
+    meta = backup.get("_meta", {})
+    fmt  = meta.get("format_version")
+    src_clinic = meta.get("clinic_id")
+
+    if fmt != BACKUP_FORMAT_VERSION:
+        return err(f"Unsupported backup format version: {fmt}. Expected {BACKUP_FORMAT_VERSION}.", 400)
+
+    if src_clinic and src_clinic != cid:
+        return err("This backup belongs to a different clinic. Restore is not permitted.", 403)
+
+    # Build summary
+    summary = {}
+    for table in BACKUP_TABLES:
+        rows = backup.get(table, [])
+        summary[table] = len(rows)
+
+    if not confirm:
+        return ok({"dry_run": True, "summary": summary, "meta": meta})
+
+    # ── Perform restore ──
+    errors = []
+    restored = {}
+
+    for table in BACKUP_TABLES:
+        rows = backup.get(table, [])
+        if not rows:
+            restored[table] = 0
+            continue
+
+        # Strip any rows that don't belong to this clinic
+        if table == "clinic_settings":
+            safe_rows = [r for r in rows if r.get("clinic_id") == cid]
+        else:
+            safe_rows = [r for r in rows if r.get("clinic_id") == cid]
+
+        if not safe_rows:
+            restored[table] = 0
+            continue
+
+        try:
+            # Supabase upsert: on_conflict defaults to pk (id)
+            db.table(table).upsert(safe_rows, on_conflict="id").execute()
+            restored[table] = len(safe_rows)
+        except Exception as e:
+            errors.append(f"{table}: {str(e)}")
+            restored[table] = 0
+
+    # Restore clinic profile fields (safe subset only)
+    clinic_backup = backup.get("clinic", {})
+    if clinic_backup:
+        safe_clinic = {k: clinic_backup[k] for k in
+                       ("name", "logo_url", "phone", "address")
+                       if k in clinic_backup}
+        if safe_clinic:
+            try:
+                db.table("clinics").update(safe_clinic).eq("id", cid).execute()
+            except Exception as e:
+                errors.append(f"clinic profile: {str(e)}")
+
+    # Log the restore event
+    db.table("backup_log").insert({
+        "clinic_id": cid,
+        "created_by": uid,
+        "kind": "restore",
+        "row_counts": restored,
+        "created_at": now_iso(),
+    }).execute()
+
+    _write_audit(cid, uid, "create", "restore", None,
+                 new_value={"restored": restored, "errors": errors})
+
+    if errors:
+        return jsonify({"ok": False, "restored": restored, "errors": errors}), 207
+
+    return ok({"restored": restored, "errors": []})
+
+
+# ─────────────────────────────────────────────────────────────
 # USERS
 # ─────────────────────────────────────────────────────────────
 
