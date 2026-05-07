@@ -3675,6 +3675,8 @@ async function openEditVisit(visitId) {
   await populateFrameInventory();
   openModal('modal-patient');
 }
+
+function topUpPatientRemaining() {
   const detail = NOOR._currentPatientDetail || {};
   const visits = (detail.visits || []).filter(v => (parseFloat(v.remaining)||0) > 0);
   const outstanding = visits.reduce((sum, v) => sum + (parseFloat(v.remaining)||0), 0);
