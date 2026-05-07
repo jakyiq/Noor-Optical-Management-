@@ -472,9 +472,13 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .rx-table td.eye-label{background:var(--burgundy-pale);text-align:center;font-size:.72rem;font-weight:700;color:var(--burgundy);white-space:nowrap;padding:8px 12px}
 .rx-input{width:100%;padding:6px 8px;border:none;background:transparent;font-family:'DM Mono',monospace;font-size:.85rem;text-align:center;color:var(--ink);outline:none}
 .rx-input:focus{background:var(--cream);border-radius:4px}
-.rx-step-btn{width:22px;height:28px;border:1.5px solid var(--cream-border);border-radius:4px;background:var(--cream);color:var(--burgundy);font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;flex-shrink:0;transition:background .12s,border-color .12s}
-.rx-step-btn:hover{background:var(--burgundy-pale);border-color:var(--burgundy)}
-.rx-step-btn:active{background:var(--burgundy);color:white}
+/* Sign toggle button — single button that flips positive ↔ negative */
+.rx-sign-wrap{display:flex;align-items:center;gap:0;position:relative}
+.rx-sign-wrap .rx-input{flex:1;min-width:0}
+.rx-sign-btn{flex-shrink:0;width:26px;height:28px;border:1.5px solid var(--cream-border);border-radius:0 4px 4px 0;background:var(--cream);color:var(--ink-mid);font-size:.65rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;transition:background .12s,color .12s,border-color .12s;letter-spacing:-.5px;user-select:none}
+.rx-sign-btn:hover{background:var(--burgundy-pale);border-color:var(--burgundy);color:var(--burgundy)}
+.rx-sign-btn:active{background:var(--burgundy);color:white;border-color:var(--burgundy)}
+.rx-sign-btn.is-negative{background:var(--burgundy-pale);border-color:var(--burgundy);color:var(--burgundy)}
 
 /* INV MATCH */
 .inv-match-box{background:var(--cream);border:1px solid var(--cream-border);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px}
@@ -1978,17 +1982,15 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
               <tr>
                 <td class="eye-label">OD (R)</td>
                 <td>
-                  <div style="display:flex;align-items:center;gap:2px;justify-content:center">
-                    <button type="button" class="rx-step-btn" onclick="stepRx('rx-od-sph',-0.25)" tabindex="-1">−</button>
-                    <input class="rx-input" id="rx-od-sph" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" style="width:64px">
-                    <button type="button" class="rx-step-btn" onclick="stepRx('rx-od-sph',+0.25)" tabindex="-1">+</button>
+                  <div class="rx-sign-wrap">
+                    <input class="rx-input" id="rx-od-sph" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-od-sph')">
+                    <button type="button" class="rx-sign-btn" id="rx-od-sph-sign" onclick="toggleRxSign('rx-od-sph')" tabindex="-1" title="Toggle sign">+/−</button>
                   </div>
                 </td>
                 <td>
-                  <div style="display:flex;align-items:center;gap:2px;justify-content:center">
-                    <button type="button" class="rx-step-btn" onclick="stepRx('rx-od-cyl',-0.25)" tabindex="-1">−</button>
-                    <input class="rx-input" id="rx-od-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" style="width:64px">
-                    <button type="button" class="rx-step-btn" onclick="stepRx('rx-od-cyl',+0.25)" tabindex="-1">+</button>
+                  <div class="rx-sign-wrap">
+                    <input class="rx-input" id="rx-od-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-od-cyl')">
+                    <button type="button" class="rx-sign-btn" id="rx-od-cyl-sign" onclick="toggleRxSign('rx-od-cyl')" tabindex="-1" title="Toggle sign">+/−</button>
                   </div>
                 </td>
                 <td><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="180" placeholder="0"></td>
@@ -1999,17 +2001,15 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
               <tr>
                 <td class="eye-label">OS (L)</td>
                 <td>
-                  <div style="display:flex;align-items:center;gap:2px;justify-content:center">
-                    <button type="button" class="rx-step-btn" onclick="stepRx('rx-os-sph',-0.25)" tabindex="-1">−</button>
-                    <input class="rx-input" id="rx-os-sph" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" style="width:64px">
-                    <button type="button" class="rx-step-btn" onclick="stepRx('rx-os-sph',+0.25)" tabindex="-1">+</button>
+                  <div class="rx-sign-wrap">
+                    <input class="rx-input" id="rx-os-sph" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-os-sph')">
+                    <button type="button" class="rx-sign-btn" id="rx-os-sph-sign" onclick="toggleRxSign('rx-os-sph')" tabindex="-1" title="Toggle sign">+/−</button>
                   </div>
                 </td>
                 <td>
-                  <div style="display:flex;align-items:center;gap:2px;justify-content:center">
-                    <button type="button" class="rx-step-btn" onclick="stepRx('rx-os-cyl',-0.25)" tabindex="-1">−</button>
-                    <input class="rx-input" id="rx-os-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" style="width:64px">
-                    <button type="button" class="rx-step-btn" onclick="stepRx('rx-os-cyl',+0.25)" tabindex="-1">+</button>
+                  <div class="rx-sign-wrap">
+                    <input class="rx-input" id="rx-os-cyl" type="number" step=".25" placeholder="0.00" oninput="onRxChange()" onblur="applyPendingSign('rx-os-cyl')">
+                    <button type="button" class="rx-sign-btn" id="rx-os-cyl-sign" onclick="toggleRxSign('rx-os-cyl')" tabindex="-1" title="Toggle sign">+/−</button>
                   </div>
                 </td>
                 <td><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="180" placeholder="0"></td>
@@ -2983,6 +2983,10 @@ function clearPatientForm() {
   document.getElementById('f-visit-date').value = todayStr();
   document.getElementById('inv-match-items').innerHTML = `<span class="inv-match-empty">${t('enterRxFirst')}</span>`;
   NOOR._selectedLensId = null;
+  // Reset sign-toggle buttons
+  ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'].forEach(id => {
+    document.getElementById(id + '-sign')?.classList.remove('is-negative');
+  });
   NOOR._selectedFrameInvId = null;
   NOOR._lastVisit = null;
   calcTotal();
@@ -3048,6 +3052,12 @@ function importPrevRx() {
   document.getElementById('rx-os-sph').value  = lv.os_sphere||'';
   document.getElementById('rx-os-cyl').value  = lv.os_cylinder||'';
   document.getElementById('rx-os-axis').value = lv.os_axis||'';
+  // Sync sign buttons to imported values
+  ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'].forEach(id => {
+    const val = parseFloat(document.getElementById(id)?.value);
+    const btn = document.getElementById(id + '-sign');
+    if (btn) btn.classList.toggle('is-negative', !isNaN(val) && val < 0);
+  });
   toast(t('successSaved'));
 }
 
@@ -3146,15 +3156,41 @@ function validateFraction(el) {
   }
 }
 
-// ── SPH / CYL stepper ────────────────────────────────────
-function stepRx(inputId, delta) {
-  const el = document.getElementById(inputId);
+// ── Sign toggle: flips value between positive and negative ──
+function toggleRxSign(inputId) {
+  const el  = document.getElementById(inputId);
+  const btn = document.getElementById(inputId + '-sign');
   if (!el) return;
-  const cur = parseFloat(el.value) || 0;
-  // Round to nearest 0.25 to avoid float drift
-  const next = Math.round((cur + delta) * 4) / 4;
-  el.value = next.toFixed(2);
+  const cur = parseFloat(el.value);
+  if (!isNaN(cur) && cur !== 0) {
+    // Flip existing non-zero value
+    el.value = (-cur).toFixed(2);
+  } else if (el.value === '' || isNaN(cur) || cur === 0) {
+    // No value yet — prime the field with '-0.00' visual cue: just mark the btn
+    // The actual negative will apply once user types a number
+    // Toggle the btn state so next typed value becomes negative
+    if (btn) btn.classList.toggle('is-negative');
+    return;
+  }
+  // Sync button highlight to current sign
+  if (btn) btn.classList.toggle('is-negative', parseFloat(el.value) < 0);
   el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// When user types into a sign-controlled field, apply pending negative state
+function applyPendingSign(inputId) {
+  const el  = document.getElementById(inputId);
+  const btn = document.getElementById(inputId + '-sign');
+  if (!el || !btn) return;
+  const val = parseFloat(el.value);
+  if (!isNaN(val) && val > 0 && btn.classList.contains('is-negative')) {
+    el.value = (-val).toFixed(2);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  // Keep button highlight in sync
+  if (!isNaN(parseFloat(el.value))) {
+    btn.classList.toggle('is-negative', parseFloat(el.value) < 0);
+  }
 }
 
 function fractionOrNull(id) {
@@ -4004,53 +4040,151 @@ function printRxSlip() {
 // ══════════════════════════════════════════════════════════
 // WHATSAPP RX PDF SEND
 // ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// WHATSAPP RX PDF SEND  — pure jsPDF text, no html2canvas
+// ══════════════════════════════════════════════════════════
 async function sendRxWhatsApp(vid, phone, patientName) {
   if (!phone) { toast('No phone number for this patient', 'error'); return; }
   toast('Preparing Rx PDF…', 'success');
+
   try {
-    const data = await get(`/api/visits/${vid}/print`);
-    _renderRxSlip(data.data);
+    const res = await get(`/api/visits/${vid}/print`);
+    const payload = res.data || {};
+    const v  = payload.visit   || {};
+    const p  = payload.patient || {};
+    const cl = payload.clinic  || { name: NOOR.clinicName };
+    const st = payload.settings || NOOR.settings || {};
 
-    // Build a standalone HTML page for jsPDF to render
-    const slipEl = document.getElementById('rx-slip-content');
-    if (!slipEl) { toast('Rx slip not available', 'error'); return; }
+    const waPhone    = phone.replace(/\D/g, '');
+    const visitDate  = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
+    const nextVisit  = v.next_visit_date ? fmtDate(v.next_visit_date) : '—';
+    const clinicName = cl.name || NOOR.clinicName || 'Noor Optical';
 
-    // Use jsPDF html() if available, otherwise fall back to a WhatsApp text link
+    // WhatsApp text message (always sent regardless of PDF)
+    const msg = `مرحباً ${patientName},\nوصفتك البصرية بتاريخ ${visitDate}.\nالموعد القادم: ${nextVisit}\n— ${clinicName}`;
+    const waURL = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
+
     if (window.jspdf) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+      const W = 148, L = 10, R = W - 10;
+      let y = 12;
 
-      await doc.html(slipEl, {
-        callback: function(d) {
-          const pdfBlob = d.output('blob');
-          const blobURL = URL.createObjectURL(pdfBlob);
+      const hline = (yy, thick) => {
+        doc.setDrawColor(...(thick ? [107,26,42] : [220,200,180]));
+        doc.setLineWidth(thick ? 0.5 : 0.2);
+        doc.line(L, yy, R, yy);
+      };
+      const txt = (s, x, yy, size, style, color) => {
+        doc.setFontSize(size || 9);
+        doc.setFont('helvetica', style || 'normal');
+        doc.setTextColor(...(color || [30, 20, 16]));
+        doc.text(String(s ?? '—'), x, yy);
+      };
 
-          // Open PDF in new tab so user can save/share, then open WhatsApp
-          window.open(blobURL, '_blank');
-          setTimeout(() => URL.revokeObjectURL(blobURL), 60000);
+      // Clinic header
+      doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(107,26,42);
+      doc.text(clinicName, W/2, y, { align:'center' }); y += 5;
+      if (st.print_doctor_name) {
+        txt(st.print_doctor_name, W/2, y, 9, 'normal', [60,50,40]);
+        doc.setFontSize(9); doc.text(st.print_doctor_name, W/2, y, {align:'center'}); y += 4;
+      }
+      if (st.print_doctor_credentials) {
+        doc.setFontSize(7); doc.setFont('helvetica','italic'); doc.setTextColor(120,110,100);
+        doc.text(st.print_doctor_credentials, W/2, y, {align:'center'}); y += 4;
+      }
+      if (cl.phone) {
+        doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(120,110,100);
+        doc.text('Tel: ' + cl.phone, W/2, y, {align:'center'}); y += 4;
+      }
+      hline(y, true); y += 3;
 
-          const visitDate = (window._rxPrintVisitDate || new Date().toISOString().slice(0,10));
-          const msg = `مرحباً ${patientName}، مرفق وصفتك البصرية بتاريخ ${visitDate}.\n— ${NOOR.clinicName}`;
-          const waPhone = phone.replace(/\D/g, '');
-          setTimeout(() => {
-            window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-          }, 800);
-          toast('PDF opened — share it via WhatsApp', 'success');
-        },
-        x: 8, y: 8,
-        width: 133,
-        windowWidth: slipEl.scrollWidth || 500,
-        autoPaging: 'text',
-        margin: [8, 8, 8, 8],
+      // Title row
+      txt('PRESCRIPTION', L, y, 8, 'bold', [107,26,42]);
+      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(120,110,100);
+      doc.text(visitDate, R, y, {align:'right'});
+      y += 2; hline(y, false); y += 5;
+
+      // Patient info
+      txt('Patient: ' + (p.full_name || '—'), L, y, 9, 'bold');
+      txt('Age: ' + (p.age || '—'), 95, y, 9);
+      txt(p.gender ? p.gender.charAt(0).toUpperCase()+p.gender.slice(1) : '', 120, y, 9);
+      y += 4;
+      txt('Next Visit: ' + nextVisit, L, y, 8, 'normal', [80,70,60]);
+      y += 2; hline(y, false); y += 5;
+
+      // Rx table
+      const cols = [L, 38, 62, 86, 106, 122];
+      const headers = ['Eye','SPH','CYL','AXIS','ADD','VA'];
+      doc.setFillColor(107,26,42);
+      doc.rect(L, y-4, R-L, 6, 'F');
+      headers.forEach((h,i) => {
+        doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
+        doc.text(h, cols[i]+1, y);
       });
+      y += 3;
+
+      const rxRow = (eye, s, c, a, add, va, bg) => {
+        doc.setFillColor(...bg);
+        doc.rect(L, y-3, R-L, 6, 'F');
+        txt(eye, cols[0]+1, y, 8, 'bold', [107,26,42]);
+        [s,c,a,add,va].forEach((val,i) => txt(val, cols[i+1]+1, y, 8));
+        y += 6;
+      };
+      rxRow('OD (R)', v.od_sphere, v.od_cylinder, v.od_axis, v.od_addition, v.od_va, [250,246,240]);
+      rxRow('OS (L)', v.os_sphere, v.os_cylinder, v.os_axis, v.os_addition, v.os_va, [245,240,235]);
+
+      if (v.ipd) { y += 1; txt('IPD: ' + v.ipd + ' mm', L, y, 8, 'normal', [80,70,60]); y += 5; }
+      else y += 3;
+
+      hline(y, false); y += 4;
+
+      // Lens & frame
+      const lensDesc  = [v.lens_type, v.lens_material, v.lens_coating].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ');
+      const frameDesc = [v.frame_brand, v.frame_type ? String(v.frame_type).replace(/_/g,' ') : ''].filter(Boolean).join(' · ');
+      txt('Lens: ' + (lensDesc || '—'), L, y, 8); y += 4;
+      txt('Frame: ' + (frameDesc || '—'), L, y, 8); y += 4;
+
+      // Financials
+      if (st.print_show_financials !== false) {
+        hline(y, false); y += 4;
+        txt('Total: ' + fmtIQD(v.total_amount), L, y, 8);
+        txt('Paid: ' + fmtIQD(v.amount_paid), 65, y, 8);
+        const remColor = (v.remaining||0) > 0 ? [192,57,43] : [30,126,90];
+        txt('Remaining: ' + fmtIQD(v.remaining), 107, y, 8, 'normal', remColor);
+        y += 5;
+      }
+
+      // Warning / instructions
+      if (st.print_warning_text) {
+        hline(y, false); y += 4;
+        doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(107,26,42);
+        doc.text('Instructions:', L, y); y += 3;
+        doc.setFont('helvetica','normal'); doc.setTextColor(60,50,40);
+        const lines = doc.splitTextToSize(st.print_warning_text, R-L);
+        doc.text(lines, L, y); y += lines.length * 3.5 + 2;
+      }
+
+      // Footer
+      hline(y, false); y += 3;
+      doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(140,130,120);
+      doc.text(clinicName + (cl.address ? ' · ' + cl.address : ''), L, y);
+
+      // Open PDF in new tab (user downloads & shares manually)
+      const pdfBlob = doc.output('blob');
+      const blobURL = URL.createObjectURL(pdfBlob);
+      window.open(blobURL, '_blank');
+      setTimeout(() => URL.revokeObjectURL(blobURL), 60000);
+      // Open WhatsApp with pre-filled text
+      setTimeout(() => window.open(waURL, '_blank'), 700);
+      toast('PDF opened — save it, then send via WhatsApp', 'success');
+
     } else {
-      // Fallback: open Rx slip print page + WhatsApp text message
-      printRxSlip();
-      const visitDate = (window._rxPrintVisitDate || new Date().toISOString().slice(0,10));
-      const msg = `مرحباً ${patientName}، وصفتك البصرية بتاريخ ${visitDate} — ${NOOR.clinicName}`;
-      const waPhone = phone.replace(/\D/g, '');
-      setTimeout(() => window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank'), 1000);
+      // jsPDF not available — text-only WhatsApp message
+      window.open(waURL, '_blank');
+      toast('Sent as WhatsApp text (PDF library not loaded yet)', 'warning');
     }
+
   } catch(e) {
     toast('Error: ' + e.message, 'error');
   }
