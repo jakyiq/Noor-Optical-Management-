@@ -41,6 +41,8 @@ _cors_origins_env = os.environ.get("CORS_ORIGINS", "")
 _cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()] or [
     "http://localhost:5000",
     "http://127.0.0.1:5000",
+    "http://tauri.localhost",
+    "tauri://localhost",
 ]
 CORS(app, supports_credentials=True, origins=_cors_origins)
 
@@ -1806,6 +1808,16 @@ def restore_backup():
     backup = body.get("backup")
     confirm = bool(body.get("confirm", False))
 
+    if isinstance(backup, dict):
+        if isinstance(backup.get("backup"), dict):
+            backup = backup["backup"]
+        elif isinstance(backup.get("data"), dict) and isinstance(backup["data"].get("backup"), dict):
+            backup = backup["data"]["backup"]
+        elif isinstance(backup.get("backup_data"), dict):
+            backup = backup["backup_data"]
+        elif isinstance(backup.get("data"), dict) and isinstance(backup["data"].get("backup_data"), dict):
+            backup = backup["data"]["backup_data"]
+
     if not backup or not isinstance(backup, dict):
         return err("No backup data provided", 400)
 
@@ -1850,8 +1862,8 @@ def restore_backup():
             continue
 
         try:
-            # Supabase upsert: on_conflict defaults to pk (id)
-            db.table(table).upsert(safe_rows, on_conflict="id").execute()
+            conflict_key = "clinic_id" if table == "clinic_settings" else "id"
+            db.table(table).upsert(safe_rows, on_conflict=conflict_key).execute()
             restored[table] = len(safe_rows)
         except Exception as e:
             errors.append(f"{table}: {str(e)}")

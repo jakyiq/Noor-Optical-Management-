@@ -2311,9 +2311,28 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 // ══════════════════════════════════════════════════════════
 // API BASE — auto-detects local vs Vercel
 // ══════════════════════════════════════════════════════════
-const API_BASE = '';  // same-origin: /api/... always works on Vercel
+let API_BASE = localStorage.getItem('noor_api_base') || '';  // Web uses same-origin; desktop stores the backend URL.
+
+function isTauriDesktop() {
+  return !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
+}
+
+function ensureApiBase() {
+  if (API_BASE || !isTauriDesktop()) return API_BASE;
+  const entered = prompt(
+    NOOR.lang === 'ar'
+      ? 'أدخل رابط الخادم الخاص بالعيادة (مثال: https://your-app.vercel.app)'
+      : 'Enter your clinic backend URL (example: https://your-app.vercel.app)'
+  );
+  if (entered) {
+    API_BASE = entered.replace(/\/+$/, '');
+    localStorage.setItem('noor_api_base', API_BASE);
+  }
+  return API_BASE;
+}
 
 async function api(method, path, body) {
+  const base = ensureApiBase();
   const opts = {
     method,
     credentials: 'include',
@@ -2323,7 +2342,7 @@ async function api(method, path, body) {
     opts.headers['X-CSRF-Token'] = NOOR.csrfToken;
   }
   if (body !== undefined) opts.body = JSON.stringify(body);
-  const res = await fetch(API_BASE + path, opts);
+  const res = await fetch(base + path, opts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
   if (data.data?.csrf_token) NOOR.csrfToken = data.data.csrf_token;
@@ -5481,43 +5500,54 @@ function onRestoreFileChosen(input) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      const parsed = JSON.parse(e.target.result);
+      const rawText = String(e.target.result || '').replace(/^\uFEFF/, '').trim();
+      const parsed = JSON.parse(rawText);
       const isAr = NOOR.lang === 'ar';
+      const backup = normalizeBackupPayload(parsed);
 
       // Must be an object (not array/null)
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      if (!backup || typeof backup !== 'object' || Array.isArray(backup)) {
         throw new Error('not_object');
       }
 
       // Must contain at least one known backup table key
       const KNOWN = ['patients','visits','frames','lenses','retail_sales','operating_expenses','clinic_settings','clinic'];
-      const hasData = KNOWN.some(k => parsed[k] !== undefined);
+      const hasData = KNOWN.some(k => backup[k] !== undefined);
       if (!hasData) {
-        toast(isAr ? 'هذا الملف لا يبدو نسخة احتياطية صالحة من نور' : 'This file does not appear to be a valid Noor backup', 'error');
+        toast(isAr ? 'هذا ملف JSON صحيح، لكنه لا يحتوي على بيانات نسخة Noor الاحتياطية.' : 'This is valid JSON, but it does not contain Noor backup data.', 'error');
         _restorePayload = null;
         document.getElementById('restore-preview').style.display = 'none';
         return;
       }
 
       // Warn (but don't block) if format version is unexpected
-      const fmt = parsed._meta && parsed._meta.format_version;
+      const fmt = backup._meta && backup._meta.format_version;
       if (fmt && fmt !== '2') {
         toast(isAr ? ('تحذير: إصدار النسخة ' + fmt + ' — قد تكون بعض الحقول غير متوافقة') : ('Warning: backup format v' + fmt + ' — some fields may not be compatible'), 'warning');
       }
 
-      _restorePayload = parsed;
-      _showRestorePreview(parsed);
+      _restorePayload = backup;
+      _showRestorePreview(backup);
     } catch (err) {
       _restorePayload = null;
       const isAr = NOOR.lang === 'ar';
       const msg = err.message === 'not_object'
-        ? (isAr ? 'الملف ليس نسخة احتياطية صالحة' : 'File is not a valid backup object')
-        : (isAr ? 'تعذّر قراءة الملف — تأكد أنه ملف JSON صحيح' : 'Could not read file — make sure it is a valid JSON file');
+        ? (isAr ? 'الملف ليس نسخة احتياطية صالحة من Noor' : 'File is not a valid Noor backup object')
+        : (isAr ? `تعذر قراءة JSON: ${err.message}` : `Could not parse JSON: ${err.message}`);
       toast(msg, 'error');
       document.getElementById('restore-preview').style.display = 'none';
     }
   };
   reader.readAsText(file);
+}
+
+function normalizeBackupPayload(parsed) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return parsed;
+  if (parsed.backup && typeof parsed.backup === 'object') return parsed.backup;
+  if (parsed.data?.backup && typeof parsed.data.backup === 'object') return parsed.data.backup;
+  if (parsed.backup_data && typeof parsed.backup_data === 'object') return parsed.backup_data;
+  if (parsed.data?.backup_data && typeof parsed.data.backup_data === 'object') return parsed.data.backup_data;
+  return parsed;
 }
 
 function _showRestorePreview(payload) {
@@ -5548,7 +5578,7 @@ function _showRestorePreview(payload) {
   const m = payload._meta || {};
   const createdAt = m.created_at ? new Date(m.created_at).toLocaleString(isAr ? 'ar-IQ' : 'en-GB') : '—';
   const srcClinic = payload.clinic?.name || m.clinic_id || '—';
-  meta.innerHTML = `${isAr ? 'تاريخ النسخة' : 'Backup date'}: <strong>${createdAt}</strong> &nbsp;|&nbsp; ${isAr ? 'العيادة' : 'Clinic'}: <strong>${escHtml(srcClinic)}</strong> &nbsp;|&nbsp; ${isAr ? 'الإصدار' : 'Format'}: <strong>v${m.format_version || '?'}</strong>`;
+  meta.innerHTML = `${isAr ? 'تاريخ النسخة' : 'Backup date'}: <strong>${createdAt}</strong> &nbsp;|&nbsp; ${isAr ? 'العيادة' : 'Clinic'}: <strong>${esc(srcClinic)}</strong> &nbsp;|&nbsp; ${isAr ? 'الإصدار' : 'Format'}: <strong>v${m.format_version || '?'}</strong>`;
 
   preview.style.display = 'block';
 }
