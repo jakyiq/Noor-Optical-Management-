@@ -1620,8 +1620,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <option value="glass">Glass</option>
             <option value="contact">Contact</option>
           </select>
-          <input type="number" class="filter-input" id="lens-sph-filter" step=".25" placeholder="SPH" oninput="filterLenses()" style="width:110px">
-          <input type="number" class="filter-input" id="lens-cyl-filter" step=".25" placeholder="CYL" oninput="filterLenses()" style="width:110px">
+          <input type="number" class="filter-input" id="lens-sph-filter" step=".25" placeholder="SPH" oninput="filterLenses()" style="min-width:80px;flex:1 1 90px;max-width:130px">
+          <input type="number" class="filter-input" id="lens-cyl-filter" step=".25" placeholder="CYL" oninput="filterLenses()" style="min-width:80px;flex:1 1 90px;max-width:130px">
           <select class="filter-select" id="lens-stock-filter" onchange="filterLenses()">
             <option value="">All stock</option>
             <option value="low">Low stock</option>
@@ -1651,10 +1651,12 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <div class="page-header-eyebrow" data-i18n="inventory">المخزون</div>
             <div class="page-header-title" data-i18n="frames">الإطارات</div>
           </div>
-          <button class="btn btn-burgundy" onclick="openAddFrame()">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            <span data-i18n="addFrame">إضافة إطار</span>
-          </button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-burgundy" onclick="openAddFrame()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="addFrame">إضافة إطار</span>
+            </button>
+          </div>
         </div>
         <div class="low-stock-banner" id="frames-low-banner">
           <div class="low-stock-title" data-i18n="lowStockAlert">تنبيه: مخزون منخفض</div>
@@ -5343,16 +5345,51 @@ function onRestoreFileChosen(input) {
   const nameEl = document.getElementById('restore-file-name');
   if (nameEl) nameEl.textContent = file.name;
 
+  // Guard: only accept .json files
+  if (!file.name.toLowerCase().endsWith('.json') && file.type !== 'application/json') {
+    _restorePayload = null;
+    const isAr = NOOR.lang === 'ar';
+    toast(isAr ? 'يُقبل ملف JSON فقط (.json)' : 'Only JSON backup files are accepted (.json)', 'error');
+    document.getElementById('restore-preview').style.display = 'none';
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const parsed = JSON.parse(e.target.result);
+      const isAr = NOOR.lang === 'ar';
+
+      // Must be an object (not array/null)
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('not_object');
+      }
+
+      // Must contain at least one known backup table key
+      const KNOWN = ['patients','visits','frames','lenses','retail_sales','operating_expenses','clinic_settings','clinic'];
+      const hasData = KNOWN.some(k => parsed[k] !== undefined);
+      if (!hasData) {
+        toast(isAr ? 'هذا الملف لا يبدو نسخة احتياطية صالحة من نور' : 'This file does not appear to be a valid Noor backup', 'error');
+        _restorePayload = null;
+        document.getElementById('restore-preview').style.display = 'none';
+        return;
+      }
+
+      // Warn (but don't block) if format version is unexpected
+      const fmt = parsed._meta && parsed._meta.format_version;
+      if (fmt && fmt !== '2') {
+        toast(isAr ? ('تحذير: إصدار النسخة ' + fmt + ' — قد تكون بعض الحقول غير متوافقة') : ('Warning: backup format v' + fmt + ' — some fields may not be compatible'), 'warning');
+      }
+
       _restorePayload = parsed;
       _showRestorePreview(parsed);
-    } catch {
+    } catch (err) {
       _restorePayload = null;
       const isAr = NOOR.lang === 'ar';
-      toast(isAr ? 'ملف غير صالح' : 'Invalid JSON file', 'error');
+      const msg = err.message === 'not_object'
+        ? (isAr ? 'الملف ليس نسخة احتياطية صالحة' : 'File is not a valid backup object')
+        : (isAr ? 'تعذّر قراءة الملف — تأكد أنه ملف JSON صحيح' : 'Could not read file — make sure it is a valid JSON file');
+      toast(msg, 'error');
       document.getElementById('restore-preview').style.display = 'none';
     }
   };

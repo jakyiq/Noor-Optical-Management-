@@ -927,7 +927,7 @@ def create_visit():
     # ── Inventory deduction (transactional guard) ──
     lens_id  = body.get("lens_id")
     frame_id = body.get("frame_id")
-    lens_count = int(body.get("lens_count") or 2)
+    lens_count = int(body.get("lens_count", 2))
 
     if lens_id:
         l = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).eq("id", lens_id).single().execute()
@@ -2225,7 +2225,17 @@ def admin_backup_clinic(cid):
     if not clinic.data:
         return err("Clinic not found", 404)
 
-    payload = {"clinic": clinic.data}
+    payload = {
+        "_meta": {
+            "format_version": BACKUP_FORMAT_VERSION,
+            "app": "noor-optical",
+            "clinic_id": cid,
+            "created_at": now_iso(),
+            "created_by": session.get("user_id"),
+            "source": "admin",
+        },
+        "clinic": clinic.data,
+    }
     for table in ["patients", "visits", "frames", "lenses", "retail_sales", "operating_expenses", "users", "clinic_settings", "licenses"]:
         query = db.table(table).select("*")
         if table == "clinic_settings":
