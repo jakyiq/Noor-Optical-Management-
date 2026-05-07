@@ -927,7 +927,7 @@ def create_visit():
     # ── Inventory deduction (transactional guard) ──
     lens_id  = body.get("lens_id")
     frame_id = body.get("frame_id")
-    lens_count = int(body.get("lens_count", 2))
+    lens_count = int(body.get("lens_count") or 2)
 
     if lens_id:
         l = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).eq("id", lens_id).single().execute()

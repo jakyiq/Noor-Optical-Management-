@@ -2935,6 +2935,12 @@ function filterPatients() {
 async function openPatientDetail(pid) {
   NOOR.editingPatientId = pid;
   const p = getPatient(pid) || {};
+  // Always ensure we are on the patients section
+  if (NOOR.currentSection !== 'patients') {
+    navigate('patients');
+    // Wait for patients to load before showing detail
+    await renderPatients();
+  }
   document.getElementById('patients-list-view').style.display = 'none';
   document.getElementById('patients-detail-view').style.display = 'block';
   document.getElementById('patient-detail-name').textContent  = p.full_name || '—';
@@ -3017,6 +3023,16 @@ function renderVisitHistory(visits) {
               <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(${v.remaining>0?'--danger':'--success'})">${t('remaining')}</span><span style="font-family:'DM Mono',monospace;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</span></div>
             </div>
           </div>
+        </div>
+        <div class="visit-action-row">
+          ${v.remaining>0 ? `<button class="btn btn-gold btn-sm" onclick="topUpSingleVisit('${escAttr(v.id)}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            ${NOOR.lang==='ar'?'تسديد':'Pay'}
+          </button>` : ''}
+          <button class="btn btn-outline btn-sm" onclick="openEditVisit('${escAttr(v.id)}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            ${NOOR.lang==='ar'?'تعديل':'Edit'}
+          </button>
         </div>
       </div>
     </div>
@@ -3563,7 +3579,102 @@ async function savePatient() {
   }
 }
 
-function topUpPatientRemaining() {
+function topUpSingleVisit(visitId) {
+  const detail = NOOR._currentPatientDetail || {};
+  const visit = (detail.visits || []).find(v => v.id === visitId);
+  if (!visit) return topUpPatientRemaining();
+  const remaining = parseFloat(visit.remaining) || 0;
+  if (remaining <= 0) return;
+
+  NOOR._topupVisits = [visit];
+  NOOR._topupOutstanding = remaining;
+
+  const isAr = NOOR.lang === 'ar';
+  const setT = (id, ar, en) => { const el = document.getElementById(id); if (el) el.textContent = isAr ? ar : en; };
+  setT('topup-modal-title', 'تسديد المتبقي', 'Pay Outstanding');
+  setT('topup-outstanding-label', 'المبلغ المتبقي', 'Outstanding Amount');
+  setT('topup-amount-label', 'المبلغ المدفوع (IQD)', 'Amount Paid (IQD)');
+  setT('topup-cancel-btn', 'إلغاء', 'Cancel');
+  setT('topup-submit-btn', 'تأكيد التسديد', 'Confirm Payment');
+
+  document.getElementById('topup-outstanding-val').textContent = fmtIQD(remaining);
+  const summaryEl = document.getElementById('topup-visits-summary');
+  summaryEl.textContent = isAr ? `زيارة ${visit.visit_date || ''}` : `Visit: ${visit.visit_date || ''}`;
+
+  const qbtns = document.getElementById('topup-quick-btns');
+  qbtns.innerHTML = ['25%','50%','75%','100%'].map(pct => {
+    const val = Math.round(remaining * parseInt(pct) / 100 / 1000) * 1000;
+    return `<button type="button" class="btn btn-sm btn-outline" onclick="setTopupQuick(${val})">${pct}<br><span style="font-size:.7rem;opacity:.7">${fmtNum(val)}</span></button>`;
+  }).join('');
+
+  const inp = document.getElementById('topup-amount-input');
+  inp.value = remaining;
+  inp.max = remaining;
+  document.getElementById('topup-error').textContent = '';
+  onTopupInput();
+  openModal('modal-topup');
+  setTimeout(() => inp.select(), 50);
+}
+
+async function openEditVisit(visitId) {
+  const detail = NOOR._currentPatientDetail || {};
+  const visit = (detail.visits || []).find(v => v.id === visitId);
+  if (!visit) return;
+
+  NOOR.patientModalMode = 'edit';
+  NOOR.editingVisitId = visitId;
+  document.getElementById('modal-patient').classList.remove('old-rx-mode');
+  clearPatientForm();
+  switchPatientTab('rx');
+
+  // Fill visit date
+  document.getElementById('visit-date-group').style.display = 'block';
+  document.getElementById('f-visit-date').value = visit.visit_date || '';
+  document.getElementById('modal-patient-title').textContent = NOOR.lang === 'ar' ? 'تعديل الزيارة' : 'Edit Visit';
+
+  // Fill Rx
+  document.getElementById('rx-od-sph').value  = visit.od_sphere ?? '';
+  document.getElementById('rx-od-cyl').value  = visit.od_cylinder ?? '';
+  document.getElementById('rx-od-axis').value = visit.od_axis ?? '';
+  document.getElementById('rx-od-add').value  = visit.od_addition ?? '';
+  document.getElementById('rx-od-va').value   = visit.od_va ?? '';
+  document.getElementById('rx-od-bcva').value = visit.od_bcva ?? '';
+  document.getElementById('rx-os-sph').value  = visit.os_sphere ?? '';
+  document.getElementById('rx-os-cyl').value  = visit.os_cylinder ?? '';
+  document.getElementById('rx-os-axis').value = visit.os_axis ?? '';
+  document.getElementById('rx-os-add').value  = visit.os_addition ?? '';
+  document.getElementById('rx-os-va').value   = visit.os_va ?? '';
+  document.getElementById('rx-os-bcva').value = visit.os_bcva ?? '';
+  document.getElementById('rx-ipd').value     = visit.ipd ?? '';
+
+  // Sync sign buttons
+  ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'].forEach(id => syncRxSign(id));
+
+  // Fill lens/frame
+  if (visit.lens_type) document.getElementById('rx-lens-type').value = visit.lens_type;
+  if (visit.lens_material) document.getElementById('rx-material').value = visit.lens_material;
+  document.getElementById('p-frame-brand').value = visit.frame_brand || '';
+  if (visit.frame_type) document.getElementById('p-frame-type').value = visit.frame_type;
+  if (visit.frame_material) document.getElementById('p-frame-material').value = visit.frame_material;
+
+  // Fill financials
+  document.getElementById('f-frame-price').value  = visit.frame_price || '';
+  document.getElementById('f-frame-cost').value   = visit.frame_cost || '';
+  document.getElementById('f-lens-price').value   = visit.lens_price || '';
+  document.getElementById('f-lens-cost').value    = visit.lens_cost || '';
+  document.getElementById('f-checkup-fee').value  = visit.checkup_fee || '';
+  document.getElementById('f-paid').value         = visit.amount_paid || '';
+  document.getElementById('f-next-visit').value   = visit.next_visit_date || '';
+
+  if (visit.did_checkup) {
+    document.getElementById('f-checkup').checked = true;
+    document.getElementById('followup-date-row').style.display = 'grid';
+  }
+
+  calcTotal();
+  await populateFrameInventory();
+  openModal('modal-patient');
+}
   const detail = NOOR._currentPatientDetail || {};
   const visits = (detail.visits || []).filter(v => (parseFloat(v.remaining)||0) > 0);
   const outstanding = visits.reduce((sum, v) => sum + (parseFloat(v.remaining)||0), 0);
