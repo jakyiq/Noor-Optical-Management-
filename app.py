@@ -284,13 +284,22 @@ def _auth(roles=None, setting=None, export=False, allow_readonly_write=False):
 
             # 4. Per-feature receptionist permission check
             if setting and role == "receptionist":
-                cs_res = db.table("clinic_settings") \
-                    .select(setting) \
-                    .eq("clinic_id", clinic_id) \
-                    .single() \
-                    .execute()
-                if not cs_res.data or not cs_res.data.get(setting):
-                    return err("Permission denied", 403)
+                try:
+                    cs_res = db.table("clinic_settings") \
+                        .select(setting) \
+                        .eq("clinic_id", clinic_id) \
+                        .single() \
+                        .execute()
+                    if not cs_res.data or not cs_res.data.get(setting):
+                        return err("Permission denied", 403)
+                except Exception:
+                    # clinic_settings row missing — deny access rather than crash
+                    logging.warning(
+                        "clinic_settings row missing for clinic_id=%s, "
+                        "denying receptionist access to setting=%s",
+                        clinic_id, setting
+                    )
+                    return err("Clinic settings not configured. Contact your administrator.", 403)
 
             return f(*args, **kwargs)
         return wrapper
@@ -1169,10 +1178,12 @@ def create_lens():
         _write_audit(cid, uid, "create", "lens", new_value={"bulk": len(rows)})
         return ok(res.data), 201
 
+    # Accept both 'material' and 'lens_material' key names from frontend
+    material = body.get("material") or body.get("lens_material")
     row = {
         "clinic_id":  cid,
         "lens_type":  body.get("lens_type"),
-        "material":   body.get("material"),
+        "material":   material,
         "coating":    body.get("coating", "clear"),
         "sphere":     body.get("sphere"),
         "cylinder":   body.get("cylinder", 0),
@@ -1180,6 +1191,7 @@ def create_lens():
         "min_stock":  int(body.get("min_stock", 2)),
         "cost_price": body.get("cost_price"),
         "sell_price": body.get("sell_price"),
+        "updated_at": now_iso(),
     }
     res = db.table("lenses").insert(row).execute()
     _write_audit(cid, uid, "create", "lens", res.data[0]["id"], new_value=res.data[0])
@@ -1199,6 +1211,9 @@ def update_lens(lid):
 
     allowed = ["lens_type","material","coating","sphere","cylinder","quantity","min_stock","cost_price","sell_price"]
     updates = {k: v for k, v in body.items() if k in allowed}
+    # Accept 'lens_material' as an alias for 'material' (frontend naming inconsistency)
+    if "lens_material" in body and "material" not in updates:
+        updates["material"] = body["lens_material"]
     updates["updated_at"] = now_iso()
 
     res = db.table("lenses").update(updates).eq("clinic_id", cid).eq("id", lid).execute()
@@ -1300,6 +1315,7 @@ def create_frame():
         "min_stock":      int(body.get("min_stock", 2)),
         "cost_price":     body.get("cost_price"),
         "sell_price":     body.get("sell_price"),
+        "updated_at":     now_iso(),
     }
     res = db.table("frames").insert(row).execute()
     _write_audit(cid, uid, "create", "frame", res.data[0]["id"], new_value=res.data[0])
@@ -1648,15 +1664,50 @@ def export_all_patients():
 # ─────────────────────────────────────────────────────────────
 
 @app.route("/api/settings", methods=["GET"])
-@_auth()
 def get_settings():
-    cid = session["clinic_id"]
+    if "user_id" not in session:
+        return err("Unauthorized", 401)
+    cid = session.get("clinic_id")
     cs  = db.table("clinic_settings").select("*").eq("clinic_id", cid).single().execute()
     cl  = db.table("clinics").select("id,name,logo_url,phone,address,owner_email,is_banned").eq("id", cid).single().execute()
     return ok({
         "clinic":   cl.data,
         "settings": cs.data,
     })
+
+
+@app.route("/api/settings/repair", methods=["POST"])
+@_auth(roles=["doctor", "super_admin"])
+def repair_settings():
+    """
+    Idempotent repair: ensures clinic_settings row exists with all required
+    NOT NULL columns populated. Safe to call multiple times.
+    """
+    cid = session["clinic_id"]
+    existing = db.table("clinic_settings").select("clinic_id").eq("clinic_id", cid).execute()
+    if existing.data:
+        return ok({"repaired": False, "message": "clinic_settings row already exists"})
+
+    defaults = {
+        "clinic_id":               cid,
+        "recept_view_patients":    True,
+        "recept_edit_patients":    False,
+        "recept_view_financials":  False,
+        "recept_edit_financials":  False,
+        "recept_access_inventory": False,
+        "recept_export_reports":   False,
+        "recept_view_audit":       False,
+        "followup_months_default": 3,
+        "default_checkup_fee":     0,
+        "print_show_financials":   True,
+        "print_logo_align":        "center",
+        "print_logo_width":        120,
+        "print_logo_height":       60,
+        "language":                "ar",
+    }
+    db.table("clinic_settings").insert(defaults).execute()
+    logging.info("Repaired missing clinic_settings for clinic_id=%s", cid)
+    return ok({"repaired": True, "message": "clinic_settings row created with defaults"})
 
 
 @app.route("/api/settings", methods=["PUT"])
@@ -1687,12 +1738,30 @@ def update_settings():
     ]
     settings_upd = {k: v for k, v in body.items() if k in settings_fields}
     if settings_upd:
-        # Upsert
+        # Upsert — if the row is missing (e.g. older clinic), insert with safe defaults
         existing = db.table("clinic_settings").select("clinic_id").eq("clinic_id", cid).execute()
         if existing.data:
             db.table("clinic_settings").update(settings_upd).eq("clinic_id", cid).execute()
         else:
-            db.table("clinic_settings").insert({"clinic_id": cid, **settings_upd}).execute()
+            defaults = {
+                "clinic_id":               cid,
+                "recept_view_patients":    True,
+                "recept_edit_patients":    False,
+                "recept_view_financials":  False,
+                "recept_edit_financials":  False,
+                "recept_access_inventory": False,
+                "recept_export_reports":   False,
+                "recept_view_audit":       False,
+                "followup_months_default": 3,
+                "default_checkup_fee":     0,
+                "print_show_financials":   True,
+                "print_logo_align":        "center",
+                "print_logo_width":        120,
+                "print_logo_height":       60,
+                "language":                "ar",
+            }
+            defaults.update(settings_upd)
+            db.table("clinic_settings").insert(defaults).execute()
 
     _write_audit(cid, uid, "update", "settings", cid, new_value=body)
     return ok()
