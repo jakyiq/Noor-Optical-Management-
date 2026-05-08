@@ -877,7 +877,7 @@ def create_visit():
         return err("Patient not found", 404)
 
     # ── Enum-safe helpers ──────────────────────────────────────
-    VALID_LENS_TYPES     = {"single_vision","bifocal","progressive","reading","plano"}
+    VALID_LENS_TYPES     = {"single_vision","bifocal","trifocal","progressive","reading","plano","prism","occupational"}
     VALID_LENS_MATERIALS = {"plastic","glass","contact"}
     VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
 
@@ -1066,7 +1066,7 @@ def update_visit(vid):
         updates["remaining"]    = max(0, updates["total_amount"] - paid)
 
     # ── Enum-safe sanitisation ──────────────────────────────────
-    VALID_LENS_TYPES     = {"single_vision","bifocal","progressive","reading","plano"}
+    VALID_LENS_TYPES     = {"single_vision","bifocal","trifocal","progressive","reading","plano","prism","occupational"}
     VALID_LENS_MATERIALS = {"plastic","glass","contact"}
     VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
 
