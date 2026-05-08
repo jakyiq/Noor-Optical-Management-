@@ -23,6 +23,33 @@
   --shadow-md:0 6px 24px rgba(26,20,16,.10);
   --shadow-lg:0 16px 56px rgba(26,20,16,.14);
   --sidebar-w:260px;--topbar-h:64px;
+
+  /* ── RX Print Color Schemes ── */
+  --rx-scheme:burgundy; /* active scheme key */
+  /* Burgundy (default) */
+  --rx-primary:#6b1a2a;--rx-accent:#c49a3c;--rx-bg:#ffffff;--rx-paper:#faf6f0;--rx-border:#e8dcc8;--rx-text:#1a1410;
+}
+/* Scheme overrides applied via .rx-scheme-* on <html> or a wrapper */
+html[data-rx-scheme="charcoal"] {
+  --rx-primary:#1c2230;--rx-accent:#4a90d9;--rx-bg:#ffffff;--rx-paper:#f5f6f8;--rx-border:#d0d6e0;--rx-text:#111827;
+}
+html[data-rx-scheme="forest"] {
+  --rx-primary:#1a4a2e;--rx-accent:#7cb87a;--rx-bg:#ffffff;--rx-paper:#f5faf6;--rx-border:#c8e0cc;--rx-text:#0d2214;
+}
+html[data-rx-scheme="slate"] {
+  --rx-primary:#2d3748;--rx-accent:#718096;--rx-bg:#ffffff;--rx-paper:#f7fafc;--rx-border:#e2e8f0;--rx-text:#1a202c;
+}
+html[data-rx-scheme="rose"] {
+  --rx-primary:#9d174d;--rx-accent:#f9a8d4;--rx-bg:#ffffff;--rx-paper:#fdf2f8;--rx-border:#f3d6e8;--rx-text:#500724;
+}
+html[data-rx-scheme="midnight"] {
+  --rx-primary:#0f172a;--rx-accent:#6366f1;--rx-bg:#ffffff;--rx-paper:#f8fafc;--rx-border:#cbd5e1;--rx-text:#0f172a;
+}
+html[data-rx-scheme="offwhite"] {
+  --rx-primary:#3d3530;--rx-accent:#a07850;--rx-bg:#fffff8;--rx-paper:#f9f5ec;--rx-border:#e0d8c8;--rx-text:#1c1714;
+}
+html[data-rx-scheme="onyx"] {
+  --rx-primary:#111111;--rx-accent:#888888;--rx-bg:#ffffff;--rx-paper:#f2f2f2;--rx-border:#d0d0d0;--rx-text:#111111;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px}
@@ -285,8 +312,65 @@ html[dir=ltr] .auth-pane-title{font-family:'Playfair Display',serif}
   .auth-tabs{margin-bottom:24px}
 }
 
-/* APP SHELL */
-#app{display:none;min-height:100vh}
+/* ── RX Scheme Swatches ── */
+.rx-swatch-option{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;font-size:.72rem;color:var(--ink-mid);font-weight:600}
+.rx-swatch{width:36px;height:36px;border-radius:50%;border:3px solid transparent;transition:transform .15s,box-shadow .15s;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.rx-swatch-option input:checked + .rx-swatch{transform:scale(1.18);box-shadow:0 0 0 3px var(--gold),0 4px 12px rgba(0,0,0,.25)}
+.rx-swatch:hover{transform:scale(1.1)}
+
+/* ── Site Theme Switcher ── */
+.site-theme-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:10px}
+.site-theme-option{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--cream-border);border-radius:var(--radius-sm);cursor:pointer;transition:border-color .15s,background .15s}
+.site-theme-option:hover{border-color:var(--burgundy)}
+.site-theme-option.active{border-color:var(--burgundy);background:var(--burgundy-pale)}
+.site-theme-dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;border:2px solid rgba(255,255,255,.35);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.site-theme-label{font-size:.82rem;font-weight:600;color:var(--ink)}
+
+/* ── Site Theme: Black ── */
+html[data-theme="black"] {
+  --cream:#0d0d0d;--cream-dark:#1a1a1a;--cream-border:#2a2a2a;
+  --burgundy:#c84b5e;--burgundy-soft:#e05a6e;--burgundy-pale:#2a1016;
+  --ink:#f0ece8;--ink-mid:#b0a89e;--ink-light:#6a6460;
+  --surface:#141414;--gold:#e0b860;--gold-pale:#1e1800;
+  --shadow-sm:0 2px 8px rgba(0,0,0,.4);
+  --shadow-md:0 6px 24px rgba(0,0,0,.5);
+}
+/* ── Site Theme: Off-white ── */
+html[data-theme="offwhite"] {
+  --cream:#f4efe8;--cream-dark:#e8e0d4;--cream-border:#d8cfc0;
+  --surface:#faf6f0;
+}
+/* ── Site Theme: Ocean ── */
+html[data-theme="ocean"] {
+  --cream:#eef4fb;--cream-dark:#dbeaf6;--cream-border:#b8d4ec;
+  --burgundy:#1a4a8b;--burgundy-soft:#2a5aa8;--burgundy-pale:#e8f0fb;
+  --surface:#ffffff;
+}
+/* ── Site Theme: Forest ── */
+html[data-theme="forest"] {
+  --cream:#eef5ee;--cream-dark:#dceadc;--cream-border:#b8d8b8;
+  --burgundy:#1a4a26;--burgundy-soft:#256038;--burgundy-pale:#e4f2e4;
+  --surface:#f8fdf8;
+}
+/* ── Site Theme: Amber ── */
+html[data-theme="amber"] {
+  --cream:#fffbf0;--cream-dark:#fef3d0;--cream-border:#f0dda0;
+  --burgundy:#7a4800;--burgundy-soft:#995c00;--burgundy-pale:#fff8e0;
+  --surface:#ffffff;--gold:#e09000;
+}
+
+/* ── Number font improvements (tabular, crisp) ── */
+.stat-card-value, .donut-center-val, .report-stat-val,
+.mini-amount, .td-amount, .fin-row-val,
+.patient-summary-value, #donut-total {
+  font-family:'DM Mono',ui-monospace,monospace;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-0.02em;
+  font-feature-settings:'tnum' 1;
+}
+.stat-card-value { font-size:1.7rem; font-weight:600; line-height:1; }
+.report-stat-val { font-size:1.6rem; font-weight:600; }
+
 #app.ready{display:flex}
 
 /* SIDEBAR */
@@ -356,10 +440,11 @@ html[dir=rtl] .search-wrap input{padding:9px 38px 9px 16px}
 .section{display:none}
 .section.active{display:block}
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:16px}
-.page-header-eyebrow{font-size:.7rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
-.page-header-title{font-family:'Amiri','Playfair Display',serif;font-size:1.8rem;font-weight:700;color:var(--ink);line-height:1.1}
+.page-header-eyebrow{font-size:.68rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.12em;margin-bottom:3px;font-weight:600}
+.page-header-title{font-family:'Amiri','Playfair Display',serif;font-size:1.9rem;font-weight:700;color:var(--ink);line-height:1.05}
 html[dir=ltr] .page-header-title{font-family:'Playfair Display',serif}
-.page-header-sub{font-size:.85rem;color:var(--ink-light);margin-top:4px}
+.page-header-sub{font-size:.84rem;color:var(--ink-light);margin-top:5px}
+.page-header-left{display:flex;flex-direction:column;min-width:0}
 
 /* BUTTONS */
 .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:var(--radius-sm);font-family:inherit;font-size:.88rem;font-weight:600;cursor:pointer;border:none;transition:all .15s}
@@ -552,21 +637,52 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .report-card{background:linear-gradient(145deg,#fff 0%,#fffaf2 100%);border:1px solid var(--cream-border);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-md)}
 .report-card-title{font-size:.78rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .donut-layout{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:center}
-.donut-wrap{position:relative;width:220px;height:220px;margin:auto;filter:drop-shadow(0 14px 22px rgba(26,20,16,.12))}
+/* ── Redesigned Donut Chart ── */
+.donut-wrap{
+  position:relative;width:220px;height:220px;margin:auto;
+  filter:drop-shadow(0 8px 28px rgba(26,20,16,.13));
+}
 .donut-wrap svg{width:220px;height:220px;transform:rotate(-90deg)}
-.donut-seg{cursor:pointer;transition:opacity .15s,stroke-width .15s}
-.donut-seg:hover{opacity:.78;stroke-width:34}
-.donut-center{position:absolute;inset:52px;border-radius:50%;background:radial-gradient(circle,#fff 0%,var(--cream) 100%);display:flex;align-items:center;justify-content:center;text-align:center;padding:12px;border:1px solid var(--cream-border)}
-.donut-center-val{font-family:'DM Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--burgundy)}
-.donut-center-label{font-size:.68rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
-.donut-legend{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;padding-inline-end:4px}
-.donut-legend-item{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center;border:1px solid var(--cream-border);border-radius:12px;padding:10px 12px;background:rgba(250,246,240,.75);cursor:pointer;transition:opacity .15s,background .15s,transform .15s}
-.donut-legend-item:hover{transform:translateY(-1px);background:white;box-shadow:var(--shadow-sm)}
-.donut-legend-item.hidden{opacity:.42;background:transparent}
-.donut-dot{width:10px;height:10px;border-radius:50%}
-.donut-legend-name{font-size:.84rem;font-weight:600;color:var(--ink)}
-.donut-legend-meta{font-size:.7rem;color:var(--ink-light)}
-.donut-legend-val{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--ink-mid)}
+.donut-track{stroke:var(--cream-border);stroke-width:28;fill:none}
+.donut-seg{
+  cursor:pointer;
+  transition:stroke-width .18s cubic-bezier(.4,0,.2,1),filter .18s;
+  filter:none;
+}
+.donut-seg:hover{stroke-width:35;filter:brightness(1.12)}
+.donut-seg.active-seg{stroke-width:36;filter:brightness(1.08)}
+.donut-center{
+  position:absolute;inset:46px;border-radius:50%;
+  background:var(--surface);
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;padding:10px;
+  box-shadow:0 2px 16px rgba(26,20,16,.08),inset 0 1px 3px rgba(255,255,255,.8);
+  border:1.5px solid var(--cream-border);
+}
+.donut-center-val{
+  font-family:'DM Mono',ui-monospace,monospace;
+  font-size:1rem;font-weight:700;color:var(--burgundy);
+  letter-spacing:-0.02em;font-variant-numeric:tabular-nums;
+  line-height:1.1;
+}
+.donut-center-label{font-size:.62rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+.donut-legend{display:flex;flex-direction:column;gap:6px;max-height:280px;overflow:auto;padding-inline-end:2px}
+.donut-legend-item{
+  display:grid;grid-template-columns:8px 1fr auto;
+  gap:10px;align-items:center;
+  border-radius:10px;padding:9px 12px;
+  background:var(--surface);
+  border:1px solid var(--cream-border);
+  cursor:pointer;
+  transition:transform .15s,box-shadow .15s,background .15s;
+}
+.donut-legend-item:hover{transform:translateX(-2px);box-shadow:var(--shadow-sm)}
+html[dir=ltr] .donut-legend-item:hover{transform:translateX(2px)}
+.donut-legend-item.hidden{opacity:.38;filter:grayscale(.6)}
+.donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.donut-legend-name{font-size:.83rem;font-weight:600;color:var(--ink);line-height:1.2}
+.donut-legend-meta{font-size:.68rem;color:var(--ink-light)}
+.donut-legend-val{font-family:'DM Mono',ui-monospace,monospace;font-size:.78rem;color:var(--burgundy);font-weight:600;letter-spacing:-0.01em}
 .quick-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
 .quick-form .full{grid-column:1/-1}
 .mini-report-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto}
@@ -1615,13 +1731,21 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <option value="" data-i18n="allTypes">كل الأنواع</option>
             <option value="single_vision">Single Vision</option>
             <option value="bifocal">Bifocal</option>
+            <option value="trifocal">Trifocal</option>
             <option value="progressive">Progressive</option>
             <option value="reading">Reading</option>
             <option value="plano">Plano</option>
+            <option value="prism">Prism</option>
+            <option value="occupational">Occupational</option>
           </select>
           <select class="filter-select" id="lens-material-filter" onchange="filterLenses()">
             <option value="" data-i18n="allMaterials">كل المواد</option>
-            <option value="plastic">Plastic</option>
+            <option value="plastic">Plastic (CR-39)</option>
+            <option value="polycarbonate">Polycarbonate</option>
+            <option value="high_index_16">High-Index 1.6</option>
+            <option value="high_index_167">High-Index 1.67</option>
+            <option value="high_index_174">High-Index 1.74</option>
+            <option value="trivex">Trivex</option>
             <option value="glass">Glass</option>
             <option value="contact">Contact</option>
           </select>
@@ -1674,6 +1798,11 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <option value="full_rim">Full Rim</option>
             <option value="half_rim">Half Rim</option>
             <option value="rimless">Rimless</option>
+            <option value="wrap">Wrap / Sport</option>
+            <option value="butterfly">Butterfly</option>
+            <option value="aviator">Aviator</option>
+            <option value="round">Round</option>
+            <option value="cat_eye">Cat Eye</option>
           </select>
           <select class="filter-select" id="frames-material-filter" onchange="filterFrames()">
             <option value="">All materials</option>
@@ -1682,6 +1811,9 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <option value="titanium">Titanium</option>
             <option value="tr90">TR90</option>
             <option value="wood">Wood</option>
+            <option value="carbon_fiber">Carbon Fiber</option>
+            <option value="nylon">Nylon</option>
+            <option value="stainless_steel">Stainless Steel</option>
           </select>
         </div>
         <div class="table-wrap">
@@ -1799,6 +1931,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <button class="tab-btn" onclick="switchSettingsTab('users')" data-i18n="userManagement">إدارة المستخدمين</button>
           <button class="tab-btn" onclick="switchSettingsTab('followup-defaults')" data-i18n="followupDefaults">إعدادات المتابعة</button>
           <button class="tab-btn" onclick="switchSettingsTab('print')">Print</button>
+          <button class="tab-btn" onclick="switchSettingsTab('appearance')">Appearance</button>
           <button class="tab-btn" onclick="switchSettingsTab('backup')" data-i18n="backupRestore">النسخ الاحتياطي</button>
         </div>
         <div class="tab-panel active" id="settings-tab-clinic">
@@ -1867,6 +2000,54 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <div class="settings-section-header">A5 Prescription Print</div>
             <div class="settings-section-body">
 
+              <!-- ── RX PRINT COLOR SCHEME ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Prescription Color Scheme</div>
+              <div class="form-group" style="margin-bottom:8px">
+                <label class="form-label">Choose color scheme for printed Rx</label>
+                <div id="rx-scheme-swatches" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="burgundy" id="rx-s-burgundy" style="display:none">
+                    <div class="rx-swatch" style="background:#6b1a2a" title="Burgundy (Default)"></div>
+                    <span>Burgundy</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="charcoal" id="rx-s-charcoal" style="display:none">
+                    <div class="rx-swatch" style="background:#1c2230" title="Charcoal Blue"></div>
+                    <span>Charcoal</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="forest" id="rx-s-forest" style="display:none">
+                    <div class="rx-swatch" style="background:#1a4a2e" title="Forest Green"></div>
+                    <span>Forest</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="slate" id="rx-s-slate" style="display:none">
+                    <div class="rx-swatch" style="background:#2d3748" title="Slate"></div>
+                    <span>Slate</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="rose" id="rx-s-rose" style="display:none">
+                    <div class="rx-swatch" style="background:#9d174d" title="Rose"></div>
+                    <span>Rose</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="midnight" id="rx-s-midnight" style="display:none">
+                    <div class="rx-swatch" style="background:#0f172a" title="Midnight"></div>
+                    <span>Midnight</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="offwhite" id="rx-s-offwhite" style="display:none">
+                    <div class="rx-swatch" style="background:#a07850;border:2px solid #d8cfc0" title="Off-white"></div>
+                    <span>Off-white</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="onyx" id="rx-s-onyx" style="display:none">
+                    <div class="rx-swatch" style="background:#111111" title="Onyx / Black"></div>
+                    <span>Onyx</span>
+                  </label>
+                </div>
+              </div>
+
               <!-- ── HEADER / CLINIC IDENTITY ── -->
               <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin-bottom:10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Clinic Header</div>
               <div class="form-grid">
@@ -1923,6 +2104,42 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
                 <button class="btn btn-burgundy" onclick="savePrintSettings()" data-i18n="save">حفظ</button>
                 <button class="btn btn-outline" onclick="clearPrintLogo()" type="button">Clear logo</button>
                 <button class="btn btn-outline" onclick="clearPrintQr()" type="button">Clear QR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- APPEARANCE TAB -->
+        <div class="tab-panel" id="settings-tab-appearance">
+          <div class="settings-section">
+            <div class="settings-section-header">Site Color Theme</div>
+            <div class="settings-section-body">
+              <p style="font-size:.84rem;color:var(--ink-light);margin-bottom:14px">Choose a color theme for the app interface.</p>
+              <div class="site-theme-grid" id="site-theme-grid">
+                <div class="site-theme-option" data-theme="" onclick="applySiteTheme('')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#6b1a2a 50%,#faf6f0 50%)"></div>
+                  <span class="site-theme-label">Burgundy Cream</span>
+                </div>
+                <div class="site-theme-option" data-theme="offwhite" onclick="applySiteTheme('offwhite')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#3d3530 50%,#f4efe8 50%)"></div>
+                  <span class="site-theme-label">Off-white</span>
+                </div>
+                <div class="site-theme-option" data-theme="black" onclick="applySiteTheme('black')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#111 50%,#1a1a1a 50%)"></div>
+                  <span class="site-theme-label">Onyx / Black</span>
+                </div>
+                <div class="site-theme-option" data-theme="ocean" onclick="applySiteTheme('ocean')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#1a4a8b 50%,#eef4fb 50%)"></div>
+                  <span class="site-theme-label">Ocean Blue</span>
+                </div>
+                <div class="site-theme-option" data-theme="forest" onclick="applySiteTheme('forest')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#1a4a26 50%,#eef5ee 50%)"></div>
+                  <span class="site-theme-label">Forest</span>
+                </div>
+                <div class="site-theme-option" data-theme="amber" onclick="applySiteTheme('amber')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#7a4800 50%,#fffbf0 50%)"></div>
+                  <span class="site-theme-label">Amber</span>
+                </div>
               </div>
             </div>
           </div>
@@ -2037,9 +2254,30 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             Add Clinic
           </button>
         </div>
+        <!-- Subscription quick-filter -->
+        <div class="section-filters" style="margin-bottom:14px">
+          <select class="filter-select" id="admin-plan-filter" onchange="filterAdminClinics()">
+            <option value="">All Plans</option>
+            <option value="trial">Trial</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+            <option value="lifetime">Lifetime</option>
+          </select>
+          <select class="filter-select" id="admin-status-filter" onchange="filterAdminClinics()">
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="expiring">Expiring Soon</option>
+            <option value="expired">Expired</option>
+            <option value="banned">Banned</option>
+          </select>
+          <input type="search" class="filter-input" id="admin-clinic-search" placeholder="Search clinic..." oninput="filterAdminClinics()" style="flex:1;min-width:180px">
+        </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Clinic</th><th>Owner</th><th>Phone</th><th>Plan</th><th>Expires</th><th>Status</th><th>Actions</th></tr></thead>
+            <thead><tr>
+              <th>Clinic</th><th>Owner</th><th>Plan</th><th>Expires</th><th>Days Left</th><th>Status</th><th>Actions</th>
+            </tr></thead>
             <tbody id="admin-clinics-tbody"></tbody>
           </table>
         </div>
@@ -2135,8 +2373,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         </div>
         <div class="form-grid" style="margin-bottom:16px">
           <div class="form-group"><label class="form-label">IPD</label><input type="number" class="form-input" id="rx-ipd" step=".5" placeholder="62.0"></div>
-          <div class="form-group"><label class="form-label" data-i18n="lensType">نوع العدسة</label><select class="form-select" id="rx-lens-type" onchange="onLensTypeChange()"><option value="single_vision">Single Vision</option><option value="bifocal">Bifocal</option><option value="progressive">Progressive</option><option value="reading">Reading</option><option value="plano">Plano</option></select></div>
-          <div class="form-group"><label class="form-label" data-i18n="material">المادة</label><select class="form-select" id="rx-material"><option value="plastic">Plastic</option><option value="glass">Glass</option><option value="contact">Contact</option></select></div>
+          <div class="form-group"><label class="form-label" data-i18n="lensType">نوع العدسة</label><select class="form-select" id="rx-lens-type" onchange="onLensTypeChange()"><option value="single_vision">Single Vision</option><option value="bifocal">Bifocal</option><option value="trifocal">Trifocal</option><option value="progressive">Progressive</option><option value="reading">Reading</option><option value="plano">Plano</option><option value="prism">Prism</option><option value="occupational">Occupational</option></select></div>
+          <div class="form-group"><label class="form-label" data-i18n="material">المادة</label><select class="form-select" id="rx-material"><option value="plastic">Plastic (CR-39)</option><option value="polycarbonate">Polycarbonate</option><option value="high_index_16">High-Index 1.6</option><option value="high_index_167">High-Index 1.67</option><option value="high_index_174">High-Index 1.74</option><option value="trivex">Trivex</option><option value="glass">Glass</option><option value="contact">Contact</option></select></div>
           <div class="form-group"><label class="form-label" data-i18n="lensCount">عدد العيون</label><select class="form-select" id="rx-lens-count"><option value="2" data-i18n="bothEyes">كلا العينين</option><option value="1" data-i18n="oneEye">عين واحدة</option></select></div>
         </div>
         <div class="form-group" style="margin-bottom:16px">
@@ -2151,6 +2389,11 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <div class="coating-chip" data-val="anti_reflective" onclick="toggleCoating(this)">Anti-Reflective</div>
             <div class="coating-chip" data-val="tinted" onclick="toggleCoating(this)">Tinted</div>
             <div class="coating-chip" data-val="uv400" onclick="toggleCoating(this)">UV400</div>
+            <div class="coating-chip" data-val="mirror" onclick="toggleCoating(this)">Mirror</div>
+            <div class="coating-chip" data-val="anti_scratch" onclick="toggleCoating(this)">Anti-Scratch</div>
+            <div class="coating-chip" data-val="anti_fog" onclick="toggleCoating(this)">Anti-Fog</div>
+            <div class="coating-chip" data-val="oleophobic" onclick="toggleCoating(this)">Oleophobic</div>
+            <div class="coating-chip" data-val="combo_ar_bc" onclick="toggleCoating(this)">AR + Blue Cut</div>
           </div>
         </div>
         <div class="inv-match-box">
@@ -2161,8 +2404,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       <div class="tab-panel" id="ptab-frame">
         <div class="form-grid">
           <div class="form-group"><label class="form-label" data-i18n="frameBrand">علامة الإطار</label><input type="text" class="form-input" id="p-frame-brand"></div>
-          <div class="form-group"><label class="form-label" data-i18n="frameType">نوع الإطار</label><select class="form-select" id="p-frame-type"><option value="full_rim">Full Rim</option><option value="half_rim">Half Rim</option><option value="rimless">Rimless</option></select></div>
-          <div class="form-group"><label class="form-label" data-i18n="frameMaterial">مادة الإطار</label><select class="form-select" id="p-frame-material"><option value="acetate">Acetate</option><option value="metal">Metal</option><option value="titanium">Titanium</option><option value="tr90">TR90</option><option value="wood">Wood</option></select></div>
+          <div class="form-group"><label class="form-label" data-i18n="frameType">نوع الإطار</label><select class="form-select" id="p-frame-type"><option value="full_rim">Full Rim</option><option value="half_rim">Half Rim</option><option value="rimless">Rimless</option><option value="wrap">Wrap / Sport</option><option value="butterfly">Butterfly</option><option value="aviator">Aviator</option><option value="round">Round</option><option value="cat_eye">Cat Eye</option></select></div>
+          <div class="form-group"><label class="form-label" data-i18n="frameMaterial">مادة الإطار</label><select class="form-select" id="p-frame-material"><option value="acetate">Acetate</option><option value="metal">Metal</option><option value="titanium">Titanium</option><option value="tr90">TR90</option><option value="wood">Wood</option><option value="carbon_fiber">Carbon Fiber</option><option value="nylon">Nylon</option><option value="stainless_steel">Stainless Steel</option></select></div>
           <div class="form-group"><label class="form-label" data-i18n="selectFromInventory">من المخزون</label><select class="form-select" id="p-frame-inv" onchange="onFrameInvSelect()"><option value="">اختر إطاراً...</option></select></div>
         </div>
       </div>
@@ -2207,15 +2450,15 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
     <div class="modal-header"><div class="modal-title" id="modal-lens-title">إضافة عدسة</div><button class="modal-close" onclick="closeModal('modal-lens')">✕</button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group"><label class="form-label">النوع</label><select class="form-select" id="l-type"><option value="single_vision">Single Vision</option><option value="bifocal">Bifocal</option><option value="progressive">Progressive</option><option value="reading">Reading</option><option value="plano">Plano</option></select></div>
-        <div class="form-group"><label class="form-label">المادة</label><select class="form-select" id="l-material"><option value="plastic">Plastic</option><option value="glass">Glass</option><option value="contact">Contact</option></select></div>
+        <div class="form-group"><label class="form-label">النوع</label><select class="form-select" id="l-type"><option value="single_vision">Single Vision</option><option value="bifocal">Bifocal</option><option value="trifocal">Trifocal</option><option value="progressive">Progressive</option><option value="reading">Reading</option><option value="plano">Plano</option><option value="prism">Prism</option><option value="occupational">Occupational</option></select></div>
+        <div class="form-group"><label class="form-label">المادة</label><select class="form-select" id="l-material"><option value="plastic">Plastic (CR-39)</option><option value="polycarbonate">Polycarbonate</option><option value="high_index_16">High-Index 1.6</option><option value="high_index_167">High-Index 1.67</option><option value="high_index_174">High-Index 1.74</option><option value="trivex">Trivex</option><option value="glass">Glass</option><option value="contact">Contact</option></select></div>
         <div class="form-group"><label class="form-label">SPH</label><input type="number" class="form-input" id="l-sph" step=".25"></div>
         <div class="form-group"><label class="form-label">CYL</label><input type="number" class="form-input" id="l-cyl" step=".25"></div>
         <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><input type="number" class="form-input" id="l-qty" min="0"></div>
         <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><input type="number" class="form-input" id="l-min" min="0" value="2"></div>
         <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="l-cost" min="0" step="1" inputmode="numeric"></div>
         <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="l-sell" min="0" step="1" inputmode="numeric"></div>
-        <div class="form-group full"><label class="form-label" data-i18n="coating">الطلاء</label><select class="form-select" id="l-coating"><option value="clear">Clear</option><option value="blue_cut">Blue Cut</option><option value="green_cut">Green Cut</option><option value="photochromic">Photochromic</option><option value="photo_blue">Photo Blue</option><option value="polarized">Polarized</option><option value="anti_reflective">Anti-Reflective</option><option value="tinted">Tinted</option><option value="uv400">UV400</option></select></div>
+        <div class="form-group full"><label class="form-label" data-i18n="coating">الطلاء</label><select class="form-select" id="l-coating"><option value="clear">Clear</option><option value="blue_cut">Blue Cut</option><option value="green_cut">Green Cut</option><option value="photochromic">Photochromic</option><option value="photo_blue">Photochromic Blue</option><option value="polarized">Polarized</option><option value="anti_reflective">Anti-Reflective (AR)</option><option value="tinted">Tinted</option><option value="uv400">UV400</option><option value="mirror">Mirror</option><option value="anti_scratch">Anti-Scratch</option><option value="anti_fog">Anti-Fog</option><option value="oleophobic">Oleophobic</option><option value="combo_ar_bc">AR + Blue Cut Combo</option></select></div>
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-lens')" data-i18n="cancel">إلغاء</button><button class="btn btn-burgundy" onclick="saveLens()" data-i18n="save">حفظ</button></div>
@@ -2229,8 +2472,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-group"><label class="form-label" data-i18n="brand">العلامة</label><input type="text" class="form-input" id="fr-brand"></div>
-        <div class="form-group"><label class="form-label" data-i18n="type">النوع</label><select class="form-select" id="fr-type"><option value="full_rim">Full Rim</option><option value="half_rim">Half Rim</option><option value="rimless">Rimless</option></select></div>
-        <div class="form-group"><label class="form-label" data-i18n="material">المادة</label><select class="form-select" id="fr-material"><option value="acetate">Acetate</option><option value="metal">Metal</option><option value="titanium">Titanium</option><option value="tr90">TR90</option><option value="wood">Wood</option></select></div>
+        <div class="form-group"><label class="form-label" data-i18n="type">النوع</label><select class="form-select" id="fr-type"><option value="full_rim">Full Rim</option><option value="half_rim">Half Rim</option><option value="rimless">Rimless</option><option value="wrap">Wrap / Sport</option><option value="butterfly">Butterfly</option><option value="aviator">Aviator</option><option value="round">Round</option><option value="cat_eye">Cat Eye</option></select></div>
+        <div class="form-group"><label class="form-label" data-i18n="material">المادة</label><select class="form-select" id="fr-material"><option value="acetate">Acetate</option><option value="metal">Metal</option><option value="titanium">Titanium</option><option value="tr90">TR90</option><option value="wood">Wood</option><option value="carbon_fiber">Carbon Fiber</option><option value="nylon">Nylon</option><option value="stainless_steel">Stainless Steel</option></select></div>
         <div class="form-group"><label class="form-label" data-i18n="color">اللون</label><input type="text" class="form-input" id="fr-color"></div>
         <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><input type="number" class="form-input" id="fr-qty" min="0"></div>
         <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><input type="number" class="form-input" id="fr-min" min="0" value="2"></div>
@@ -2282,6 +2525,48 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       </div>
     </div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-clinic')">Cancel</button><button class="btn btn-burgundy" onclick="saveClinic()">Save</button></div>
+  </div>
+</div>
+
+<!-- Subscription Management Modal -->
+<div class="modal-overlay" id="modal-subscription">
+  <div class="modal" style="width:min(480px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">Manage Subscription — <span id="sub-clinic-name"></span></div>
+      <button class="modal-close" onclick="closeModal('modal-subscription')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--cream);border:1px solid var(--cream-border);border-radius:10px;padding:14px;margin-bottom:18px">
+        <div style="font-size:.72rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Current Plan</div>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span id="sub-current-plan" style="font-size:1.1rem;font-weight:700;color:var(--burgundy)">&#8212;</span>
+          <span id="sub-expires-info" style="font-size:.82rem;color:var(--ink-light)"></span>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">New Plan</label>
+          <select class="form-select" id="sub-new-plan" onchange="onSubPlanChange()">
+            <option value="trial">Trial (7 days from today)</option>
+            <option value="monthly">Monthly (30 days)</option>
+            <option value="quarterly">Quarterly (90 days)</option>
+            <option value="yearly">Yearly (365 days)</option>
+            <option value="lifetime">Lifetime (no expiry)</option>
+            <option value="custom">Custom expiry date...</option>
+          </select>
+        </div>
+        <div class="form-group full" id="sub-custom-date-row" style="display:none">
+          <label class="form-label">Custom Expiry Date</label>
+          <input type="date" class="form-input" id="sub-custom-date">
+        </div>
+        <div class="form-group full"><label class="form-label">Notes (optional)</label>
+          <input type="text" class="form-input" id="sub-notes" placeholder="e.g. Paid via bank transfer">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-subscription')">Cancel</button>
+      <button class="btn btn-burgundy" onclick="saveSubscription()">Update Subscription</button>
+    </div>
   </div>
 </div>
 
@@ -4299,22 +4584,34 @@ function renderReportDonut() {
   document.getElementById('donut-total').textContent = fmtNum(total);
   document.getElementById('donut-active-count').textContent = `${items.length}/${all.length}`;
   if (!total) {
-    svg.innerHTML = `<circle cx="110" cy="110" r="82" fill="none" stroke="var(--cream-border)" stroke-width="30"></circle>`;
+    svg.innerHTML = `<circle cx="110" cy="110" r="82" fill="none" stroke="var(--cream-border)" stroke-width="28" stroke-linecap="round"></circle>`;
     legend.innerHTML = `<div class="mini-report-sub">No report items yet</div>`;
     return;
   }
+  const GAP_DEG = items.length > 1 ? 2 : 0;
   let angle = 0;
-  svg.innerHTML = items.map((item, i) => {
-    const size = (parseFloat(item.amount)||0) / total * 360;
-    const path = donutArc(110, 110, 82, angle, angle + size);
-    angle += size;
-    return `<path class="donut-seg" data-key="${escAttr(item.key)}" d="${path}" fill="none" stroke="${reportColor(i,item.kind)}" stroke-width="30" stroke-linecap="round" onclick="toggleReportItem(this.dataset.key)"><title>${esc(item.label)}: ${fmtIQD(item.amount)}</title></path>`;
+  // Track ring behind
+  let markup = `<circle cx="110" cy="110" r="82" fill="none" stroke="var(--cream-border)" stroke-width="28" opacity=".35"></circle>`;
+  markup += items.map((item, i) => {
+    const size = (parseFloat(item.amount)||0) / total * (360 - GAP_DEG * items.length);
+    const start = angle;
+    const end = angle + size;
+    angle += size + GAP_DEG;
+    const path = donutArc(110, 110, 82, start, end);
+    const col = reportColor(i, item.kind);
+    return `<path class="donut-seg" data-key="${escAttr(item.key)}" d="${path}" fill="none" stroke="${col}" stroke-width="28" stroke-linecap="round" onclick="toggleReportItem(this.dataset.key)"><title>${esc(item.label)}: ${fmtIQD(item.amount)}</title></path>`;
   }).join('');
+  svg.innerHTML = markup;
   legend.innerHTML = all.map((item, i) => {
     const hidden = NOOR.reportHiddenItems.has(item.key);
+    const col = reportColor(i, item.kind);
+    const pct = total ? Math.round((parseFloat(item.amount)||0) / total * 100) : 0;
     return `<div class="donut-legend-item ${hidden?'hidden':''}" data-key="${escAttr(item.key)}" onclick="toggleReportItem(this.dataset.key)">
-      <span class="donut-dot" style="background:${reportColor(i,item.kind)}"></span>
-      <span><span class="donut-legend-name">${esc(item.label)}</span><br><span class="donut-legend-meta">${esc(item.kind)} · ${item.count||0} item(s)</span></span>
+      <span class="donut-dot" style="background:${col}"></span>
+      <span>
+        <span class="donut-legend-name">${esc(item.label)}</span>
+        <br><span class="donut-legend-meta">${esc(item.kind)} · ${item.count||0} · <b>${pct}%</b></span>
+      </span>
       <span class="donut-legend-val">${fmtNum(item.amount)}</span>
     </div>`;
   }).join('');
@@ -4588,16 +4885,28 @@ function printRxSlip() {
   const slipHTML = document.getElementById('rx-slip-content').innerHTML;
 
   // CSS for the print document — no border, no extra padding, clean A5
+  const rxScheme = _getRxScheme ? _getRxScheme() : 'burgundy';
+  const schemeColors = {
+    burgundy: {primary:'#6b1a2a',accent:'#c49a3c',bg:'#ffffff',paper:'#faf6f0',border:'#e8dcc8',text:'#1a1410'},
+    charcoal: {primary:'#1c2230',accent:'#4a90d9',bg:'#ffffff',paper:'#f5f6f8',border:'#d0d6e0',text:'#111827'},
+    forest:   {primary:'#1a4a2e',accent:'#7cb87a',bg:'#ffffff',paper:'#f5faf6',border:'#c8e0cc',text:'#0d2214'},
+    slate:    {primary:'#2d3748',accent:'#718096',bg:'#ffffff',paper:'#f7fafc',border:'#e2e8f0',text:'#1a202c'},
+    rose:     {primary:'#9d174d',accent:'#f9a8d4',bg:'#ffffff',paper:'#fdf2f8',border:'#f3d6e8',text:'#500724'},
+    midnight: {primary:'#0f172a',accent:'#6366f1',bg:'#ffffff',paper:'#f8fafc',border:'#cbd5e1',text:'#0f172a'},
+    offwhite: {primary:'#3d3530',accent:'#a07850',bg:'#fffff8',paper:'#f9f5ec',border:'#e0d8c8',text:'#1c1714'},
+    onyx:     {primary:'#111111',accent:'#888888',bg:'#ffffff',paper:'#f2f2f2',border:'#d0d0d0',text:'#111111'},
+  };
+  const sc = schemeColors[rxScheme] || schemeColors.burgundy;
   const printCSS = `
-    :root{--burgundy:#6b1a2a;--burgundy-pale:#f5e8eb;--cream:#faf6f0;--cream-dark:#f0ead8;--cream-border:#e8dcc8;--ink:#1a1410;--ink-mid:#4a3f35;--ink-light:#8a7d70;--ink-dark:#2a1f18;--surface:#fff;--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
+    :root{--burgundy:${sc.primary};--burgundy-pale:${sc.paper};--cream:${sc.paper};--cream-dark:${sc.paper};--cream-border:${sc.border};--cream-bg:${sc.paper};--ink:${sc.text};--ink-mid:${sc.text};--ink-light:#8a8a7a;--ink-dark:${sc.text};--surface:${sc.bg};--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{background:white;font-family:'Cairo','DM Sans',sans-serif;width:100%;height:auto;}
     .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9pt;line-height:1.5;}
-    .rx-slip-label{font-size:6.5pt;text-transform:uppercase;letter-spacing:.08em;color:#8a7d70}
+    .rx-slip-label{font-size:6.5pt;text-transform:uppercase;letter-spacing:.08em;color:${sc.text}99}
     .rx-slip-val{font-weight:600;font-size:9pt}
     table{border-collapse:collapse;width:100%;font-size:8.5pt}
-    th,td{border:1px solid #ccc;padding:3px 5px}
-    thead tr{background:#6b1a2a;color:#fff}
+    th,td{border:1px solid ${sc.border};padding:3px 5px}
+    thead tr{background:${sc.primary};color:#fff}
     @page{size:A5 portrait;margin:8mm 9mm}
     @media print{
       *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
@@ -4885,7 +5194,7 @@ async function renderSettings() {
 }
 
 function switchSettingsTab(tab) {
-  const tabs = ['clinic','whatsapp','permissions','users','followup-defaults','print','backup'];
+  const tabs = ['clinic','whatsapp','permissions','users','followup-defaults','print','appearance','backup'];
   tabs.forEach(t2 => {
     document.getElementById(`settings-tab-${t2}`)?.classList.toggle('active', t2===tab);
   });
@@ -4893,7 +5202,45 @@ function switchSettingsTab(tab) {
     btn.classList.toggle('active', tabs[i]===tab);
   });
   if (tab === 'backup') openBackupTab();
+  if (tab === 'print') _initRxSchemePicker();
+  if (tab === 'appearance') _initSiteThemePicker();
 }
+
+// ── Site theme ──────────────────────────────────────────────
+function applySiteTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme || '');
+  localStorage.setItem('noor_site_theme', theme || '');
+  document.querySelectorAll('#site-theme-grid .site-theme-option').forEach(el => {
+    el.classList.toggle('active', el.dataset.theme === theme);
+  });
+}
+function _initSiteThemePicker() {
+  const saved = localStorage.getItem('noor_site_theme') || '';
+  document.querySelectorAll('#site-theme-grid .site-theme-option').forEach(el => {
+    el.classList.toggle('active', el.dataset.theme === saved);
+  });
+}
+(function(){
+  const t = localStorage.getItem('noor_site_theme') || '';
+  if (t) document.documentElement.setAttribute('data-theme', t);
+})();
+
+// ── RX Color Scheme ─────────────────────────────────────────
+function _initRxSchemePicker() {
+  const saved = localStorage.getItem('noor_rx_scheme') || 'burgundy';
+  const radio = document.querySelector(`input[name="rx-scheme"][value="${saved}"]`);
+  if (radio) radio.checked = true;
+  document.querySelectorAll('input[name="rx-scheme"]').forEach(r => {
+    r.addEventListener('change', () => {
+      localStorage.setItem('noor_rx_scheme', r.value);
+      document.documentElement.setAttribute('data-rx-scheme', r.value);
+    });
+  });
+}
+function _getRxScheme() {
+  return localStorage.getItem('noor_rx_scheme') || 'burgundy';
+}
+
 
 function renderPermissionsToggles() {
   const perms = [
@@ -5125,28 +5472,93 @@ async function renderSuperAdmin() {
   try {
     const data = await get('/api/admin/clinics');
     NOOR.clinics = data.data || [];
-    document.getElementById('admin-clinics-tbody').innerHTML = NOOR.clinics.map(c => {
-      const lic = c.license || {};
-      const exp = lic.expires_at ? daysDiff(lic.expires_at) : null;
-      const st  = !lic.is_active?'danger':exp!==null&&exp<0?'danger':exp!==null&&exp<7?'warning':'success';
-      const sl  = !lic.is_active?'Inactive':exp!==null&&exp<0?'Expired':exp!==null&&exp<7?'Expiring Soon':'Active';
-      const banned = !!c.is_banned;
-      return `<tr>
-        <td class="td-name">${esc(c.name)}</td>
-        <td data-label="Owner">${esc(c.owner_email || c.users?.[0]?.email || '')}</td>
-        <td data-label="Phone">${esc(c.phone)}</td>
-        <td data-label="Plan"><span class="badge badge-burgundy">${esc(lic.plan)}</span></td>
-        <td data-label="Expires" style="font-family:'DM Mono',monospace">${esc(lic.expires_at||'Lifetime')}</td>
-        <td data-label="Status"><span class="badge badge-${banned?'danger':st}">${banned?'Banned':sl}</span></td>
-        <td class="td-actions-cell">
-          <button class="btn btn-outline btn-sm" onclick="impersonateClinic('${escAttr(c.id)}')">Impersonate</button>
-          <button class="btn btn-outline btn-sm" onclick="toggleClinicBan('${escAttr(c.id)}', ${banned?'false':'true'})">${banned?'Unban':'Ban'}</button>
-          <button class="btn btn-outline btn-sm" onclick="backupClinic('${escAttr(c.id)}')">Backup</button>
-          <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteClinic('${escAttr(c.id)}')">Delete</button>
-        </td>
-      </tr>`;
-    }).join('');
+    _renderAdminClinicsTable(NOOR.clinics);
   } catch(e) { toast(e.message,'error'); }
+}
+
+function _renderAdminClinicsTable(clinics) {
+  document.getElementById('admin-clinics-tbody').innerHTML = clinics.map(c => {
+    const lic = c.license || {};
+    const exp = lic.expires_at ? daysDiff(lic.expires_at) : null;
+    const st  = !lic.is_active?'danger':exp!==null&&exp<0?'danger':exp!==null&&exp<7?'warning':'success';
+    const sl  = !lic.is_active?'Inactive':exp!==null&&exp<0?'Expired':exp!==null&&exp<7?'Expiring Soon':'Active';
+    const banned = !!c.is_banned;
+    const daysLabel = exp === null ? '∞' : (exp >= 0 ? exp + 'd' : 'Expired');
+    return `<tr>
+      <td class="td-name">${esc(c.name)}</td>
+      <td>${esc(c.owner_email || c.users?.[0]?.email || '')}</td>
+      <td><span class="badge badge-burgundy">${esc(lic.plan || 'none')}</span></td>
+      <td style="font-family:'DM Mono',monospace;font-size:.82rem">${esc(lic.expires_at||'Lifetime')}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:.82rem;color:${exp!==null&&exp<7?'var(--danger)':'inherit'}">${daysLabel}</td>
+      <td><span class="badge badge-${banned?'danger':st}">${banned?'Banned':sl}</span></td>
+      <td class="td-actions-cell" style="display:flex;gap:5px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="openManageSubscription('${escAttr(c.id)}','${escAttr(c.name)}','${escAttr(lic.plan||'')}','${escAttr(lic.expires_at||'')}')">Subscription</button>
+        <button class="btn btn-outline btn-sm" onclick="impersonateClinic('${escAttr(c.id)}')">Impersonate</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleClinicBan('${escAttr(c.id)}', ${banned?'false':'true'})">${banned?'Unban':'Ban'}</button>
+        <button class="btn btn-outline btn-sm" onclick="backupClinic('${escAttr(c.id)}')">Backup</button>
+        <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteClinic('${escAttr(c.id)}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--ink-light)">No clinics found</td></tr>`;
+}
+
+function filterAdminClinics() {
+  const plan   = document.getElementById('admin-plan-filter')?.value || '';
+  const status = document.getElementById('admin-status-filter')?.value || '';
+  const q      = (document.getElementById('admin-clinic-search')?.value || '').toLowerCase();
+  const filtered = (NOOR.clinics || []).filter(c => {
+    const lic  = c.license || {};
+    const exp  = lic.expires_at ? daysDiff(lic.expires_at) : null;
+    const banned = !!c.is_banned;
+    if (plan && lic.plan !== plan) return false;
+    if (status) {
+      if (status === 'banned' && !banned) return false;
+      if (status === 'active' && (banned || (exp !== null && exp < 0))) return false;
+      if (status === 'expiring' && (exp === null || exp < 0 || exp >= 7)) return false;
+      if (status === 'expired' && (exp === null || exp >= 0)) return false;
+    }
+    if (q) {
+      const hay = (c.name + ' ' + (c.owner_email||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  _renderAdminClinicsTable(filtered);
+}
+
+function openManageSubscription(cid, name, plan, expiresAt) {
+  document.getElementById('sub-clinic-name').textContent = name;
+  document.getElementById('sub-current-plan').textContent = plan || 'none';
+  document.getElementById('sub-expires-info').textContent = expiresAt ? 'Expires: ' + expiresAt : 'No expiry';
+  document.getElementById('sub-new-plan').value = plan || 'monthly';
+  document.getElementById('sub-notes').value = '';
+  document.getElementById('sub-custom-date-row').style.display = 'none';
+  document.getElementById('sub-new-plan').dataset.cid = cid;
+  openModal('modal-subscription');
+}
+
+function onSubPlanChange() {
+  const v = document.getElementById('sub-new-plan').value;
+  document.getElementById('sub-custom-date-row').style.display = v === 'custom' ? '' : 'none';
+}
+
+async function saveSubscription() {
+  const cid  = document.getElementById('sub-new-plan').dataset.cid;
+  const plan = document.getElementById('sub-new-plan').value;
+  const notes = document.getElementById('sub-notes').value;
+  const body = { plan, notes };
+  if (plan === 'custom') {
+    const d = document.getElementById('sub-custom-date').value;
+    if (!d) { toast('Please choose a custom expiry date', 'error'); return; }
+    body.expires_at = d;
+    body.plan = 'custom';
+  }
+  try {
+    await put(`/api/admin/licenses/${cid}`, body);
+    toast('Subscription updated');
+    closeModal('modal-subscription');
+    await renderSuperAdmin();
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 function openAddClinic() { openModal('modal-clinic'); }

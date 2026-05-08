@@ -1714,6 +1714,16 @@ def create_backup():
     """Create a full clinic backup and record it in backup_log."""
     cid = session["clinic_id"]
     uid = session["user_id"]
+    role = session.get("role")
+
+    # Trial clinics (7-day only) are not permitted to export their database as JSON.
+    if role != "super_admin":
+        lic_state = _license_state(cid)
+        if lic_state.get("plan") == "trial":
+            return err(
+                "JSON export is not available during the 7-day trial. "
+                "Upgrade to a paid plan to enable backups.", 403
+            )
 
     clinic = db.table("clinics").select("*").eq("id", cid).single().execute()
     if not clinic.data:
