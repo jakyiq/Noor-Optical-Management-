@@ -7,7 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -363,9 +363,9 @@ html[data-theme="amber"] {
 .stat-card-value, .donut-center-val, .report-stat-val,
 .mini-amount, .td-amount, .fin-row-val,
 .patient-summary-value, #donut-total {
-  font-family:'DM Mono',ui-monospace,monospace;
+  font-family:'Figtree','DM Sans',sans-serif;
   font-variant-numeric:tabular-nums;
-  letter-spacing:-0.02em;
+  letter-spacing:-0.01em;
   font-feature-settings:'tnum' 1;
 }
 .stat-card-value { font-size:1.7rem; font-weight:600; line-height:1; }
@@ -426,7 +426,7 @@ html[dir=rtl] .search-wrap input{padding:9px 38px 9px 16px}
 .search-result-item:hover{background:var(--cream)}
 .search-result-avatar{width:30px;height:30px;background:var(--burgundy-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.72rem;color:var(--burgundy);font-weight:700;flex-shrink:0}
 .search-result-name{font-size:.88rem;font-weight:600}
-.search-result-phone{font-size:.75rem;color:var(--ink-light);font-family:'DM Mono',monospace}
+.search-result-phone{font-size:.75rem;color:var(--ink-light);font-family:'Figtree','DM Sans',sans-serif}
 .topbar-actions{display:flex;align-items:center;gap:8px}
 .icon-btn{width:36px;height:36px;border:1px solid var(--cream-border);border-radius:var(--radius-sm);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-mid);transition:all .15s;position:relative}
 .icon-btn:hover{background:var(--cream);color:var(--burgundy)}
@@ -475,7 +475,7 @@ html[dir=ltr] .dash-date{font-family:'Playfair Display',serif}
 .stat-card-icon.warning{background:#fef3e2;color:var(--warning)}
 .stat-card-icon.danger{background:#fef2f2;color:var(--danger)}
 .stat-card-label{font-size:.72rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
-.stat-card-value{font-family:'DM Mono',monospace;font-size:1.6rem;font-weight:500;color:var(--ink);line-height:1}
+.stat-card-value{font-family:'Figtree','DM Sans',sans-serif;font-size:1.6rem;font-weight:600;color:var(--ink);line-height:1}
 .stat-card-sub{font-size:.75rem;color:var(--ink-light);margin-top:4px}
 .stat-card-pulse{position:absolute;top:14px;inset-inline-end:14px;width:8px;height:8px;background:var(--warning);border-radius:50%;display:none}
 .stat-card-pulse.show{display:block;animation:pulse 1.5s infinite}
@@ -490,7 +490,7 @@ html[dir=ltr] .dash-date{font-family:'Playfair Display',serif}
 .chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
 .chart-bar{width:100%;max-width:40px;background:var(--burgundy-pale);border-radius:4px 4px 0 0;transition:background .15s;cursor:pointer;position:relative}
 .chart-bar:hover{background:var(--burgundy)}
-.chart-bar-tooltip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--ink);color:white;font-size:.68rem;font-family:'DM Mono',monospace;padding:3px 7px;border-radius:4px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s}
+.chart-bar-tooltip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--ink);color:white;font-size:.68rem;font-family:'Figtree','DM Sans',sans-serif;padding:3px 7px;border-radius:4px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .15s}
 .chart-bar:hover .chart-bar-tooltip{opacity:1}
 .chart-bar-day{font-size:.65rem;color:var(--ink-light)}
 .mini-list-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--cream-border)}
@@ -498,7 +498,7 @@ html[dir=ltr] .dash-date{font-family:'Playfair Display',serif}
 .mini-avatar{width:34px;height:34px;border-radius:50%;background:var(--burgundy-pale);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:var(--burgundy);flex-shrink:0}
 .mini-name{font-size:.88rem;font-weight:600}
 .mini-sub{font-size:.74rem;color:var(--ink-light)}
-.mini-amount{margin-inline-start:auto;font-family:'DM Mono',monospace;font-size:.85rem;color:var(--ink)}
+.mini-amount{margin-inline-start:auto;font-family:'Figtree','DM Sans',sans-serif;font-size:.85rem;color:var(--ink)}
 
 /* TABLES */
 .section-filters{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
@@ -513,8 +513,8 @@ td{padding:13px 16px;font-size:.875rem;color:var(--ink);border-bottom:1px solid 
 tbody tr:last-child td{border-bottom:none}
 tbody tr:hover{background:var(--cream)}
 .td-name{font-weight:600}
-.td-phone{font-family:'DM Mono',monospace;font-size:.82rem;color:var(--ink-mid)}
-.td-amount{font-family:'DM Mono',monospace;font-size:.85rem}
+.td-phone{font-family:'Figtree','DM Sans',sans-serif;font-size:.82rem;color:var(--ink-mid)}
+.td-amount{font-family:'Figtree','DM Sans',sans-serif;font-size:.85rem}
 .td-actions{display:flex;gap:6px}
 .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:.72rem;font-weight:600;white-space:nowrap}
 .badge-success{background:#e6f5ee;color:var(--success)}
@@ -552,10 +552,10 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 /* RX TABLE */
 .rx-table-wrap{overflow-x:auto;margin-bottom:16px}
 .rx-table{border-collapse:collapse;width:100%;min-width:560px}
-.rx-table th{background:var(--cream);border:1px solid var(--cream-border);padding:8px 10px;font-size:.68rem;text-align:center;color:var(--ink-mid);font-family:'DM Mono',monospace;font-weight:700;letter-spacing:.06em}
+.rx-table th{background:var(--cream);border:1px solid var(--cream-border);padding:8px 10px;font-size:.68rem;text-align:center;color:var(--ink-mid);font-family:'Figtree','DM Sans',sans-serif;font-weight:700;letter-spacing:.04em}
 .rx-table td{border:1px solid var(--cream-border);padding:6px}
 .rx-table td.eye-label{background:var(--burgundy-pale);text-align:center;font-size:.72rem;font-weight:700;color:var(--burgundy);white-space:nowrap;padding:8px 12px}
-.rx-input{width:100%;padding:6px 8px;border:none;background:transparent;font-family:'DM Mono',monospace;font-size:.85rem;text-align:center;color:var(--ink);outline:none}
+.rx-input{width:100%;padding:6px 8px;border:none;background:transparent;font-family:'Figtree','DM Sans',sans-serif;font-size:.85rem;text-align:center;color:var(--ink);outline:none}
 .rx-input:focus{background:var(--cream);border-radius:4px}
 /* Sign toggle button — single button that flips positive ↔ negative */
 .rx-sign-wrap{display:flex;align-items:center;gap:0;position:relative}
@@ -571,7 +571,7 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .inv-match-box{background:var(--cream);border:1px solid var(--cream-border);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px}
 .inv-match-title{font-size:.74rem;font-weight:700;color:var(--ink-mid);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
 .inv-match-items{display:flex;flex-wrap:wrap;gap:8px}
-.inv-match-chip{padding:6px 12px;border:1.5px solid var(--cream-border);border-radius:var(--radius-sm);font-size:.78rem;font-family:'DM Mono',monospace;cursor:pointer;background:white;transition:all .15s}
+.inv-match-chip{padding:6px 12px;border:1.5px solid var(--cream-border);border-radius:var(--radius-sm);font-size:.78rem;font-family:'Figtree','DM Sans',sans-serif;cursor:pointer;background:white;transition:all .15s}
 .inv-match-chip:hover{border-color:var(--burgundy);color:var(--burgundy)}
 .inv-match-chip.selected{border-color:var(--burgundy);background:var(--burgundy-pale);color:var(--burgundy);font-weight:600}
 .inv-match-empty{font-size:.8rem;color:var(--ink-light)}
@@ -581,7 +581,7 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .fin-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:.88rem;border-bottom:1px solid var(--cream-border)}
 .fin-row:last-child{border-bottom:none}
 .fin-row-label{color:var(--ink-mid)}
-.fin-row-val{font-family:'DM Mono',monospace;font-weight:600}
+.fin-row-val{font-family:'Figtree','DM Sans',sans-serif;font-weight:600}
 .fin-row.total{font-weight:700}
 .fin-row.total .fin-row-label{color:var(--ink)}
 .fin-row.remaining .fin-row-val{color:var(--danger)}
@@ -631,7 +631,7 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 /* REPORTS */
 .report-stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
 .report-stat{background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-md);padding:18px;text-align:center}
-.report-stat-val{font-family:'DM Mono',monospace;font-size:1.5rem;font-weight:500;color:var(--burgundy);margin-bottom:4px}
+.report-stat-val{font-family:'Figtree','DM Sans',sans-serif;font-size:1.5rem;font-weight:600;color:var(--burgundy);margin-bottom:4px}
 .report-stat-label{font-size:.74rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.06em}
 .report-grid{display:grid;grid-template-columns:minmax(320px,1.15fr) minmax(300px,.85fr);gap:18px;margin-bottom:22px}
 .report-card{background:linear-gradient(145deg,#fff 0%,#fffaf2 100%);border:1px solid var(--cream-border);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-md)}
@@ -660,7 +660,7 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
   border:1.5px solid var(--cream-border);
 }
 .donut-center-val{
-  font-family:'DM Mono',ui-monospace,monospace;
+  font-family:'Figtree','DM Sans',sans-serif;
   font-size:1rem;font-weight:700;color:var(--burgundy);
   letter-spacing:-0.02em;font-variant-numeric:tabular-nums;
   line-height:1.1;
@@ -682,7 +682,7 @@ html[dir=ltr] .donut-legend-item:hover{transform:translateX(2px)}
 .donut-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .donut-legend-name{font-size:.83rem;font-weight:600;color:var(--ink);line-height:1.2}
 .donut-legend-meta{font-size:.68rem;color:var(--ink-light)}
-.donut-legend-val{font-family:'DM Mono',ui-monospace,monospace;font-size:.78rem;color:var(--burgundy);font-weight:600;letter-spacing:-0.01em}
+.donut-legend-val{font-family:'Figtree','DM Sans',sans-serif;font-size:.78rem;color:var(--burgundy);font-weight:600;letter-spacing:0}
 .quick-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:14px}
 .quick-form .full{grid-column:1/-1}
 .mini-report-list{display:flex;flex-direction:column;gap:8px;max-height:220px;overflow:auto}
@@ -690,14 +690,14 @@ html[dir=ltr] .donut-legend-item:hover{transform:translateX(2px)}
 .mini-report-row:last-child{border-bottom:none}
 .mini-report-title{font-size:.86rem;font-weight:700;color:var(--ink)}
 .mini-report-sub{font-size:.72rem;color:var(--ink-light)}
-.mini-report-val{font-family:'DM Mono',monospace;font-size:.82rem;color:var(--burgundy)}
+.mini-report-val{font-family:'Figtree','DM Sans',sans-serif;font-size:.82rem;color:var(--burgundy)}
 @media(max-width:980px){.report-grid{grid-template-columns:1fr}.donut-layout{grid-template-columns:1fr}.donut-wrap{width:200px;height:200px}.donut-wrap svg{width:200px;height:200px}.donut-center{inset:48px}.quick-form{grid-template-columns:1fr}}
 
 /* VISIT CARD INNER GRID */
 .patient-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
 .patient-summary-card{background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow-sm)}
 .patient-summary-label{font-size:.68rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
-.patient-summary-value{font-family:'DM Mono',monospace;font-size:1.05rem;font-weight:700;color:var(--ink)}
+.patient-summary-value{font-family:'Figtree','DM Sans',sans-serif;font-size:1.05rem;font-weight:700;color:var(--ink)}
 .patient-summary-value.danger{color:var(--danger)}
 .patient-summary-sub{font-size:.78rem;color:var(--ink-light);margin-top:3px}
 .patient-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
@@ -734,7 +734,7 @@ html[dir=ltr] .donut-legend-item:hover{transform:translateX(2px)}
 .rx-slip{background:white;border:2px solid var(--burgundy);border-radius:var(--radius-md);padding:24px;max-width:500px;margin:0 auto}
 .rx-slip-header{display:flex;justify-content:space-between;margin-bottom:16px}
 .rx-slip-clinic{font-family:'Amiri',serif;font-size:1.1rem;font-weight:700;color:var(--burgundy)}
-.rx-slip-date{font-family:'DM Mono',monospace;font-size:.8rem;color:var(--ink-light)}
+.rx-slip-date{font-family:'Figtree','DM Sans',sans-serif;font-size:.8rem;color:var(--ink-light)}
 .rx-slip-patient{font-size:.9rem;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--cream-border)}
 .rx-slip-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-light)}
 .rx-slip-val{font-weight:600;font-size:.95rem}
@@ -750,7 +750,7 @@ html[dir=ltr] .donut-legend-item:hover{transform:translateX(2px)}
 .session-warning{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9200;background:var(--ink);color:white;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);padding:12px 14px;display:none;align-items:center;gap:12px;max-width:min(520px,calc(100vw - 32px));font-size:.86rem}
 .session-warning.show{display:flex}
 .session-warning button{border:1px solid rgba(255,255,255,.35);background:white;color:var(--ink);border-radius:var(--radius-sm);padding:7px 11px;font-family:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
-.debt-pill{display:inline-flex;align-items:center;justify-content:center;min-width:72px;padding:4px 8px;border-radius:999px;background:#fef2f2;border:1px solid #fecaca;color:var(--danger);font-family:'DM Mono',monospace;font-size:.78rem;font-weight:700}
+.debt-pill{display:inline-flex;align-items:center;justify-content:center;min-width:72px;padding:4px 8px;border-radius:999px;background:#fef2f2;border:1px solid #fecaca;color:var(--danger);font-family:'Figtree','DM Sans',sans-serif;font-size:.78rem;font-weight:700}
 .debt-pill.clear{background:#ecfdf5;border-color:#a7f3d0;color:var(--success)}
 @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 
@@ -954,10 +954,10 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   .settings-section-body>table td.td-name::before{ display:none }
   /* Phone: monospace */
   .table-wrap td.td-phone,
-  .settings-section-body>table td.td-phone{ font-family:'DM Mono',monospace; font-size:.88rem }
+  .settings-section-body>table td.td-phone{ font-family:'Figtree','DM Sans',sans-serif; font-size:.88rem }
   /* Amount: monospace */
   .table-wrap td.td-amount,
-  .settings-section-body>table td.td-amount{ font-family:'DM Mono',monospace }
+  .settings-section-body>table td.td-amount{ font-family:'Figtree','DM Sans',sans-serif }
   /* Actions: full width, side by side buttons */
   .table-wrap td.td-actions-cell,
   .settings-section-body>table td.td-actions-cell{
@@ -1159,7 +1159,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   font-size: .78rem;
 }
 #topup-amount-input {
-  font-family: 'DM Mono', monospace;
+  font-family:'Figtree','DM Sans',sans-serif;
   font-size: 1.15rem !important;
   font-weight: 700;
   letter-spacing: -.5px;
@@ -1623,7 +1623,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <div class="page-header-left">
               <div class="page-header-eyebrow" data-i18n="management">إدارة</div>
               <div class="page-header-title" data-i18n="patients">المراجعين</div>
-              <div class="page-header-sub"><span data-i18n="total">الإجمالي</span>: <span id="patients-total" style="font-family:'DM Mono',monospace;font-weight:700">0</span></div>
+              <div class="page-header-sub"><span data-i18n="total">الإجمالي</span>: <span id="patients-total" style="font-family:'Figtree','DM Sans',sans-serif;font-weight:700">0</span></div>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-outline btn-sm" onclick="exportExcel()">Excel</button>
@@ -2323,7 +2323,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       <div class="tab-panel" id="ptab-rx">
         <div id="prev-rx-box" style="background:var(--cream);border:1px solid var(--cream-border);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;display:none">
           <div style="font-size:.74rem;font-weight:700;color:var(--ink-mid);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px" data-i18n="previousRx">الوصفة السابقة</div>
-          <div id="prev-rx-display" style="font-family:'DM Mono',monospace;font-size:.82rem;color:var(--ink-mid)"></div>
+          <div id="prev-rx-display" style="font-family:'Figtree','DM Sans',sans-serif;font-size:.82rem;color:var(--ink-mid)"></div>
           <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="importPrevRx()" data-i18n="importAsCurrent">استيراد كوصفة حالية</button>
         </div>
         <div class="rx-table-wrap">
@@ -2546,16 +2546,20 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       <div class="form-grid">
         <div class="form-group full"><label class="form-label">New Plan</label>
           <select class="form-select" id="sub-new-plan" onchange="onSubPlanChange()">
-            <option value="trial">Trial (7 days from today)</option>
+            <option value="trial">Trial (7 days)</option>
             <option value="monthly">Monthly (30 days)</option>
             <option value="quarterly">Quarterly (90 days)</option>
             <option value="yearly">Yearly (365 days)</option>
             <option value="lifetime">Lifetime (no expiry)</option>
-            <option value="custom">Custom expiry date...</option>
+            <option value="custom">Custom — set exact dates below</option>
           </select>
         </div>
-        <div class="form-group full" id="sub-custom-date-row" style="display:none">
-          <label class="form-label">Custom Expiry Date</label>
+        <div class="form-group" id="sub-starts-row">
+          <label class="form-label">Start Date</label>
+          <input type="date" class="form-input" id="sub-starts-date">
+        </div>
+        <div class="form-group" id="sub-custom-date-row" style="display:none">
+          <label class="form-label">Expiry Date</label>
           <input type="date" class="form-input" id="sub-custom-date">
         </div>
         <div class="form-group full"><label class="form-label">Notes (optional)</label>
@@ -2929,6 +2933,7 @@ async function doLogin() {
     NOOR.role      = data.data.role;
     NOOR.clinicId  = data.data.clinic_id;
     NOOR.csrfToken = data.data.csrf_token;
+    NOOR.license   = data.data.license || null;
 
     if (data.data.grace_warning) {
       document.getElementById('license-banner-text').textContent = data.data.grace_warning;
@@ -3160,14 +3165,14 @@ function esc(v){
 }
 function escAttr(v){ return esc(v).replace(/`/g, '&#96;'); }
 
-function toast(msg, type='success') {
+function toast(msg, type='success', duration=3500) {
   const tc = document.getElementById('toast-container');
   const el = document.createElement('div');
   el.className = `toast ${type}`;
   el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${type==='success'?'<polyline points="20,6 9,17 4,12"/>':'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>'}
   </svg>${esc(msg)}`;
   tc.appendChild(el);
-  setTimeout(()=>el.remove(), 3500);
+  setTimeout(()=>el.remove(), duration);
 }
 
 function openModal(id){
@@ -3393,13 +3398,13 @@ function renderVisitHistory(visits) {
           ${v.lens_type===null && (parseFloat(v.total_amount)||0)===0 ? `<span class="badge badge-neutral" style="margin:0 8px">${NOOR.lang==='ar'?'وصفة قديمة':'Old Rx'}</span>` : `<span style="margin:0 10px;color:var(--ink-light)">${esc((v.lens_type||'').replace(/_/g,' '))}</span>`}
           ${v.remaining>0?`<span class="badge badge-danger">${fmtNum(v.remaining)} IQD ${t('remaining')}</span>`:`<span class="badge badge-success">Paid</span>`}
         </div>
-        <span style="font-family:'DM Mono',monospace;font-size:.9rem;color:var(--ink-mid)">${fmtNum(v.total_amount)} IQD</span>
+        <span style="font-family:'Figtree','DM Sans',sans-serif;font-size:.9rem;color:var(--ink-mid)">${fmtNum(v.total_amount)} IQD</span>
       </div>
       <div class="visit-card-body${i===0 && !(v.lens_type===null && (parseFloat(v.total_amount)||0)===0) ? ' open':''}" id="vc${v.id}">
         <div class="visit-body-grid">
           <div>
             <div style="font-size:.72rem;font-weight:700;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Rx</div>
-            <table style="border-collapse:collapse;font-size:.82rem;font-family:'DM Mono',monospace">
+            <table style="border-collapse:collapse;font-size:.82rem;font-family:'Figtree','DM Sans',sans-serif">
               <thead><tr>${['Eye','SPH','CYL','AXIS','ADD','VA'].map(h=>`<th style="padding:4px 8px;border:1px solid var(--cream-border);background:var(--cream);font-size:.65rem">${h}</th>`).join('')}</tr></thead>
               <tbody>
                 <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OD</td>${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
@@ -3411,9 +3416,9 @@ function renderVisitHistory(visits) {
           <div>
             <div style="font-size:.72rem;font-weight:700;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t('financials')}</div>
             <div style="font-size:.85rem">
-              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--cream-border)"><span style="color:var(--ink-light)">${t('total')}</span><span style="font-family:'DM Mono',monospace">${fmtNum(v.total_amount)}</span></div>
-              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--cream-border)"><span style="color:var(--ink-light)">${t('paid')}</span><span style="font-family:'DM Mono',monospace">${fmtNum(v.amount_paid)}</span></div>
-              <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(${v.remaining>0?'--danger':'--success'})">${t('remaining')}</span><span style="font-family:'DM Mono',monospace;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</span></div>
+              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--cream-border)"><span style="color:var(--ink-light)">${t('total')}</span><span style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(v.total_amount)}</span></div>
+              <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--cream-border)"><span style="color:var(--ink-light)">${t('paid')}</span><span style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(v.amount_paid)}</span></div>
+              <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="color:var(${v.remaining>0?'--danger':'--success'})">${t('remaining')}</span><span style="font-family:'Figtree','DM Sans',sans-serif;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</span></div>
             </div>
             ${v.notes ? `<div style="font-size:.8rem;color:var(--ink-mid);margin-top:12px;padding:10px;border:1px solid var(--cream-border);border-radius:var(--radius-sm);background:var(--cream)"><strong>${t('visitNotes')}:</strong> ${esc(v.notes)}</div>` : ''}
           </div>
@@ -4319,11 +4324,11 @@ function filterLenses() {
     return `<tr>
       <td class="td-name">${esc((l.lens_type||'').replace(/_/g,' '))} · ${esc((l.coating||'').replace(/_/g,' '))}</td>
       <td data-label="${t('material')}">${esc(l.material)}</td>
-      <td data-label="SPH" style="font-family:'DM Mono',monospace">${l.sphere>0?'+':''}${l.sphere}</td>
-      <td data-label="CYL" style="font-family:'DM Mono',monospace">${esc(l.cylinder||0)}</td>
-      <td data-label="${t('qty')}" style="font-family:'DM Mono',monospace">${l.quantity}</td>
+      <td data-label="SPH" style="font-family:'Figtree','DM Sans',sans-serif">${l.sphere>0?'+':''}${l.sphere}</td>
+      <td data-label="CYL" style="font-family:'Figtree','DM Sans',sans-serif">${esc(l.cylinder||0)}</td>
+      <td data-label="${t('qty')}" style="font-family:'Figtree','DM Sans',sans-serif">${l.quantity}</td>
       <td data-label="${t('status')}"><span class="badge badge-${st[0]}">${st[1]}</span></td>
-      <td data-label="${t('sellPrice')}" style="font-family:'DM Mono',monospace">${fmtNum(l.sell_price)}</td>
+      <td data-label="${t('sellPrice')}" style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(l.sell_price)}</td>
       <td class="td-actions-cell">
         <button class="btn btn-outline btn-sm" onclick="openRestockModal('lens','${escAttr(l.id)}')">${t('restock')}</button>
         <button class="btn btn-outline btn-sm" onclick="openEditLens('${escAttr(l.id)}')">${t('edit')}</button>
@@ -4422,9 +4427,9 @@ function filterFrames() {
       <td class="td-name">${esc(f.brand)} · ${esc((f.frame_type||'').replace(/_/g,' '))}</td>
       <td data-label="${t('material')}">${esc(f.frame_material)}</td>
       <td data-label="${t('color')}">${esc(f.color)}</td>
-      <td data-label="${t('qty')}" style="font-family:'DM Mono',monospace">${f.quantity}</td>
+      <td data-label="${t('qty')}" style="font-family:'Figtree','DM Sans',sans-serif">${f.quantity}</td>
       <td data-label="${t('status')}"><span class="badge badge-${st[0]}">${st[1]}</span></td>
-      <td data-label="${t('sellPrice')}" style="font-family:'DM Mono',monospace">${fmtNum(f.sell_price)}</td>
+      <td data-label="${t('sellPrice')}" style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(f.sell_price)}</td>
       <td class="td-actions-cell">
         <button class="btn btn-outline btn-sm" onclick="openRestockModal('frame','${escAttr(f.id)}')">${t('restock')}</button>
         <button class="btn btn-outline btn-sm" onclick="openEditFrame('${escAttr(f.id)}')">${t('edit')}</button>
@@ -4542,9 +4547,9 @@ async function loadReports() {
         <td class="td-name">${esc(p?.full_name)}</td>
         <td data-label="${t('date')}">${fmtDate(v.visit_date)}</td>
         <td data-label="${NOOR.lang==='ar'?'نوع العدسة':'Lens'}">${esc((v.lens_type||'').replace(/_/g,' '))}</td>
-        <td data-label="${t('total')}" style="font-family:'DM Mono',monospace">${fmtNum(v.total_amount)}</td>
-        <td data-label="${t('paid')}" style="font-family:'DM Mono',monospace">${fmtNum(v.amount_paid)}</td>
-        <td data-label="${t('remaining')}" style="font-family:'DM Mono',monospace;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</td>
+        <td data-label="${t('total')}" style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(v.total_amount)}</td>
+        <td data-label="${t('paid')}" style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(v.amount_paid)}</td>
+        <td data-label="${t('remaining')}" style="font-family:'Figtree','DM Sans',sans-serif;color:var(${v.remaining>0?'--danger':'--success'})">${fmtNum(v.remaining)}</td>
         <td class="td-actions-cell">
           <button class="btn btn-outline btn-sm" onclick="showRxSlipFromData('${escAttr(cachedId)}')">${t('slip')}</button>
         </td>
@@ -4676,12 +4681,31 @@ async function saveOperatingExpense() {
   } catch(e) { toast(e.message,'error'); }
 }
 
+// ── Trial paywall guard for export features ──────────────────
+function _checkExportAllowed() {
+  const lic = NOOR.license;
+  if (NOOR.role === 'super_admin') return true; // super admin always allowed
+  if (!lic || lic.exports_allowed === false) {
+    const isAr = NOOR.lang === 'ar';
+    toast(
+      isAr
+        ? '⭐ التصدير متاح للاشتراكات المدفوعة فقط. يرجى الترقية للوصول إلى هذه الميزة.'
+        : '⭐ Export is available on paid plans only. Please upgrade to unlock this feature.',
+      'warning',
+      6000
+    );
+    return false;
+  }
+  return true;
+}
+
 async function exportExcel() {
+  if (!_checkExportAllowed()) return;
   if (typeof XLSX==='undefined') { toast('Loading...','warning'); return; }
   try {
     const from = document.getElementById('report-from')?.value || '';
     const to   = document.getElementById('report-to')?.value   || '';
-    const data = await get(`/api/reports/export/excel?from=${from}&to=${to}`);
+    const data = await get('/api/reports/export/excel?from='+from+'&to='+to);
     const rows = data.data || [];
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -4691,6 +4715,7 @@ async function exportExcel() {
 }
 
 async function exportPDF() {
+  if (!_checkExportAllowed()) return;
   try {
     const from = document.getElementById('report-from')?.value||'';
     const to   = document.getElementById('report-to')?.value||'';
@@ -4807,7 +4832,7 @@ function _renderRxSlip(payload) {
   <!-- DIVIDER BAR -->
   <div style="border-top:2px solid var(--burgundy);border-bottom:1px solid var(--cream-border);display:flex;justify-content:space-between;align-items:center;padding:3px 0;margin-bottom:9px">
     <span style="font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--burgundy)">${t('prescriptionSlip')}</span>
-    <span style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--ink-light)">${visitDateStr}</span>
+    <span style="font-family:'Figtree','DM Sans',sans-serif;font-size:.7rem;color:var(--ink-light)">${visitDateStr}</span>
   </div>
 
   <!-- PATIENT INFO -->
@@ -5418,7 +5443,7 @@ async function renderUsersTable() {
     NOOR.users = data.data || [];
     document.getElementById('users-tbody').innerHTML = NOOR.users.map(u => `<tr>
       <td class="td-name">${esc(u.full_name)}</td>
-      <td data-label="${t('username')}" style="font-family:'DM Mono',monospace">${esc(u.username)}</td>
+      <td data-label="${t('username')}" style="font-family:'Figtree','DM Sans',sans-serif">${esc(u.username)}</td>
       <td data-label="${t('role')}"><span class="badge badge-${u.role==='doctor'?'burgundy':'neutral'}">${t(u.role)}</span></td>
       <td data-label="${t('status')}"><span class="badge badge-${u.is_active?'success':'danger'}">${u.is_active?(NOOR.lang==='ar'?'نشط':'Active'):(NOOR.lang==='ar'?'معطل':'Disabled')}</span></td>
       <td class="td-actions-cell"><button class="btn btn-outline btn-sm" onclick="toggleUserActive('${escAttr(u.id)}',${!u.is_active})">${u.is_active?(NOOR.lang==='ar'?'تعطيل':'Disable'):(NOOR.lang==='ar'?'تفعيل':'Enable')}</button></td>
@@ -5457,7 +5482,7 @@ async function renderAuditLog() {
     const rows = data.data || [];
     document.getElementById('audit-tbody').innerHTML = rows.map(a => `<tr>
       <td class="td-name" style="font-size:.9rem">${esc(a.username||a.full_name)} · <span class="audit-action audit-${escAttr(a.action)}">${esc(a.action)}</span></td>
-      <td data-label="${t('timestamp')}" style="font-family:'DM Mono',monospace;font-size:.82rem">${new Date(a.created_at).toLocaleString(NOOR.lang==='ar'?'ar-IQ':'en-GB')}</td>
+      <td data-label="${t('timestamp')}" style="font-family:'Figtree','DM Sans',sans-serif;font-size:.82rem">${new Date(a.created_at).toLocaleString(NOOR.lang==='ar'?'ar-IQ':'en-GB')}</td>
       <td data-label="${t('entity')}">${esc(a.entity_type)}</td>
       <td data-label="${t('details')}" style="font-size:.85rem;color:var(--ink-mid)">${esc(a.details)}</td>
     </tr>`).join('');
@@ -5488,8 +5513,8 @@ function _renderAdminClinicsTable(clinics) {
       <td class="td-name">${esc(c.name)}</td>
       <td>${esc(c.owner_email || c.users?.[0]?.email || '')}</td>
       <td><span class="badge badge-burgundy">${esc(lic.plan || 'none')}</span></td>
-      <td style="font-family:'DM Mono',monospace;font-size:.82rem">${esc(lic.expires_at||'Lifetime')}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:.82rem;color:${exp!==null&&exp<7?'var(--danger)':'inherit'}">${daysLabel}</td>
+      <td style="font-family:'Figtree','DM Sans',sans-serif;font-size:.82rem">${esc(lic.expires_at||'Lifetime')}</td>
+      <td style="font-family:'Figtree','DM Sans',sans-serif;font-size:.82rem;color:${exp!==null&&exp<7?'var(--danger)':'inherit'}">${daysLabel}</td>
       <td><span class="badge badge-${banned?'danger':st}">${banned?'Banned':sl}</span></td>
       <td class="td-actions-cell" style="display:flex;gap:5px;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="openManageSubscription('${escAttr(c.id)}','${escAttr(c.name)}','${escAttr(lic.plan||'')}','${escAttr(lic.expires_at||'')}')">Subscription</button>
@@ -5530,32 +5555,46 @@ function openManageSubscription(cid, name, plan, expiresAt) {
   document.getElementById('sub-clinic-name').textContent = name;
   document.getElementById('sub-current-plan').textContent = plan || 'none';
   document.getElementById('sub-expires-info').textContent = expiresAt ? 'Expires: ' + expiresAt : 'No expiry';
-  document.getElementById('sub-new-plan').value = plan || 'monthly';
+  const planSel = document.getElementById('sub-new-plan');
+  planSel.value = (['trial','monthly','quarterly','yearly','lifetime','custom'].includes(plan)) ? plan : 'monthly';
   document.getElementById('sub-notes').value = '';
-  document.getElementById('sub-custom-date-row').style.display = 'none';
-  document.getElementById('sub-new-plan').dataset.cid = cid;
+  document.getElementById('sub-starts-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('sub-custom-date').value = expiresAt || '';
+  onSubPlanChange();
+  planSel.dataset.cid = cid;
   openModal('modal-subscription');
 }
 
 function onSubPlanChange() {
   const v = document.getElementById('sub-new-plan').value;
-  document.getElementById('sub-custom-date-row').style.display = v === 'custom' ? '' : 'none';
+  const expRow = document.getElementById('sub-custom-date-row');
+  expRow.style.display = (v === 'lifetime') ? 'none' : '';
+  document.getElementById('sub-custom-date').required = (v === 'custom');
 }
 
 async function saveSubscription() {
-  const cid  = document.getElementById('sub-new-plan').dataset.cid;
-  const plan = document.getElementById('sub-new-plan').value;
-  const notes = document.getElementById('sub-notes').value;
-  const body = { plan, notes };
+  const cid    = document.getElementById('sub-new-plan').dataset.cid;
+  const plan   = document.getElementById('sub-new-plan').value;
+  const notes  = document.getElementById('sub-notes').value.trim();
+  const starts = document.getElementById('sub-starts-date').value;
+  const expiry = document.getElementById('sub-custom-date').value;
+
+  if (!starts) { toast('Please set a start date', 'error'); return; }
+
+  const body = { plan, notes, starts_at: starts };
+
   if (plan === 'custom') {
-    const d = document.getElementById('sub-custom-date').value;
-    if (!d) { toast('Please choose a custom expiry date', 'error'); return; }
-    body.expires_at = d;
-    body.plan = 'custom';
+    if (!expiry) { toast('Please set an expiry date for the custom plan', 'error'); return; }
+    if (expiry <= starts) { toast('Expiry date must be after the start date', 'error'); return; }
+    body.expires_at = expiry;
+  } else if (plan !== 'lifetime' && expiry) {
+    body.expires_at = expiry;
   }
+
   try {
-    await put(`/api/admin/licenses/${cid}`, body);
-    toast('Subscription updated');
+    const res = await put('/api/admin/licenses/' + cid, body);
+    const d = res && res.data ? res.data : {};
+    toast('Subscription updated — expires: ' + (d.expires_at || 'never'), 'success');
     closeModal('modal-subscription');
     await renderSuperAdmin();
   } catch(e) { toast(e.message, 'error'); }
@@ -5802,6 +5841,7 @@ async function openBackupTab() {
 }
 
 async function createBackup() {
+  if (!_checkExportAllowed()) return;
   const btn = document.getElementById('btn-create-backup');
   if (btn) btn.disabled = true;
   try {
@@ -6060,7 +6100,7 @@ checkSession();  // restores session on page reload without showing login screen
     <div class="modal-body">
       <div style="background:var(--cream);border:1px solid var(--cream-border);border-radius:10px;padding:16px;margin-bottom:20px">
         <div style="font-size:.78rem;color:var(--ink-light);margin-bottom:4px" id="topup-outstanding-label">المبلغ المتبقي</div>
-        <div style="font-size:1.6rem;font-weight:800;color:var(--danger);font-family:'DM Mono',monospace;letter-spacing:-.5px" id="topup-outstanding-val">0 IQD</div>
+        <div style="font-size:1.6rem;font-weight:800;color:var(--danger);font-family:'Figtree','DM Sans',sans-serif;letter-spacing:-.5px" id="topup-outstanding-val">0 IQD</div>
         <div style="font-size:.75rem;color:var(--ink-light);margin-top:6px" id="topup-visits-summary"></div>
       </div>
       <div class="form-group" style="margin-bottom:8px">

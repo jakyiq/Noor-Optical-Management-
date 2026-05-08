@@ -99,12 +99,15 @@ def _csrf_token():
 
 
 def _safe_license_summary(license_state):
+    status = license_state["status"]
+    plan   = license_state.get("plan")
     return {
-        "status": license_state["status"],
-        "plan": license_state.get("plan"),
+        "status": status,
+        "plan": plan,
         "days_left": license_state.get("days_left"),
-        "read_only": license_state["status"] in ("expired_read_only", "blocked"),
-        "exports_allowed": license_state["status"] == "active",
+        "read_only": status in ("expired_read_only", "blocked"),
+        # exports are allowed only on paid active plans — not trial, not expired
+        "exports_allowed": status == "active" and plan != "trial",
     }
 
 
@@ -175,6 +178,7 @@ def _license_state(clinic_id):
     delta = (expires - today).days
 
     if delta >= 0:
+        # "custom" is a paid plan variant — treat same as active
         status = "trial" if plan == "trial" else "active"
         return {"status": status, "plan": plan, "days_left": delta}
 
@@ -269,8 +273,8 @@ def _auth(roles=None, setting=None, export=False, allow_readonly_write=False):
             status = license_state["status"]
             if status == "blocked":
                 return err("License blocked. Please contact support.", 403)
-            if export and status != "active":
-                return err("Export is available only for active paid clinics.", 403)
+            if export and status in ("trial", "expired_read_only", "blocked"):
+                return err("هذه الميزة متاحة للاشتراكات المدفوعة فقط. يرجى الترقية للوصول إلى التصدير. | This feature is available on paid plans only. Please upgrade to enable exports.", 403)
             if (
                 status == "expired_read_only"
                 and request.method in WRITE_METHODS
@@ -2315,29 +2319,60 @@ def admin_list_licenses():
 def admin_update_license(target_clinic_id):
     body  = request.get_json() or {}
     plan  = body.get("plan")
-    notes = body.get("notes")
+    notes = (body.get("notes") or "").strip()
+
+    # Allow admin to set an explicit start date; fall back to today
+    raw_starts = (body.get("starts_at") or "").strip()
+    try:
+        starts_at = date.fromisoformat(raw_starts).isoformat() if raw_starts else today_str()
+    except ValueError:
+        return err("Invalid starts_at date format. Use YYYY-MM-DD.", 400)
+
+    KNOWN_PLANS = {"trial", "monthly", "quarterly", "yearly", "lifetime", "custom"}
+    if plan and plan not in KNOWN_PLANS:
+        return err(f"Unknown plan '{{plan}}'.", 400)
 
     plan_days = {"trial": 7, "monthly": 30, "quarterly": 90, "yearly": 365}
+
     if plan == "lifetime":
         expires_at = None
+    elif plan == "custom":
+        raw_exp = (body.get("expires_at") or "").strip()
+        if not raw_exp:
+            return err("expires_at is required for a custom plan.", 400)
+        try:
+            expires_at = date.fromisoformat(raw_exp).isoformat()
+        except ValueError:
+            return err("Invalid expires_at date format. Use YYYY-MM-DD.", 400)
     elif plan in plan_days:
-        expires_at = (date.today() + timedelta(days=plan_days[plan])).isoformat()
+        base = date.fromisoformat(starts_at)
+        expires_at = (base + timedelta(days=plan_days[plan])).isoformat()
     else:
-        expires_at = body.get("expires_at")
+        raw_exp = (body.get("expires_at") or "").strip()
+        try:
+            expires_at = date.fromisoformat(raw_exp).isoformat() if raw_exp else None
+        except ValueError:
+            return err("Invalid expires_at date format. Use YYYY-MM-DD.", 400)
 
-    updates = {"is_active": True, "starts_at": today_str()}
+    new_row = {
+        "clinic_id":  target_clinic_id,
+        "is_active":  True,
+        "starts_at":  starts_at,
+        "expires_at": expires_at,
+    }
     if plan:
-        updates["plan"] = plan
-    if expires_at is not None or plan == "lifetime":
-        updates["expires_at"] = expires_at
+        new_row["plan"] = plan
     if notes:
-        updates["notes"] = notes
+        new_row["notes"] = notes
 
-    # Deactivate old licenses then insert new
-    db.table("licenses").update({"is_active": False}).eq("clinic_id", target_clinic_id).execute()
-    db.table("licenses").insert({"clinic_id": target_clinic_id, **updates}).execute()
+    try:
+        db.table("licenses").update({"is_active": False}).eq("clinic_id", target_clinic_id).execute()
+        db.table("licenses").insert(new_row).execute()
+    except Exception as exc:
+        logging.exception("admin_update_license failed for clinic %s", target_clinic_id)
+        return err(f"Failed to update license: {str(exc)}", 500)
 
-    return ok()
+    return ok({"starts_at": starts_at, "expires_at": expires_at, "plan": plan})
 
 
 @app.route("/api/admin/clinics/<cid>/backup", methods=["POST"])
