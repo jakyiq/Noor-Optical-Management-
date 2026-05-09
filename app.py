@@ -159,7 +159,7 @@ def _license_state(clinic_id):
         .select("*") \
         .eq("clinic_id", clinic_id) \
         .eq("is_active", True) \
-        .order("starts_at", desc=True) \
+        .order("created_at", desc=True) \
         .limit(1) \
         .execute()
 
@@ -1672,50 +1672,11 @@ def get_settings():
     if "user_id" not in session:
         return err("Unauthorized", 401)
     cid = session.get("clinic_id")
-
-    # Auto-repair: if clinic_settings row is missing (e.g. fresh signup), create it
-    cs_res = db.table("clinic_settings").select("*").eq("clinic_id", cid).execute()
-    if not cs_res.data:
-        logging.warning("clinic_settings missing for clinic_id=%s — auto-creating defaults", cid)
-        defaults = {
-            "clinic_id":               cid,
-            "recept_view_patients":    True,
-            "recept_edit_patients":    False,
-            "recept_view_financials":  False,
-            "recept_edit_financials":  False,
-            "recept_access_inventory": False,
-            "recept_export_reports":   False,
-            "recept_view_audit":       False,
-            "followup_months_default": 3,
-            "default_checkup_fee":     0,
-            "print_show_financials":   True,
-            "print_logo_align":        "center",
-            "print_logo_width":        120,
-            "print_logo_height":       60,
-            "language":                "ar",
-            "wa_template_1":           "Dear {patient_name}, your next visit at {clinic_name} is on {next_visit}.",
-            "wa_template_2":           "Hello {patient_name}! Time for your annual eye check at {clinic_name}.",
-            "wa_template_3":           "{patient_name}, follow-up reminder: {next_visit}. {clinic_name}.",
-        }
-        try:
-            db.table("clinic_settings").insert(defaults).execute()
-            cs_data = defaults
-        except Exception:
-            logging.exception("Failed to auto-create clinic_settings for clinic_id=%s", cid)
-            cs_data = {}
-    else:
-        cs_data = cs_res.data[0]
-
-    cl = db.table("clinics").select("id,name,logo_url,phone,address,owner_email,is_banned").eq("id", cid).single().execute()
-
-    # Attach live license info to settings response
-    license_state = _license_state(cid) if cid else {"status": "blocked", "plan": None, "days_left": None}
-    license_summary = _safe_license_summary(license_state)
-
+    cs  = db.table("clinic_settings").select("*").eq("clinic_id", cid).single().execute()
+    cl  = db.table("clinics").select("id,name,logo_url,phone,address,owner_email,is_banned").eq("id", cid).single().execute()
     return ok({
         "clinic":   cl.data,
-        "settings": cs_data,
-        "license":  license_summary,
+        "settings": cs.data,
     })
 
 
@@ -2108,7 +2069,39 @@ def update_user(target_id):
     return ok({k: v for k, v in res.data[0].items() if k != "password_hash"})
 
 
-@app.route("/api/users/<target_id>", methods=["DELETE"])
+@app.route("/api/users/<target_id>/reset-password", methods=["POST"])
+@_auth(roles=["doctor", "super_admin"])
+def reset_user_password(target_id):
+    """Doctor (or super_admin) resets a receptionist's password."""
+    cid  = session["clinic_id"]
+    uid  = session["user_id"]
+    body = request.get_json() or {}
+
+    new_pw = body.get("password", "")
+    if len(new_pw) < 6:
+        return err("Password must be at least 6 characters")
+
+    target = db.table("users").select("id,role,full_name").eq("clinic_id", cid).eq("id", target_id).single().execute()
+    if not target.data:
+        return err("User not found", 404)
+    if target.data["role"] == "super_admin":
+        return err("Cannot modify super_admin", 403)
+    # Doctors can only reset receptionist passwords (not other doctors)
+    if session.get("role") == "doctor" and target.data["role"] not in ("receptionist",):
+        return err("Doctors can only reset receptionist passwords", 403)
+
+    hashed = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
+    db.table("users").update({
+        "password_hash":        hashed,
+        "must_change_password": True,
+    }).eq("clinic_id", cid).eq("id", target_id).execute()
+
+    _write_audit(cid, uid, "update", "user", target_id,
+                 new_value={"action": "password_reset", "target": target.data.get("full_name")})
+    return ok()
+
+
+
 @_auth(roles=["doctor", "super_admin"])
 def delete_user(target_id):
     cid = session["clinic_id"]
@@ -2194,7 +2187,7 @@ def admin_list_clinics():
 
     for c in clinic_list:
         lic = db.table("licenses").select("plan,expires_at,is_active") \
-            .eq("clinic_id", c["id"]).order("starts_at", desc=True).limit(1).execute()
+            .eq("clinic_id", c["id"]).eq("is_active", True).order("created_at", desc=True).limit(1).execute()
         c["license"] = lic.data[0] if lic.data else None
         users = db.table("users").select("id,email,username,full_name,role,is_active,last_login,created_at") \
             .eq("clinic_id", c["id"]).execute()
