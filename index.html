@@ -2510,6 +2510,31 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   </div>
 </div>
 
+<!-- Reset User Password Modal -->
+<div class="modal-overlay" id="modal-reset-user-password">
+  <div class="modal" style="width:min(400px,100%)">
+    <div class="modal-header">
+      <div class="modal-title" id="reset-user-pw-title">Reset Password</div>
+      <button class="modal-close" onclick="closeModal('modal-reset-user-password')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" data-i18n="password">كلمة المرور الجديدة</label>
+        <input type="password" class="form-input" id="reset-user-pw" placeholder="Min 6 characters" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">تأكيد كلمة المرور</label>
+        <input type="password" class="form-input" id="reset-user-pw-confirm" placeholder="Repeat password" autocomplete="new-password">
+      </div>
+      <p style="font-size:.82rem;color:var(--ink-light);margin-top:4px">سيُطلب من المستخدم تغيير كلمة المرور عند تسجيل الدخول التالي. / The user will be prompted to change their password on next login.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-reset-user-password')" data-i18n="cancel">إلغاء</button>
+      <button class="btn btn-burgundy" onclick="saveResetUserPassword()">حفظ / Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- Clinic Modal -->
 <div class="modal-overlay" id="modal-clinic">
   <div class="modal" style="width:min(500px,100%)">
@@ -5446,7 +5471,7 @@ async function renderUsersTable() {
       <td data-label="${t('username')}" style="font-family:'Figtree','DM Sans',sans-serif">${esc(u.username)}</td>
       <td data-label="${t('role')}"><span class="badge badge-${u.role==='doctor'?'burgundy':'neutral'}">${t(u.role)}</span></td>
       <td data-label="${t('status')}"><span class="badge badge-${u.is_active?'success':'danger'}">${u.is_active?(NOOR.lang==='ar'?'نشط':'Active'):(NOOR.lang==='ar'?'معطل':'Disabled')}</span></td>
-      <td class="td-actions-cell"><button class="btn btn-outline btn-sm" onclick="toggleUserActive('${escAttr(u.id)}',${!u.is_active})">${u.is_active?(NOOR.lang==='ar'?'تعطيل':'Disable'):(NOOR.lang==='ar'?'تفعيل':'Enable')}</button></td>
+      <td class="td-actions-cell"><button class="btn btn-outline btn-sm" onclick="toggleUserActive('${escAttr(u.id)}',${!u.is_active})">${u.is_active?(NOOR.lang==='ar'?'تعطيل':'Disable'):(NOOR.lang==='ar'?'تفعيل':'Enable')}</button> <button class="btn btn-outline btn-sm" onclick="openResetUserPassword('${escAttr(u.id)}','${escAttr(u.full_name)}')">${NOOR.lang==='ar'?'إعادة تعيين كلمة المرور':'Reset Password'}</button></td>
     </tr>`).join('');
   } catch(_){}
 }
@@ -5466,6 +5491,28 @@ async function saveUser() {
 
 async function toggleUserActive(id, active) {
   try { await put(`/api/users/${id}`, { is_active: active }); await renderUsersTable(); } catch(e) { toast(e.message,'error'); }
+}
+
+function openResetUserPassword(userId, fullName) {
+  document.getElementById('reset-user-pw-title').textContent =
+    (NOOR.lang === 'ar' ? 'إعادة تعيين كلمة مرور: ' : 'Reset Password: ') + fullName;
+  document.getElementById('reset-user-pw').value = '';
+  document.getElementById('reset-user-pw-confirm').value = '';
+  document.getElementById('reset-user-pw').dataset.userId = userId;
+  openModal('modal-reset-user-password');
+}
+
+async function saveResetUserPassword() {
+  const userId = document.getElementById('reset-user-pw').dataset.userId;
+  const pw     = document.getElementById('reset-user-pw').value;
+  const conf   = document.getElementById('reset-user-pw-confirm').value;
+  if (!pw || pw.length < 6) { toast(NOOR.lang==='ar'?'كلمة المرور يجب أن تكون 6 أحرف على الأقل':'Min 6 characters', 'error'); return; }
+  if (pw !== conf)           { toast(NOOR.lang==='ar'?'كلمتا المرور غير متطابقتين':'Passwords do not match', 'error'); return; }
+  try {
+    await post(`/api/users/${userId}/reset-password`, { password: pw });
+    closeModal('modal-reset-user-password');
+    toast(NOOR.lang==='ar'?'تم إعادة تعيين كلمة المرور':'Password reset successfully', 'success');
+  } catch(e) { toast(e.message, 'error'); }
 }
 
 // ══════════════════════════════════════════════════════════
