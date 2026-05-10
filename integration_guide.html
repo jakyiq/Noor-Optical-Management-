@@ -1,0 +1,122 @@
+<!--
+  ══════════════════════════════════════════════════════════════════════════════
+  INTEGRATION GUIDE — Local-First for Noor index.html
+  ══════════════════════════════════════════════════════════════════════════════
+
+  STEP 1 — Add localFirst.js to <head> (after your existing scripts)
+  ══════════════════════════════════════════════════════════════════════════════
+-->
+<script src="/localFirst.js"></script>
+
+
+<!--
+  STEP 2 — Initialise NoorLF right after NOOR is defined
+           (inside your existing DOMContentLoaded / init block)
+  ══════════════════════════════════════════════════════════════════════════════
+-->
+<script>
+// ── Boot the local-first layer ────────────────────────────────────────────
+NoorLF.init().then(() => {
+  console.info('[Noor] LocalFirst ready.');
+
+  // Wire the pending-items badge to any element you like:
+  NoorLF.bindBadge(document.getElementById('sync-pending-badge'));
+});
+
+// ── Listen to SW messages (Background Sync from the service worker) ────────
+navigator.serviceWorker?.addEventListener('message', e => {
+  if (e.data?.type === 'NF_FLUSH') NoorLF.flush();
+});
+
+// ── Register for Background Sync when SW is ready ─────────────────────────
+navigator.serviceWorker?.ready.then(reg => {
+  // This tag matches the SYNC_TAG constant in sw.js
+  reg.sync?.register('noor-lf-flush').catch(() => {
+    // Background Sync not supported — the heartbeat handles it instead
+  });
+});
+
+// ── Custom conflict dialog (replaces the default confirm()) ───────────────
+// Plug in your existing modal system so conflicts look on-brand.
+NoorLF.onConflict = function (entityType, localRecord, serverRecord, resolve) {
+  const isAr = NOOR.lang === 'ar';
+
+  // Use your existing showConfirm / modal helpers, e.g.:
+  const msg = isAr
+    ? `تعارض في بيانات ${entityType}:\nالخادم يحتوي على إصدار أحدث.\nهل تريد الاحتفاظ بنسخة الخادم؟`
+    : `Conflict in ${entityType}:\nThe server has a newer version.\nKeep the server version?`;
+
+  // Swap this native confirm for a beautiful modal if you have one:
+  const keepServer = confirm(msg);
+  resolve(keepServer ? 'server' : 'local');
+};
+</script>
+
+
+<!--
+  STEP 3 — Add a sync-status badge somewhere in the sidebar/topbar HTML
+  ══════════════════════════════════════════════════════════════════════════════
+  This badge automatically shows/hides based on the pending queue count.
+-->
+<span
+  id="sync-pending-badge"
+  title=""
+  style="
+    display: none;
+    background: var(--warning, #d4820a);
+    color: #fff;
+    font-size: .65rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 99px;
+    min-width: 18px;
+    text-align: center;
+    margin-inline-start: 6px;
+    vertical-align: middle;
+  "
+></span>
+
+
+<!--
+  STEP 4 — Replace direct API write calls with NoorLF.write()
+  ══════════════════════════════════════════════════════════════════════════════
+  Before (existing pattern in index.html):
+
+      const res = await post('/api/patients', body);
+
+  After (local-first):
+
+      const res = await NoorLF.write('patients', 'upsert', body);
+      // res.data is returned immediately (optimistic); sync happens in background.
+      // res.pending === true means it's queued but not yet on the server.
+
+  For updates with a known ID:
+
+      const res = await NoorLF.write('patients', 'upsert', body, patientId);
+
+  For deletes:
+
+      await NoorLF.write('patients', 'delete', { id: patientId }, patientId);
+
+  ══════════════════════════════════════════════════════════════════════════════
+
+  STEP 5 — Register the Flask blueprint in app.py
+  ══════════════════════════════════════════════════════════════════════════════
+  Add these two lines near the top of app.py (after `app` is created):
+
+      from sync_routes import sync_bp
+      app.register_blueprint(sync_bp)
+
+  ══════════════════════════════════════════════════════════════════════════════
+
+  STEP 6 — Tauri: swap the adapter (optional, future)
+  ══════════════════════════════════════════════════════════════════════════════
+  In your Tauri main.js / setup file, BEFORE calling NoorLF.init():
+
+      // Auto-detected if window.__TAURI__ exists, but you can be explicit:
+      NoorLF.useAdapter(new NoorLF.TauriStorageAdapter());
+      await NoorLF.init();
+
+  No other code changes needed. The sync engine, conflict logic, and heartbeat
+  are all adapter-agnostic.
+-->
