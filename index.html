@@ -52,9 +52,10 @@ html[data-rx-scheme="onyx"] {
   --rx-primary:#111111;--rx-accent:#888888;--rx-bg:#ffffff;--rx-paper:#f2f2f2;--rx-border:#d0d0d0;--rx-text:#111111;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-.qty-stepper{display:flex;align-items:center;border:1.5px solid var(--cream-border);border-radius:var(--radius-sm);overflow:hidden;background:var(--surface)}
-.qty-stepper .qty-input{border:none!important;border-radius:0!important;text-align:center;flex:1;min-width:0;box-shadow:none!important;padding:10px 4px}
-.qty-stepper .qty-btn{flex-shrink:0;width:36px;background:var(--cream);border:none;font-size:1.15rem;font-weight:600;color:var(--ink-mid);cursor:pointer;transition:background .15s,color .15s;align-self:stretch;display:flex;align-items:center;justify-content:center}
+/* ── Qty/SPH/CYL stepper ── */
+.qty-stepper{display:flex;align-items:stretch;border:1.5px solid var(--cream-border);border-radius:var(--radius-sm);overflow:hidden;background:var(--surface)}
+.qty-stepper .qty-input{border:none!important;border-radius:0!important;text-align:center;flex:1;min-width:0;box-shadow:none!important;padding:10px 4px;font-family:'Figtree','DM Sans',sans-serif}
+.qty-stepper .qty-btn{flex-shrink:0;width:36px;background:var(--cream);border:none;font-size:1.15rem;font-weight:600;color:var(--ink-mid);cursor:pointer;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center}
 .qty-stepper .qty-btn:hover{background:var(--cream-dark);color:var(--burgundy)}
 .qty-stepper .qty-btn:first-child{border-inline-end:1.5px solid var(--cream-border)}
 .qty-stepper .qty-btn:last-child{border-inline-start:1.5px solid var(--cream-border)}
@@ -1823,7 +1824,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <table>
             <thead><tr>
               <th data-i18n="type">النوع</th><th data-i18n="material">المادة</th><th data-i18n="coating">الطلاء</th>
-              <th>SPH</th><th>CYL</th><th data-i18n="qty">الكمية</th><th data-i18n="minStock">الحد الأدنى</th>
+              <th>SPH</th><th>CYL</th><th data-i18n="qty">الكمية</th>
               <th data-i18n="status">الحالة</th><th data-i18n="sellPrice">سعر البيع</th><th data-i18n="actions">إجراءات</th>
             </tr></thead>
             <tbody id="lenses-tbody"></tbody>
@@ -2536,10 +2537,10 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       <div class="form-grid">
         <div class="form-group"><label class="form-label">النوع</label><select class="form-select" id="l-type"><option value="single_vision">Single Vision</option><option value="bifocal">Bifocal</option><option value="trifocal">Trifocal</option><option value="progressive">Progressive</option><option value="reading">Reading</option><option value="plano">Plano</option><option value="prism">Prism</option><option value="occupational">Occupational</option></select></div>
         <div class="form-group"><label class="form-label">المادة</label><select class="form-select" id="l-material"><option value="plastic">Plastic (CR-39)</option><option value="polycarbonate">Polycarbonate</option><option value="high_index_16">High-Index 1.6</option><option value="high_index_167">High-Index 1.67</option><option value="high_index_174">High-Index 1.74</option><option value="trivex">Trivex</option><option value="glass">Glass</option><option value="contact">Contact</option></select></div>
-        <div class="form-group"><label class="form-label">SPH</label><input type="number" class="form-input" id="l-sph" step=".25"></div>
-        <div class="form-group"><label class="form-label">CYL</label><input type="number" class="form-input" id="l-cyl" step=".25"></div>
-        <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepQty('l-qty',-1)">−</button><input type="number" class="form-input qty-input" id="l-qty" min="0" value="0"><button type="button" class="qty-btn" onclick="stepQty('l-qty',1)">+</button></div></div>
-        <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepQty('l-min',-1)">−</button><input type="number" class="form-input qty-input" id="l-min" min="0" value="2"><button type="button" class="qty-btn" onclick="stepQty('l-min',1)">+</button></div></div>
+        <div class="form-group"><label class="form-label">SPH</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepSph('l-sph',-0.25)">−</button><input type="number" class="form-input qty-input" id="l-sph" step=".25"><button type="button" class="qty-btn" onclick="stepSph('l-sph',0.25)">+</button></div></div>
+        <div class="form-group"><label class="form-label">CYL</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepSph('l-cyl',-0.25)">−</button><input type="number" class="form-input qty-input" id="l-cyl" step=".25"><button type="button" class="qty-btn" onclick="stepSph('l-cyl',0.25)">+</button></div></div>
+        <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><input type="number" class="form-input" id="l-qty" min="0"></div>
+        <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><input type="number" class="form-input" id="l-min" min="0" value="2"></div>
         <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="l-cost" min="0" step="1" inputmode="numeric"></div>
         <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="l-sell" min="0" step="1" inputmode="numeric"></div>
         <div class="form-group full"><label class="form-label" data-i18n="coating">الطلاء</label><select class="form-select" id="l-coating"><option value="clear">Clear</option><option value="blue_cut">Blue Cut</option><option value="green_cut">Green Cut</option><option value="photochromic">Photochromic</option><option value="photo_blue">Photochromic Blue</option><option value="polarized">Polarized</option><option value="anti_reflective">Anti-Reflective (AR)</option><option value="tinted">Tinted</option><option value="uv400">UV400</option><option value="mirror">Mirror</option><option value="anti_scratch">Anti-Scratch</option><option value="anti_fog">Anti-Fog</option><option value="oleophobic">Oleophobic</option><option value="combo_ar_bc">AR + Blue Cut Combo</option></select></div>
@@ -4431,8 +4432,9 @@ function filterLenses() {
   tbody.innerHTML = list.map(l => {
     const st = l.quantity===0?['danger',t('out')]:l.quantity<=l.min_stock?['warning',t('low')]:['success',t('ok')];
     return `<tr>
-      <td class="td-name">${esc((l.lens_type||'').replace(/_/g,' '))} · ${esc((l.coating||'').replace(/_/g,' '))}</td>
+      <td class="td-name">${esc((l.lens_type||'').replace(/_/g,' '))}</td>
       <td data-label="${t('material')}">${esc(l.material)}</td>
+      <td data-label="${t('coating')}">${esc((l.coating||'').replace(/_/g,' '))}</td>
       <td data-label="SPH" style="font-family:'Figtree','DM Sans',sans-serif">${l.sphere>0?'+':''}${l.sphere}</td>
       <td data-label="CYL" style="font-family:'Figtree','DM Sans',sans-serif">${esc(l.cylinder||0)}</td>
       <td data-label="${t('qty')}" style="font-family:'Figtree','DM Sans',sans-serif">${l.quantity}</td>
@@ -4441,18 +4443,36 @@ function filterLenses() {
       <td class="td-actions-cell">
         <button class="btn btn-outline btn-sm" onclick="openRestockModal('lens','${escAttr(l.id)}')">${t('restock')}</button>
         <button class="btn btn-outline btn-sm" onclick="openEditLens('${escAttr(l.id)}')">${t('edit')}</button>
-        <button class="btn btn-outline btn-sm" onclick="duplicateLens('${escAttr(l.id)}')" title="${NOOR.lang==='ar'?'نسخ':'Duplicate'}" style="color:var(--ink-mid)">⧉</button>
+        <button class="btn btn-outline btn-sm" onclick="duplicateLens('${escAttr(l.id)}')" title="${NOOR.lang==='ar'?'نسخ':'Duplicate'}">⧉</button>
         <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteLens('${escAttr(l.id)}')">${t('delete')}</button>
+      </td>
+    </tr>`;
       </td>
     </tr>`;
   }).join('');
 }
 
-function stepQty(id, delta) {
+function stepSph(id, delta) {
   const el = document.getElementById(id);
   if (!el) return;
-  const min = parseInt(el.min) || 0;
-  el.value = Math.max(min, (parseInt(el.value) || 0) + delta);
+  const val = parseFloat(el.value) || 0;
+  el.value = Math.round((val + delta) * 100) / 100;
+}
+
+function duplicateLens(id) {
+  const l = NOOR.lenses.find(x=>x.id===id); if(!l)return;
+  NOOR.editingLensId = null;
+  document.getElementById('modal-lens-title').textContent = NOOR.lang==='ar' ? 'نسخ عدسة' : 'Duplicate Lens';
+  document.getElementById('l-type').value     = l.lens_type;
+  document.getElementById('l-material').value = l.material;
+  document.getElementById('l-coating').value  = l.coating;
+  document.getElementById('l-sph').value      = l.sphere;
+  document.getElementById('l-cyl').value      = l.cylinder||0;
+  document.getElementById('l-qty').value      = l.quantity;
+  document.getElementById('l-min').value      = l.min_stock;
+  document.getElementById('l-cost').value     = l.cost_price;
+  document.getElementById('l-sell').value     = l.sell_price;
+  openModal('modal-lens');
 }
 
 function openAddLens() {
@@ -4467,22 +4487,6 @@ function openEditLens(id) {
   const l = NOOR.lenses.find(x=>x.id===id); if(!l)return;
   NOOR.editingLensId = id;
   document.getElementById('modal-lens-title').textContent = t('edit');
-  document.getElementById('l-type').value    = l.lens_type;
-  document.getElementById('l-material').value= l.material;
-  document.getElementById('l-coating').value = l.coating;
-  document.getElementById('l-sph').value     = l.sphere;
-  document.getElementById('l-cyl').value     = l.cylinder||0;
-  document.getElementById('l-qty').value     = l.quantity;
-  document.getElementById('l-min').value     = l.min_stock;
-  document.getElementById('l-cost').value    = l.cost_price;
-  document.getElementById('l-sell').value    = l.sell_price;
-  openModal('modal-lens');
-}
-
-function duplicateLens(id) {
-  const l = NOOR.lenses.find(x=>x.id===id); if(!l)return;
-  NOOR.editingLensId = null;  // null = new record
-  document.getElementById('modal-lens-title').textContent = (NOOR.lang==='ar' ? 'نسخ عدسة' : 'Duplicate Lens');
   document.getElementById('l-type').value    = l.lens_type;
   document.getElementById('l-material').value= l.material;
   document.getElementById('l-coating').value = l.coating;
