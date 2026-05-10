@@ -11,6 +11,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 :root {
   --cream:#faf6f0;--cream-dark:#f0ead8;--cream-border:#e8dcc8;
@@ -5173,16 +5174,21 @@ async function sendRxWhatsApp(vid, phone, patientName) {
 
     // ── Render slip & build the download blob ────────────────────────────
     _renderRxSlip(payload);
-    const { blobURL, docTitle } = _buildRxPrintBlob();
-
-    // ── Download the file directly — no popup, never blocked ─────────────
-    const a = document.createElement('a');
-    a.href = blobURL;
-    a.download = docTitle + '.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobURL), 30000);
+    // ── Generate PDF and download it ─────────────────────────
+    const safeName = (p.full_name || patientName || 'Patient').replace(/\s+/g, '_');
+    const docTitle = safeName + '_' + (v.visit_date || new Date().toISOString().slice(0,10));
+    const slipEl   = document.getElementById('rx-slip-content');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+    await new Promise(resolve => {
+      pdf.html(slipEl, {
+        callback: doc => { doc.save(docTitle + '.pdf'); resolve(); },
+        x: 9, y: 8,
+        width: 130,
+        windowWidth: slipEl.scrollWidth || 500,
+        html2canvas: { scale: 0.5, useCORS: true, logging: false }
+      });
+    });
 
     // ── Build WhatsApp message from custom template (or empty) ────────────
     const tpl = (st.wa_pdf_message || '').trim();
