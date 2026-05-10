@@ -5167,12 +5167,13 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const visitDate  = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
     const clinicName = cl.name || NOOR.clinicName || '';
 
-    // ── Render slip so _rxPrintPatientName / _rxPrintVisitDate are set ───
+    // ── Render slip so _rxPrintPatientName / _rxPrintVisitDate are set ────
     _renderRxSlip(payload);
 
-    // ── Use the exact same print blob as the Print button —
-    //    this is the file that produces the clean PDF when printed.
-    printRxSlip();
+    // ── Build the same clean blob the Print button uses ───────────────────
+    const { blob, docTitle } = _buildRxPrintBlob();
+    const fileName = docTitle + '.html';
+    const file = new File([blob], fileName, { type: 'text/html' });
 
     // ── Build WhatsApp message from custom template (or empty) ────────────
     const tpl = (st.wa_pdf_message || '').trim();
@@ -5185,10 +5186,37 @@ async function sendRxWhatsApp(vid, phone, patientName) {
         .replace(/\{next_visit\}/g,   v.next_visit_date ? fmtDate(v.next_visit_date) : '');
     }
 
-    // ── Open WhatsApp ─────────────────────────────────────────────────────
     const waURL = 'https://wa.me/' + waPhone + (waMsg ? '?text=' + encodeURIComponent(waMsg) : '');
-    window.open(waURL, '_blank');
 
+    // ── Try native Share API first (mobile — file goes straight into WhatsApp) ──
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: fileName,
+          text: waMsg || undefined,
+        });
+        toast(NOOR.lang === 'ar' ? 'تمت مشاركة الوصفة' : 'Rx shared successfully', 'success');
+        return;
+      } catch (shareErr) {
+        // User cancelled the share sheet — don't fall through to download
+        if (shareErr.name === 'AbortError') return;
+        // Any other share error → fall through to download fallback
+      }
+    }
+
+    // ── Fallback: download the file + open the WhatsApp chat ─────────────
+    // (desktop, or browsers that don't support file sharing)
+    const blobURL = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobURL;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobURL), 30000);
+
+    window.open(waURL, '_blank');
     toast(NOOR.lang === 'ar' ? 'تم تنزيل الوصفة وفتح واتساب' : 'Rx saved & WhatsApp opened', 'success');
 
   } catch(e) {
