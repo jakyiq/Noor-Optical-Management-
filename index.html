@@ -5078,16 +5078,17 @@ function _renderRxSlip(payload) {
 
 </div>`;
 }
-function printRxSlip() {
+// ── Shared helper: build the print-ready HTML blob and filename ──
+// Returns { blob, blobURL, docTitle } using the currently rendered rx-slip-content.
+function _buildRxPrintBlob() {
   const patientName = (window._rxPrintPatientName || '').trim();
   const visitDate   = (window._rxPrintVisitDate || new Date().toISOString().slice(0, 10));
-  const docTitle    = patientName
-    ? 'Rx_' + patientName.replace(/\s+/g,'_') + '_' + visitDate
-    : 'Prescription';
+  // Filename: PatientName_YYYY-MM-DD  (spaces → underscores, keep Arabic chars)
+  const safeName    = patientName.replace(/\s+/g, '_') || 'Patient';
+  const docTitle    = safeName + '_' + visitDate;
 
   const slipHTML = document.getElementById('rx-slip-content').innerHTML;
 
-  // CSS for the print document — no border, no extra padding, clean A5
   const rxScheme = _getRxScheme ? _getRxScheme() : 'burgundy';
   const schemeColors = {
     burgundy: {primary:'#6b1a2a',accent:'#c49a3c',bg:'#ffffff',paper:'#faf6f0',border:'#e8dcc8',text:'#1a1410'},
@@ -5131,9 +5132,13 @@ function printRxSlip() {
     '<body onload="document.fonts.ready.then(function(){setTimeout(function(){window.print();},200)})">' + slipHTML + '</body>' +
     '</html>';
 
-  // Blob URL approach: fully isolated page, no app UI bleed-through on any device
-  var blob = new Blob([printHTML], { type: 'text/html;charset=utf-8' });
-  var blobURL = URL.createObjectURL(blob);
+  const blob    = new Blob([printHTML], { type: 'text/html;charset=utf-8' });
+  const blobURL = URL.createObjectURL(blob);
+  return { blob, blobURL, docTitle };
+}
+
+function printRxSlip() {
+  const { blobURL, docTitle } = _buildRxPrintBlob();
 
   // On desktop, open a sized popup; on mobile open a full new tab
   var isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -5142,7 +5147,7 @@ function printRxSlip() {
     : window.open(blobURL, '_blank', 'width=650,height=850');
 
   if (!pw) {
-    // Fallback if popup blocked: force download as HTML and let browser handle it
+    // Fallback if popup blocked: download the HTML file directly
     var a = document.createElement('a');
     a.href = blobURL;
     a.download = docTitle + '.html';
@@ -5163,7 +5168,7 @@ function printRxSlip() {
 // ══════════════════════════════════════════════════════════
 async function sendRxWhatsApp(vid, phone, patientName) {
   if (!phone) { toast('No phone number for this patient', 'error'); return; }
-  toast('Preparing Rx PDF…', 'success');
+  toast(NOOR.lang === 'ar' ? 'جارٍ تحضير الوصفة…' : 'Preparing Rx…', 'success');
 
   try {
     const res = await get(`/api/visits/${vid}/print`);
@@ -5185,18 +5190,14 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const nextVisit  = v.next_visit_date ? fmtDate(v.next_visit_date) : '—';
     const clinicName = cl.name || NOOR.clinicName || 'Noor Optical';
 
-    // jsPDF cannot render Arabic (Helvetica is Latin-only) — strip to ASCII for PDF,
-    // send the full Arabic details separately via WhatsApp text.
-    const latinOnly = s => (s || '').replace(/[\u0600-\u06FF\u200C-\u200F\u202A-\u202E]/g, '').trim() || '—';
+    // ── Render the polished slip into the hidden modal content div ────────
+    // _renderRxSlip populates #rx-slip-content and sets window._rxPrint* vars
+    _renderRxSlip(payload);
 
-    const pdfClinicName = latinOnly(clinicName) !== '—' ? latinOnly(clinicName) : 'Noor Optical';
-    const pdfPatient    = latinOnly(p.full_name || patientName);
-    const pdfDoctor     = latinOnly(st.print_doctor_name || '');
-    const pdfCred       = latinOnly(st.print_doctor_credentials || st.print_certification_text || '');
-    const pdfWarning    = latinOnly(st.print_warning_text || '');
-    const pdfAddress    = latinOnly(cl.address || '');
+    // ── Build the same high-quality print blob used by printRxSlip() ──────
+    const { blobURL, docTitle } = _buildRxPrintBlob();
 
-    // WhatsApp companion message (sent first so user gets it immediately)
+    // ── WhatsApp companion message ────────────────────────────────────────
     const lensDesc  = [v.lens_type, v.lens_material, v.lens_coating]
       .filter(Boolean).map(x => String(x).replace(/_/g,' ')).join(' · ') || '—';
     const frameDesc = [v.frame_brand, v.frame_type ? String(v.frame_type).replace(/_/g,' ') : '']
@@ -5224,129 +5225,37 @@ async function sendRxWhatsApp(vid, phone, patientName) {
 
     const waURL = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`;
 
-    if (window.jspdf) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
-      const W = 148, L = 10, R = W - 10;
-      let y = 12;
-
-      const hline = (yy, thick) => {
-        doc.setDrawColor(...(thick ? [107,26,42] : [220,200,180]));
-        doc.setLineWidth(thick ? 0.5 : 0.2);
-        doc.line(L, yy, R, yy);
-      };
-      const txt = (s, x, yy, size, style, color) => {
-        doc.setFontSize(size || 9);
-        doc.setFont('helvetica', style || 'normal');
-        doc.setTextColor(...(color || [30, 20, 16]));
-        doc.text(String(s ?? '—'), x, yy);
-      };
-
-      // Clinic header (Latin-safe strings only)
-      doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(107,26,42);
-      doc.text(pdfClinicName, W/2, y, { align:'center' }); y += 5;
-      if (pdfDoctor && pdfDoctor !== '—') {
-        doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(60,50,40);
-        doc.text(pdfDoctor, W/2, y, {align:'center'}); y += 4;
+    // ── Download the polished print file so the user can attach it ────────
+    const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobileDevice) {
+      // On mobile: open the print page in a new tab (user can share/print from there)
+      const pw = window.open(blobURL, '_blank');
+      if (!pw) {
+        // Fallback: download the file
+        const a = document.createElement('a');
+        a.href = blobURL; a.download = docTitle + '.html'; a.click();
       }
-      if (pdfCred && pdfCred !== '—') {
-        doc.setFontSize(7); doc.setFont('helvetica','italic'); doc.setTextColor(120,110,100);
-        doc.text(pdfCred, W/2, y, {align:'center'}); y += 4;
-      }
-      if (cl.phone) {
-        doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(120,110,100);
-        doc.text('Tel: ' + cl.phone, W/2, y, {align:'center'}); y += 4;
-      }
-      hline(y, true); y += 3;
-
-      // Title row
-      txt('PRESCRIPTION', L, y, 8, 'bold', [107,26,42]);
-      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(120,110,100);
-      doc.text(visitDate, R, y, {align:'right'});
-      y += 2; hline(y, false); y += 5;
-
-      // Patient info (use latin-safe name; phone number is always latin)
-      txt('Patient: ' + pdfPatient, L, y, 9, 'bold');
-      txt('Age: ' + fmtVal(p.age), 95, y, 9);
-      txt(p.gender ? p.gender.charAt(0).toUpperCase()+p.gender.slice(1) : '', 120, y, 9);
-      y += 4;
-      txt('Next Visit: ' + nextVisit, L, y, 8, 'normal', [80,70,60]);
-      y += 2; hline(y, false); y += 5;
-
-      // Rx table
-      const cols = [L, 38, 62, 86, 106, 122, 132];
-      const headers = ['Eye','SPH','CYL','AXIS','ADD','VA','BCVA'];
-      doc.setFillColor(107,26,42);
-      doc.rect(L, y-4, R-L, 6, 'F');
-      headers.forEach((h,i) => {
-        doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
-        doc.text(h, cols[i]+1, y);
-      });
-      y += 3;
-
-      const rxRow = (eye, s, c, a, add, va, bcva, bg) => {
-        doc.setFillColor(...bg);
-        doc.rect(L, y-3, R-L, 6, 'F');
-        txt(eye, cols[0]+1, y, 8, 'bold', [107,26,42]);
-        [s,c,a,add,va,bcva].forEach((val,i) => txt(fmtVal(val), cols[i+1]+1, y, 8));
-        y += 6;
-      };
-      rxRow('OD (R)', v.od_sphere, v.od_cylinder, v.od_axis, v.od_addition, v.od_va, v.od_bcva, [250,246,240]);
-      rxRow('OS (L)', v.os_sphere, v.os_cylinder, v.os_axis, v.os_addition, v.os_va, v.os_bcva, [245,240,235]);
-
-      if (v.ipd) { y += 1; txt('IPD: ' + v.ipd + ' mm', L, y, 8, 'normal', [80,70,60]); y += 5; }
-      else y += 3;
-
-      hline(y, false); y += 4;
-
-      // Lens & frame (already Latin from DB enum values)
-      txt('Lens: ' + (lensDesc || '—'), L, y, 8); y += 4;
-      txt('Frame: ' + (frameDesc || '—'), L, y, 8); y += 4;
-
-      // Financials
-      if (st.print_show_financials !== false) {
-        hline(y, false); y += 4;
-        txt('Total: ' + fmtIQD(v.total_amount), L, y, 8);
-        txt('Paid: ' + fmtIQD(v.amount_paid), 65, y, 8);
-        const remColor = (v.remaining||0) > 0 ? [192,57,43] : [30,126,90];
-        txt('Remaining: ' + fmtIQD(v.remaining), 107, y, 8, 'normal', remColor);
-        y += 5;
-      }
-
-      // Instructions (Latin only)
-      if (pdfWarning && pdfWarning !== '—') {
-        hline(y, false); y += 4;
-        doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(107,26,42);
-        doc.text('Instructions:', L, y); y += 3;
-        doc.setFont('helvetica','normal'); doc.setTextColor(60,50,40);
-        const lines = doc.splitTextToSize(pdfWarning, R-L);
-        doc.text(lines, L, y); y += lines.length * 3.5 + 2;
-      }
-
-      // Footer
-      hline(y, false); y += 3;
-      doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(140,130,120);
-      doc.text(pdfClinicName + (pdfAddress && pdfAddress !== '—' ? ' · ' + pdfAddress : ''), L, y);
-
-      // ── Download PDF then open WhatsApp ─────────────────────────────────
-      // Download the PDF so the user can share it inside WhatsApp
-      const safePatient = (p.full_name || patientName || 'patient')
-        .replace(/[\u0600-\u06FF\s]+/g, '_').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30) || 'patient';
-      const filename = `Rx_${safePatient}_${visitDate.replace(/\//g,'-')}.pdf`;
-      doc.save(filename);
-
-      // After a brief delay open WhatsApp with the text summary
-      setTimeout(() => {
-        window.open(waURL, '_blank');
-      }, 800);
-
-      toast('PDF downloaded — open WhatsApp to send the message', 'success');
-
     } else {
-      // jsPDF not available — text-only WhatsApp message
-      window.open(waURL, '_blank');
-      toast('Sent as WhatsApp text (PDF library not loaded yet)', 'warning');
+      // On desktop: open the print popup (same as printRxSlip)
+      const pw = window.open(blobURL, '_blank', 'width=650,height=850');
+      if (!pw) {
+        const a = document.createElement('a');
+        a.href = blobURL; a.download = docTitle + '.html'; a.click();
+      }
     }
+
+    // ── Open WhatsApp after a short delay so the print window loads first ─
+    setTimeout(() => {
+      window.open(waURL, '_blank');
+      setTimeout(() => URL.revokeObjectURL(blobURL), 30000);
+    }, 800);
+
+    toast(
+      NOOR.lang === 'ar'
+        ? 'تم فتح الوصفة — سيفتح واتساب تلقائياً'
+        : 'Rx opened — WhatsApp will open shortly',
+      'success'
+    );
 
   } catch(e) {
     toast('Error: ' + e.message, 'error');
