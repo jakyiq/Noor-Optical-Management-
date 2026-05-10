@@ -2693,6 +2693,9 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   </div>
 </div>
 
+<!-- Off-screen container for PDF rendering — always in DOM, never display:none -->
+<div id="rx-pdf-stage" aria-hidden="true" style="position:fixed;left:-9999px;top:0;width:500px;background:#fff;z-index:-1;pointer-events:none;"></div>
+
 <!-- Rx Slip Modal -->
 <div class="modal-overlay" id="modal-rx-slip">
   <div class="modal" style="width:min(540px,100%)">
@@ -5170,60 +5173,62 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const visitDate  = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
     const clinicName = cl.name || NOOR.clinicName || '';
 
-    // ── Render the slip into the hidden DOM element ───────────────────────
+    // ── Render slip into the always-visible off-screen stage ─────────────
+    // We can't use the modal element directly because display:none means
+    // html2canvas gets zero dimensions. The stage div is always rendered.
     _renderRxSlip(payload);
 
-    // ── Filename: PatientName_YYYY-MM-DD.pdf ─────────────────────────────
     const safeName = (window._rxPrintPatientName || '').replace(/\s+/g, '_') || 'Patient';
-    const rawDate  = (window._rxPrintVisitDate  || new Date().toISOString().slice(0, 10));
+    const rawDate  = window._rxPrintVisitDate || new Date().toISOString().slice(0, 10);
     const fileName = safeName + '_' + rawDate + '.pdf';
 
-    // ── Render the slip element to canvas, then to PDF ───────────────────
-    const slipEl = document.getElementById('rx-slip-content');
+    // Clone the rendered slip into the off-screen stage so html2canvas
+    // sees a real laid-out element with known width (500 px).
+    const stage   = document.getElementById('rx-pdf-stage');
+    const slipSrc = document.getElementById('rx-slip-content');
+    stage.innerHTML = slipSrc.innerHTML;
 
-    // Temporarily make the modal visible off-screen so html2canvas can measure it
-    const modalEl = document.getElementById('modal-rx-slip');
-    const prevModalDisplay  = modalEl.style.display;
-    const prevModalVis      = modalEl.style.visibility;
-    const prevModalOpacity  = modalEl.style.opacity;
-    modalEl.style.display    = 'block';
-    modalEl.style.visibility = 'hidden';
-    modalEl.style.opacity    = '0';
+    // Wait one frame so the browser paints the stage before we screenshot it
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-    let pdfBlob;
-    try {
-      const canvas = await html2canvas(slipEl, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
+    const canvas = await html2canvas(stage, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      width:  stage.scrollWidth,
+      height: stage.scrollHeight,
+    });
 
-      // A5 dimensions in mm: 148 × 210
-      const { jsPDF } = window.jspdf;
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
+    stage.innerHTML = ''; // clean up
 
-      const imgW = canvas.width;
-      const imgH = canvas.height;
-      const ratio = Math.min(pageW / imgW, pageH / imgH);
-      const drawW = imgW * ratio;
-      const drawH = imgH * ratio;
-      const offsetX = (pageW - drawW) / 2;
+    // ── Convert canvas → A5 PDF ───────────────────────────────────────────
+    const { jsPDF } = window.jspdf;
+    const pdf    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+    const pageW  = pdf.internal.pageSize.getWidth();   // 148 mm
+    const pageH  = pdf.internal.pageSize.getHeight();  // 210 mm
+    const margin = 8; // mm on each side
 
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', offsetX, 8, drawW, drawH);
-      pdfBlob = pdf.output('blob');
-    } finally {
-      // Restore modal state regardless of success/failure
-      modalEl.style.display    = prevModalDisplay;
-      modalEl.style.visibility = prevModalVis;
-      modalEl.style.opacity    = prevModalOpacity;
-    }
+    const maxW   = pageW  - margin * 2;
+    const maxH   = pageH  - margin * 2;
+    const imgW   = canvas.width  / 2; // undo scale:2 for mm calculation
+    const imgH   = canvas.height / 2;
 
+    // Pixels → mm (96 dpi screen, 1 inch = 25.4 mm)
+    const pxToMm = 25.4 / 96;
+    let drawW = imgW * pxToMm;
+    let drawH = imgH * pxToMm;
+
+    // Scale down if it overflows the page
+    if (drawW > maxW) { const s = maxW / drawW; drawW *= s; drawH *= s; }
+    if (drawH > maxH) { const s = maxH / drawH; drawW *= s; drawH *= s; }
+
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, drawW, drawH);
+    const pdfBlob = pdf.output('blob');
     const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-    // ── Build WhatsApp message from custom template (or empty) ────────────
+    // ── Build WhatsApp message from custom template ───────────────────────
     const tpl = (st.wa_pdf_message || '').trim();
     let waMsg = '';
     if (tpl) {
@@ -5236,22 +5241,22 @@ async function sendRxWhatsApp(vid, phone, patientName) {
 
     const waURL = 'https://wa.me/' + waPhone + (waMsg ? '?text=' + encodeURIComponent(waMsg) : '');
 
-    // ── Try native Share API (mobile — PDF goes straight into WhatsApp) ───
+    // ── Try native Share API (mobile) — PDF attaches directly in WhatsApp ─
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
       try {
         await navigator.share({ files: [pdfFile], title: fileName, text: waMsg || undefined });
         toast(NOOR.lang === 'ar' ? 'تمت مشاركة الوصفة' : 'Rx shared successfully', 'success');
         return;
       } catch (shareErr) {
-        if (shareErr.name === 'AbortError') return; // user cancelled
-        // other error → fall through to download fallback
+        if (shareErr.name === 'AbortError') return; // user dismissed share sheet
+        // any other error → fall through to download fallback
       }
     }
 
-    // ── Fallback: download PDF + open WhatsApp chat ───────────────────────
+    // ── Desktop fallback: download PDF then open WhatsApp chat ────────────
     const blobURL = URL.createObjectURL(pdfBlob);
     const a = document.createElement('a');
-    a.href = blobURL;
+    a.href     = blobURL;
     a.download = fileName;
     document.body.appendChild(a);
     a.click();
@@ -5259,9 +5264,9 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     setTimeout(() => URL.revokeObjectURL(blobURL), 30000);
 
     window.open(waURL, '_blank');
-    toast(NOOR.lang === 'ar' ? 'تم تنزيل الوصفة وفتح واتساب' : 'Rx PDF saved & WhatsApp opened', 'success');
+    toast(NOOR.lang === 'ar' ? 'تم حفظ الوصفة وفتح واتساب' : 'Rx PDF saved & WhatsApp opened', 'success');
 
-  } catch(e) {
+  } catch (e) {
     toast('Error: ' + e.message, 'error');
   }
 }
