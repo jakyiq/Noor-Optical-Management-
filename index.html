@@ -7,7 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -53,7 +53,7 @@ html[data-rx-scheme="onyx"] {
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:16px}
-body{background:var(--cream);color:var(--ink);font-family:'Cairo','DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+body{background:var(--cream);color:var(--ink);font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
 #app,.main-content,.page-content{max-width:100%;overflow-x:hidden}
 html[dir=ltr] body{font-family:'DM Sans','Cairo',sans-serif}
 ::-webkit-scrollbar{width:6px;height:6px}
@@ -557,6 +557,62 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .rx-table td.eye-label{background:var(--burgundy-pale);text-align:center;font-size:.72rem;font-weight:700;color:var(--burgundy);white-space:nowrap;padding:8px 12px}
 .rx-input{width:100%;padding:6px 8px;border:none;background:transparent;font-family:'Figtree','DM Sans',sans-serif;font-size:.85rem;text-align:center;color:var(--ink);outline:none}
 .rx-input:focus{background:var(--cream);border-radius:4px}
+
+/* Mobile RX: stacked card layout per eye — no horizontal scroll */
+@media(max-width:600px){
+  .rx-table-wrap{overflow-x:visible}
+  .rx-table,
+  .rx-table thead,
+  .rx-table tbody,
+  .rx-table tr,
+  .rx-table th,
+  .rx-table td{ display:block; }
+  .rx-table thead{ display:none }
+  .rx-table tbody{ display:flex; flex-direction:column; gap:10px }
+  .rx-table tr{
+    background:var(--surface);
+    border:1px solid var(--cream-border);
+    border-radius:var(--radius-md);
+    padding:10px 12px 12px;
+    box-shadow:var(--shadow-sm);
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px 10px;
+  }
+  .rx-table td{ border:none; padding:0; }
+  .rx-table td.eye-label{
+    grid-column:1/-1;
+    text-align:start;
+    padding:0 0 8px;
+    border-bottom:1px solid var(--cream-border);
+    background:transparent;
+    font-size:.82rem;
+  }
+  /* Label each cell with its column name */
+  .rx-table td[data-col]::before{
+    content:attr(data-col);
+    display:block;
+    font-size:.6rem;
+    font-weight:700;
+    color:var(--ink-light);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:3px;
+  }
+  .rx-input{
+    text-align:start;
+    padding:8px 10px;
+    border:1.5px solid var(--cream-border);
+    border-radius:var(--radius-sm);
+    background:var(--cream);
+    font-size:1rem;
+    width:100%;
+  }
+  .rx-input:focus{ border-color:var(--burgundy); background:white; }
+  .rx-sign-wrap{ width:100%; }
+  .rx-sign-wrap .rx-input{ min-width:0; }
+  .rx-sign-btn{ height:40px; }
+}
 /* Sign toggle button — single button that flips positive ↔ negative */
 .rx-sign-wrap{display:flex;align-items:center;gap:0;position:relative}
 .rx-sign-wrap .rx-input{flex:1;min-width:0}
@@ -2332,41 +2388,41 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <tbody>
               <tr>
                 <td class="eye-label">OD (R)</td>
-                <td>
+                <td data-col="SPH">
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-od-sph" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-od-sph')" onblur="applyPendingSign('rx-od-sph')">
                     <button type="button" class="rx-sign-btn" id="rx-od-sph-sign" onclick="toggleRxSign('rx-od-sph')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td>
+                <td data-col="CYL">
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-od-cyl" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-od-cyl')" onblur="applyPendingSign('rx-od-cyl')">
                     <button type="button" class="rx-sign-btn" id="rx-od-cyl-sign" onclick="toggleRxSign('rx-od-cyl')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
-                <td><input class="rx-input" id="rx-od-add" type="number" step=".25" placeholder="0.00"></td>
-                <td><input class="rx-input" id="rx-od-va" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
-                <td><input class="rx-input" id="rx-od-bcva" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="AXIS"><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
+                <td data-col="ADD"><input class="rx-input" id="rx-od-add" type="number" step=".25" placeholder="0.00"></td>
+                <td data-col="VA"><input class="rx-input" id="rx-od-va" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="BCVA"><input class="rx-input" id="rx-od-bcva" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
               </tr>
               <tr>
                 <td class="eye-label">OS (L)</td>
-                <td>
+                <td data-col="SPH">
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-os-sph" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-os-sph')" onblur="applyPendingSign('rx-os-sph')">
                     <button type="button" class="rx-sign-btn" id="rx-os-sph-sign" onclick="toggleRxSign('rx-os-sph')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td>
+                <td data-col="CYL">
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-os-cyl" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-os-cyl')" onblur="applyPendingSign('rx-os-cyl')">
                     <button type="button" class="rx-sign-btn" id="rx-os-cyl-sign" onclick="toggleRxSign('rx-os-cyl')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
-                <td><input class="rx-input" id="rx-os-add" type="number" step=".25" placeholder="0.00"></td>
-                <td><input class="rx-input" id="rx-os-va" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
-                <td><input class="rx-input" id="rx-os-bcva" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="AXIS"><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
+                <td data-col="ADD"><input class="rx-input" id="rx-os-add" type="number" step=".25" placeholder="0.00"></td>
+                <td data-col="VA"><input class="rx-input" id="rx-os-va" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="BCVA"><input class="rx-input" id="rx-os-bcva" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
               </tr>
             </tbody>
           </table>
@@ -4880,18 +4936,22 @@ function _renderRxSlip(payload) {
       <th style="padding:4px 5px;text-align:center">AXIS</th>
       <th style="padding:4px 5px;text-align:center">ADD</th>
       <th style="padding:4px 5px;text-align:center">VA</th>
+      <th style="padding:4px 5px;text-align:center">BCVA</th>
     </tr></thead>
     <tbody>
       <tr style="background:var(--cream-bg)">
         <td style="padding:4px 5px;font-weight:700;font-size:.73rem;border:1px solid var(--cream-border)">OD (R)</td>
-        ${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
+        ${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va,v.od_bcva].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
       </tr>
       <tr>
         <td style="padding:4px 5px;font-weight:700;font-size:.73rem;border:1px solid var(--cream-border)">OS (L)</td>
-        ${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
+        ${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va,v.os_bcva].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
       </tr>
     </tbody>
   </table>
+
+  <!-- IPD -->
+  ${v.ipd != null ? `<div style="font-size:.76rem;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)"><span class="rx-slip-label">IPD</span> <strong style="font-family:'Figtree','DM Sans',sans-serif">${esc(v.ipd)} mm</strong></div>` : ''}
 
   <!-- LENS / FRAME -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:.76rem;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
@@ -4950,7 +5010,7 @@ function printRxSlip() {
   const printCSS = `
     :root{--burgundy:${sc.primary};--burgundy-pale:${sc.paper};--cream:${sc.paper};--cream-dark:${sc.paper};--cream-border:${sc.border};--cream-bg:${sc.paper};--ink:${sc.text};--ink-mid:${sc.text};--ink-light:#8a8a7a;--ink-dark:${sc.text};--surface:${sc.bg};--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{background:white;font-family:'Cairo','DM Sans',sans-serif;width:100%;height:auto;}
+    html,body{background:white;font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;width:100%;height:auto;}
     .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9pt;line-height:1.5;}
     .rx-slip-label{font-size:6.5pt;text-transform:uppercase;letter-spacing:.08em;color:${sc.text}99}
     .rx-slip-val{font-weight:600;font-size:9pt}
@@ -4972,7 +5032,7 @@ function printRxSlip() {
     '<title>' + docTitle + '</title>' +
     '<link rel="preconnect" href="https://fonts.googleapis.com">' +
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-    '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Amiri:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">' +
+    '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Amiri:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@300;400;600;700&display=swap" rel="stylesheet">' +
     '<style>' + printCSS + '</style>' +
     '</head>' +
     '<body onload="document.fonts.ready.then(function(){setTimeout(function(){window.print();},200)})">' + slipHTML + '</body>' +
@@ -5057,8 +5117,9 @@ async function sendRxWhatsApp(vid, phone, patientName) {
       `*المريض:* ${p.full_name || patientName || '—'}`,
       `*العمر:* ${fmtVal(p.age)}   *الجنس:* ${p.gender ? (NOOR.lang==='ar' ? (p.gender==='male'?'ذكر':'أنثى') : p.gender) : '—'}`,
       '',
-      `*OD (R):* SPH ${fmtVal(v.od_sphere)} | CYL ${fmtVal(v.od_cylinder)} | AXIS ${fmtVal(v.od_axis)}`,
-      `*OS (L):* SPH ${fmtVal(v.os_sphere)} | CYL ${fmtVal(v.os_cylinder)} | AXIS ${fmtVal(v.os_axis)}`,
+      `*OD (R):* SPH ${fmtVal(v.od_sphere)} | CYL ${fmtVal(v.od_cylinder)} | AXIS ${fmtVal(v.od_axis)} | VA ${fmtVal(v.od_va)} | BCVA ${fmtVal(v.od_bcva)}`,
+      `*OS (L):* SPH ${fmtVal(v.os_sphere)} | CYL ${fmtVal(v.os_cylinder)} | AXIS ${fmtVal(v.os_axis)} | VA ${fmtVal(v.os_va)} | BCVA ${fmtVal(v.os_bcva)}`,
+      ...(v.ipd ? [`*IPD:* ${fmtVal(v.ipd)} mm`] : []),
       '',
       `*العدسة:* ${lensDesc}`,
       `*الإطار:* ${frameDesc}`,
@@ -5120,8 +5181,8 @@ async function sendRxWhatsApp(vid, phone, patientName) {
       y += 2; hline(y, false); y += 5;
 
       // Rx table
-      const cols = [L, 38, 62, 86, 106, 122];
-      const headers = ['Eye','SPH','CYL','AXIS','ADD','VA'];
+      const cols = [L, 38, 62, 86, 106, 122, 132];
+      const headers = ['Eye','SPH','CYL','AXIS','ADD','VA','BCVA'];
       doc.setFillColor(107,26,42);
       doc.rect(L, y-4, R-L, 6, 'F');
       headers.forEach((h,i) => {
@@ -5130,15 +5191,15 @@ async function sendRxWhatsApp(vid, phone, patientName) {
       });
       y += 3;
 
-      const rxRow = (eye, s, c, a, add, va, bg) => {
+      const rxRow = (eye, s, c, a, add, va, bcva, bg) => {
         doc.setFillColor(...bg);
         doc.rect(L, y-3, R-L, 6, 'F');
         txt(eye, cols[0]+1, y, 8, 'bold', [107,26,42]);
-        [s,c,a,add,va].forEach((val,i) => txt(fmtVal(val), cols[i+1]+1, y, 8));
+        [s,c,a,add,va,bcva].forEach((val,i) => txt(fmtVal(val), cols[i+1]+1, y, 8));
         y += 6;
       };
-      rxRow('OD (R)', v.od_sphere, v.od_cylinder, v.od_axis, v.od_addition, v.od_va, [250,246,240]);
-      rxRow('OS (L)', v.os_sphere, v.os_cylinder, v.os_axis, v.os_addition, v.os_va, [245,240,235]);
+      rxRow('OD (R)', v.od_sphere, v.od_cylinder, v.od_axis, v.od_addition, v.od_va, v.od_bcva, [250,246,240]);
+      rxRow('OS (L)', v.os_sphere, v.os_cylinder, v.os_axis, v.os_addition, v.os_va, v.os_bcva, [245,240,235]);
 
       if (v.ipd) { y += 1; txt('IPD: ' + v.ipd + ' mm', L, y, 8, 'normal', [80,70,60]); y += 5; }
       else y += 3;
