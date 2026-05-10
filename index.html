@@ -531,7 +531,7 @@ tbody tr:hover{background:var(--cream)}
 .badge-burgundy{background:var(--burgundy-pale);color:var(--burgundy)}
 
 /* MODAL */
-.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;touch-action:none}
 .modal-overlay.show{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:min(700px,100%);position:relative;animation:modalIn .22s ease}
 @keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
@@ -1160,6 +1160,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 .more-menu-overlay{
   display:none;position:fixed;inset:0;z-index:210;
   background:rgba(26,20,16,.22);backdrop-filter:blur(2px);
+  touch-action:none;
 }
 .more-menu-overlay.show{display:block}
 .more-menu-sheet{
@@ -1172,6 +1173,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
   transform:translateY(calc(100% + var(--bottom-nav-h)));
   transition:transform .24s ease;
+  touch-action:none;
 }
 .more-menu-sheet.show{transform:translateY(0)}
 .more-tile{
@@ -2560,8 +2562,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         <div class="form-group"><label class="form-label" data-i18n="type">النوع</label><select class="form-select" id="fr-type"><option value="full_rim">Full Rim</option><option value="half_rim">Half Rim</option><option value="rimless">Rimless</option><option value="wrap">Wrap / Sport</option><option value="butterfly">Butterfly</option><option value="aviator">Aviator</option><option value="round">Round</option><option value="cat_eye">Cat Eye</option></select></div>
         <div class="form-group"><label class="form-label" data-i18n="material">المادة</label><select class="form-select" id="fr-material"><option value="acetate">Acetate</option><option value="metal">Metal</option><option value="titanium">Titanium</option><option value="tr90">TR90</option><option value="wood">Wood</option><option value="carbon_fiber">Carbon Fiber</option><option value="nylon">Nylon</option><option value="stainless_steel">Stainless Steel</option></select></div>
         <div class="form-group"><label class="form-label" data-i18n="color">اللون</label><input type="text" class="form-input" id="fr-color"></div>
-        <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><input type="number" class="form-input" id="fr-qty" min="0"></div>
-        <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><input type="number" class="form-input" id="fr-min" min="0" value="2"></div>
+        <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepQty('fr-qty',-1)">−</button><input type="number" class="form-input qty-input" id="fr-qty" min="0" value="0"><button type="button" class="qty-btn" onclick="stepQty('fr-qty',1)">+</button></div></div>
+        <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepQty('fr-min',-1)">−</button><input type="number" class="form-input qty-input" id="fr-min" min="0" value="2"><button type="button" class="qty-btn" onclick="stepQty('fr-min',1)">+</button></div></div>
         <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="fr-cost" min="0" step="1" inputmode="numeric"></div>
         <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="fr-sell" min="0" step="1" inputmode="numeric"></div>
       </div>
@@ -3234,6 +3236,13 @@ function toggleMoreMenu() {
   sheet.classList.toggle('show', open);
   overlay.classList.toggle('show', open);
   sheet.setAttribute('aria-hidden', open ? 'false' : 'true');
+  // Guard touch events once on first open
+  if (open && !sheet._touchGuarded) {
+    sheet.addEventListener('touchstart', e => e.stopPropagation(), {passive:false});
+    sheet.addEventListener('touchend',   e => e.stopPropagation(), {passive:false});
+    sheet.addEventListener('touchmove',  e => e.stopPropagation(), {passive:false});
+    sheet._touchGuarded = true;
+  }
 }
 
 function closeMoreMenu() {
@@ -3286,7 +3295,17 @@ function toast(msg, type='success', duration=3500) {
 }
 
 function openModal(id){
-  document.getElementById(id).classList.add('show');
+  closeMoreMenu();
+  const overlay = document.getElementById(id);
+  if (!overlay) return;
+  overlay.classList.add('show');
+  // Stop any touch/click on the overlay reaching the bottom-nav or page beneath
+  if (!overlay._touchGuarded) {
+    overlay.addEventListener('touchstart', e => e.stopPropagation(), {passive:false});
+    overlay.addEventListener('touchend',   e => e.stopPropagation(), {passive:false});
+    overlay.addEventListener('touchmove',  e => e.stopPropagation(), {passive:false});
+    overlay._touchGuarded = true;
+  }
   if (id === 'modal-patient') setTimeout(markPatientFormClean, 0);
 }
 function closeModal(id){
@@ -4476,7 +4495,8 @@ function duplicateLens(id) {
 function openAddLens() {
   NOOR.editingLensId = null;
   document.getElementById('modal-lens-title').textContent = t('addLens');
-  ['l-sph','l-cyl','l-qty','l-cost','l-sell'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['l-sph','l-cyl','l-cost','l-sell'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('l-qty').value='0';
   document.getElementById('l-min').value='2';
   openModal('modal-lens');
 }
@@ -4568,6 +4588,7 @@ function filterFrames() {
       <td class="td-actions-cell">
         <button class="btn btn-outline btn-sm" onclick="openRestockModal('frame','${escAttr(f.id)}')">${t('restock')}</button>
         <button class="btn btn-outline btn-sm" onclick="openEditFrame('${escAttr(f.id)}')">${t('edit')}</button>
+        <button class="btn btn-outline btn-sm" onclick="duplicateFrame('${escAttr(f.id)}')" title="${NOOR.lang==='ar'?'نسخ':'Duplicate'}" style="color:var(--ink-mid)">⧉</button>
         <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteFrame('${escAttr(f.id)}')">${t('delete')}</button>
       </td>
     </tr>`;
@@ -4577,7 +4598,8 @@ function filterFrames() {
 function openAddFrame() {
   NOOR.editingFrameId = null;
   document.getElementById('modal-frame-title').textContent = t('addFrame');
-  ['fr-brand','fr-color','fr-qty','fr-cost','fr-sell'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['fr-brand','fr-color','fr-cost','fr-sell'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('fr-qty').value='0';
   document.getElementById('fr-min').value='2';
   openModal('modal-frame');
 }
@@ -4586,6 +4608,21 @@ function openEditFrame(id) {
   const f = NOOR.frames.find(x=>x.id===id); if(!f)return;
   NOOR.editingFrameId = id;
   document.getElementById('modal-frame-title').textContent = t('edit');
+  document.getElementById('fr-brand').value    = f.brand||'';
+  document.getElementById('fr-type').value     = f.frame_type||'full_rim';
+  document.getElementById('fr-material').value = f.frame_material||'acetate';
+  document.getElementById('fr-color').value    = f.color||'';
+  document.getElementById('fr-qty').value      = f.quantity;
+  document.getElementById('fr-min').value      = f.min_stock;
+  document.getElementById('fr-cost').value     = f.cost_price;
+  document.getElementById('fr-sell').value     = f.sell_price;
+  openModal('modal-frame');
+}
+
+function duplicateFrame(id) {
+  const f = NOOR.frames.find(x=>x.id===id); if(!f)return;
+  NOOR.editingFrameId = null;
+  document.getElementById('modal-frame-title').textContent = (NOOR.lang==='ar' ? 'نسخ إطار' : 'Duplicate Frame');
   document.getElementById('fr-brand').value    = f.brand||'';
   document.getElementById('fr-type').value     = f.frame_type||'full_rim';
   document.getElementById('fr-material').value = f.frame_material||'acetate';
