@@ -1885,7 +1885,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <table>
             <thead><tr>
               <th data-i18n="brand">العلامة</th><th data-i18n="type">النوع</th><th data-i18n="material">المادة</th>
-              <th data-i18n="qty">الكمية</th><th data-i18n="status">الحالة</th>
+              <th data-i18n="color">اللون</th><th data-i18n="qty">الكمية</th><th data-i18n="status">الحالة</th>
               <th data-i18n="costPrice">التكلفة</th><th data-i18n="sellPrice">سعر البيع</th><th data-i18n="actions">إجراءات</th>
             </tr></thead>
             <tbody id="frames-tbody"></tbody>
@@ -4579,11 +4579,13 @@ function filterFrames() {
   tbody.innerHTML = list.map(f => {
     const st = f.quantity===0?['danger',t('out')]:f.quantity<=f.min_stock?['warning',t('low')]:['success',t('ok')];
     return `<tr>
-      <td class="td-name">${esc(f.brand)} · ${esc((f.frame_type||'').replace(/_/g,' '))}</td>
+      <td data-label="${t('brand')}">${esc(f.brand)}</td>
+      <td data-label="${t('type')}">${esc((f.frame_type||'').replace(/_/g,' '))}</td>
       <td data-label="${t('material')}">${esc(f.frame_material)}</td>
       <td data-label="${t('color')}">${esc(f.color)}</td>
       <td data-label="${t('qty')}" style="font-family:'Figtree','DM Sans',sans-serif">${f.quantity}</td>
       <td data-label="${t('status')}"><span class="badge badge-${st[0]}">${st[1]}</span></td>
+      <td data-label="${t('costPrice')}" style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(f.cost_price)}</td>
       <td data-label="${t('sellPrice')}" style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(f.sell_price)}</td>
       <td class="td-actions-cell">
         <button class="btn btn-outline btn-sm" onclick="openRestockModal('frame','${escAttr(f.id)}')">${t('restock')}</button>
