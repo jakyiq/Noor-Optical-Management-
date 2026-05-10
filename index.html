@@ -4443,10 +4443,8 @@ function filterLenses() {
       <td class="td-actions-cell">
         <button class="btn btn-outline btn-sm" onclick="openRestockModal('lens','${escAttr(l.id)}')">${t('restock')}</button>
         <button class="btn btn-outline btn-sm" onclick="openEditLens('${escAttr(l.id)}')">${t('edit')}</button>
-        <button class="btn btn-outline btn-sm" onclick="duplicateLens('${escAttr(l.id)}')" title="${NOOR.lang==='ar'?'نسخ':'Duplicate'}">⧉</button>
+        <button class="btn btn-outline btn-sm" onclick="duplicateLens('${escAttr(l.id)}')" title="${NOOR.lang==='ar'?'نسخ':'Duplicate'}">${NOOR.lang==='ar'?'نسخ':'Copy'}</button>
         <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteLens('${escAttr(l.id)}')">${t('delete')}</button>
-      </td>
-    </tr>`;
       </td>
     </tr>`;
   }).join('');
