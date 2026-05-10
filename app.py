@@ -890,21 +890,40 @@ def create_patient():
     body = request.get_json() or {}
 
     full_name = (body.get("full_name") or "").strip()
-    phone = (body.get("phone") or "").strip()
+    phone     = (body.get("phone") or "").strip()
     if not full_name:
         return err("full_name is required")
 
-    existing = db.table("patients").select("id,full_name,phone").eq("clinic_id", cid).execute()
-    for patient in (existing.data or []):
-        same_phone = phone and (patient.get("phone") or "").strip() == phone
-        same_name = (patient.get("full_name") or "").strip().lower() == full_name.lower()
-        if same_phone or same_name:
-            return err("A patient with the same name or phone already exists", 409)
+    # ── Idempotency: rapid double-submits return the existing record ──────────
+    # The client may pass a one-time key (UUID generated before the first POST).
+    # If we already created a patient with this key in this session, return it.
+    idem_key = (body.get("idempotency_key") or "").strip()
+    if idem_key:
+        idem_cache = session.get("_idem_patients") or {}
+        if idem_key in idem_cache:
+            existing_id = idem_cache[idem_key]
+            cached = db.table("patients").select("*").eq("id", existing_id).limit(1).execute()
+            if cached.data:
+                return ok(cached.data[0]), 200   # already created — same response, no duplicate
+
+    # ── Phone uniqueness check (per clinic only; duplicate names are allowed) ─
+    # A targeted query instead of fetching all patients avoids a full-table scan.
+    if phone:
+        conflict = (
+            db.table("patients")
+            .select("id")
+            .eq("clinic_id", cid)
+            .eq("phone", phone)
+            .limit(1)
+            .execute()
+        )
+        if conflict.data:
+            return err("يوجد مريض بنفس رقم الهاتف | A patient with this phone number already exists in this clinic", 409)
 
     row = {
         "clinic_id":  cid,
         "full_name":  full_name,
-        "phone":      phone,
+        "phone":      phone or None,
         "age":        body.get("age"),
         "gender":     body.get("gender"),
         "address":    body.get("address"),
@@ -913,8 +932,18 @@ def create_patient():
         "updated_at": now_iso(),
     }
 
-    res = db.table("patients").insert(row).execute()
+    res     = db.table("patients").insert(row).execute()
     patient = res.data[0]
+
+    # Store idempotency key in session so a retried request returns this record
+    if idem_key:
+        idem_cache = session.get("_idem_patients") or {}
+        idem_cache[idem_key] = patient["id"]
+        # Keep at most 20 keys to avoid bloating the session cookie
+        if len(idem_cache) > 20:
+            oldest = next(iter(idem_cache))
+            del idem_cache[oldest]
+        session["_idem_patients"] = idem_cache
 
     _write_audit(cid, uid, "create", "patient", patient["id"], new_value=patient)
     return ok(patient), 201
