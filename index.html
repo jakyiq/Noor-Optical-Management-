@@ -5157,10 +5157,6 @@ async function sendRxWhatsApp(vid, phone, patientName) {
   else if (digits.startsWith('0'))    digits = digits.slice(1);
   const waPhone = '964' + digits;
 
-  // ── Build WhatsApp URL BEFORE any async work so it can be opened
-  //    synchronously inside the user-gesture. We'll fill the message after.
-  // ────────────────────────────────────────────────────────────────────────
-
   try {
     const res = await get(`/api/visits/${vid}/print`);
     const payload = res.data || {};
@@ -5172,25 +5168,29 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const visitDate  = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
     const clinicName = cl.name || NOOR.clinicName || '';
 
-    // ── Render slip & build the download blob ────────────────────────────
+    // ── Render slip & grab the polished print blob ───────────────────────
     _renderRxSlip(payload);
-    // ── Generate PDF and download it ─────────────────────────
-    const safeName = (p.full_name || patientName || 'Patient').replace(/\s+/g, '_');
-    const docTitle = safeName + '_' + (v.visit_date || new Date().toISOString().slice(0,10));
-    const slipEl   = document.getElementById('rx-slip-content');
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
-    await new Promise(resolve => {
-      pdf.html(slipEl, {
-        callback: doc => { doc.save(docTitle + '.pdf'); resolve(); },
-        x: 9, y: 8,
-        width: 130,
-        windowWidth: slipEl.scrollWidth || 500,
-        html2canvas: { scale: 0.5, useCORS: true, logging: false }
-      });
-    });
+    const { blob: htmlBlob, docTitle } = _buildRxPrintBlob();
 
-    // ── Build WhatsApp message from custom template (or empty) ────────────
+    // ── Convert HTML blob to PDF blob via jsPDF + html2canvas ────────────
+    let shareBlob = htmlBlob;
+    let shareExt  = '.html';
+    try {
+      const { jsPDF } = window.jspdf;
+      const pdf    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+      const slipEl = document.getElementById('rx-slip-content');
+      await new Promise((resolve, reject) => {
+        pdf.html(slipEl, {
+          callback: doc => { shareBlob = doc.output('blob'); shareExt = '.pdf'; resolve(); },
+          x: 9, y: 8,
+          width: 130,
+          windowWidth: slipEl.scrollWidth || 500,
+          html2canvas: { scale: 0.5, useCORS: true, logging: false }
+        });
+      });
+    } catch(_) { /* fall back to HTML blob silently */ }
+
+    // ── Build WhatsApp message from custom template ───────────────────────
     const tpl = (st.wa_pdf_message || '').trim();
     let waMsg = '';
     if (tpl) {
@@ -5201,10 +5201,35 @@ async function sendRxWhatsApp(vid, phone, patientName) {
         .replace(/\{next_visit\}/g,   v.next_visit_date ? fmtDate(v.next_visit_date) : '');
     }
 
-    // ── Open WhatsApp ─────────────────────────────────────────────────────
-    const waURL = 'https://wa.me/' + waPhone + (waMsg ? '?text=' + encodeURIComponent(waMsg) : '');
-    window.open(waURL, '_blank');
+    const fileName = docTitle + shareExt;
+    const mimeType = shareExt === '.pdf' ? 'application/pdf' : 'text/html';
+    const waURL    = 'https://wa.me/' + waPhone + (waMsg ? '?text=' + encodeURIComponent(waMsg) : '');
 
+    // ── Try Web Share API — opens native share sheet with file attached ───
+    if (navigator.canShare && navigator.canShare({ files: [new File([shareBlob], fileName, { type: mimeType })] })) {
+      try {
+        await navigator.share({
+          files: [new File([shareBlob], fileName, { type: mimeType })],
+          text: waMsg || undefined,
+        });
+        toast(NOOR.lang === 'ar' ? 'تمت المشاركة بنجاح' : 'Shared successfully', 'success');
+        return;
+      } catch (shareErr) {
+        if (shareErr.name === 'AbortError') return; // user cancelled
+        // fall through to fallback
+      }
+    }
+
+    // ── Fallback: download file + open WhatsApp (desktop without Share API) ─
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(shareBlob);
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+
+    window.open(waURL, '_blank');
     toast(NOOR.lang === 'ar' ? 'تم تنزيل الوصفة وفتح واتساب' : 'Rx saved & WhatsApp opened', 'success');
 
   } catch(e) {
