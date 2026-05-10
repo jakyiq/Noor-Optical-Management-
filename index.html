@@ -5156,10 +5156,6 @@ async function sendRxWhatsApp(vid, phone, patientName) {
   else if (digits.startsWith('0'))    digits = digits.slice(1);
   const waPhone = '964' + digits;
 
-  // ── Build WhatsApp URL BEFORE any async work so it can be opened
-  //    synchronously inside the user-gesture. We'll fill the message after.
-  // ────────────────────────────────────────────────────────────────────────
-
   try {
     const res = await get(`/api/visits/${vid}/print`);
     const payload = res.data || {};
@@ -5171,18 +5167,12 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const visitDate  = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
     const clinicName = cl.name || NOOR.clinicName || '';
 
-    // ── Render slip & build the download blob ────────────────────────────
+    // ── Render slip so _rxPrintPatientName / _rxPrintVisitDate are set ───
     _renderRxSlip(payload);
-    const { blobURL, docTitle } = _buildRxPrintBlob();
 
-    // ── Download the file directly — no popup, never blocked ─────────────
-    const a = document.createElement('a');
-    a.href = blobURL;
-    a.download = docTitle + '.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobURL), 30000);
+    // ── Use the exact same print blob as the Print button —
+    //    this is the file that produces the clean PDF when printed.
+    printRxSlip();
 
     // ── Build WhatsApp message from custom template (or empty) ────────────
     const tpl = (st.wa_pdf_message || '').trim();
