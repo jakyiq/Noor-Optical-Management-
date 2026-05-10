@@ -5241,19 +5241,22 @@ async function sendRxWhatsApp(vid, phone, patientName) {
 
     const waURL = 'https://wa.me/' + waPhone + (waMsg ? '?text=' + encodeURIComponent(waMsg) : '');
 
-    // ── Try native Share API (mobile) — PDF attaches directly in WhatsApp ─
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+    // ── Native Share API — try unconditionally if share exists ────────────
+    // canShare() returns false on some Android versions even when sharing works.
+    // We try directly and catch errors instead of trusting canShare as gatekeeper.
+    if (navigator.share) {
+      toast('share API found — opening share sheet…', 'info');
       try {
         await navigator.share({ files: [pdfFile], title: fileName, text: waMsg || undefined });
         toast(NOOR.lang === 'ar' ? 'تمت مشاركة الوصفة' : 'Rx shared successfully', 'success');
         return;
       } catch (shareErr) {
-        if (shareErr.name === 'AbortError') return; // user dismissed share sheet
-        // any other error → fall through to download fallback
+        if (shareErr.name === 'AbortError') return; // user dismissed — do nothing
+        // NotAllowedError, TypeError, etc. → fall through to download fallback
       }
     }
 
-    // ── Desktop fallback: download PDF then open WhatsApp chat ────────────
+    // ── Fallback: download PDF then open WhatsApp chat ────────────────────
     const blobURL = URL.createObjectURL(pdfBlob);
     const a = document.createElement('a');
     a.href     = blobURL;
