@@ -20,7 +20,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from supabase import create_client, Client
 
-logging.basicConfig(level=logging.DEBUG)
+_log_level = logging.DEBUG if os.environ.get("FLASK_DEBUG") else logging.WARNING
+logging.basicConfig(level=_log_level)
 
 # ─────────────────────────────────────────────
 # APP INIT
@@ -50,8 +51,16 @@ limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["300 per hour"],
+    # IMPORTANT: set RATELIMIT_STORAGE_URI to a Redis/Upstash URL in production.
+    # "memory://" resets on every cold start — rate limits won't work on Vercel otherwise.
     storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
 )
+
+# The public URL of this app — used as redirect_to in Supabase auth emails
+# so confirmation / reset links point to your domain, not localhost.
+# Set this in Vercel: Project Settings → Environment Variables → SITE_URL
+# Example: https://noor.yourapp.com
+SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")
 
 # ─────────────────────────────────────────────
 # SUPABASE CLIENT  (service_role key — backend only)
@@ -358,7 +367,6 @@ def login():
 
         if not bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
             return err("Invalid credentials", 401)
-
     role = user["role"]
     clinic_id = user["clinic_id"]
 
@@ -376,7 +384,8 @@ def login():
             grace_warning = "License expired. Clinic is read-only until activated."
         license_summary = _safe_license_summary(license_state)
 
-    # Build session
+    # Build session — clear first to prevent session fixation
+    session.clear()
     session.permanent = True
     session["user_id"]   = user["id"]
     session["role"]      = role
@@ -454,15 +463,22 @@ def signup():
     phone = (body.get("phone") or "").strip()
     password = body.get("password") or ""
 
-    if not clinic_name or not owner_name or not email or len(password) < 6:
-        return err("clinic_name, owner_name, email, and a 6+ character password are required")
+    if not clinic_name or not owner_name or not email or len(password) < 8:
+        return err("clinic_name, owner_name, email, and an 8+ character password are required")
 
     existing = db.table("users").select("id").eq("email", email).limit(1).execute()
     if existing.data:
         return err("An account already exists for this email", 409)
 
     try:
-        auth_res = _auth_rest("signup", {"email": email, "password": password})
+        signup_payload = {"email": email, "password": password}
+        # redirect_to ensures the confirmation email links back to your live
+        # domain rather than localhost. The frontend handles the token at /?type=signup
+        if SITE_URL:
+            signup_payload["options"] = {
+                "emailRedirectTo": f"{SITE_URL}/?type=signup"
+            }
+        auth_res = _auth_rest("signup", signup_payload)
         auth_user_id = (auth_res.get("user") or {}).get("id")
     except Exception as exc:
         logging.exception("Supabase signup failed")
@@ -527,10 +543,129 @@ def reset_password():
     if not email:
         return err("email is required")
     try:
-        _auth_rest("recover", {"email": email})
+        recover_payload = {"email": email}
+        # redirect_to ensures the password-reset email links to your live domain.
+        # The frontend reads the access_token from the URL hash at /?type=recovery
+        # and calls /api/auth/set-new-password to complete the reset.
+        if SITE_URL:
+            recover_payload["options"] = {
+                "redirectTo": f"{SITE_URL}/?type=recovery"
+            }
+        _auth_rest("recover", recover_payload)
     except Exception:
         logging.exception("Supabase reset password failed")
     return ok({"message": "If the email exists, a reset link has been sent."})
+
+
+@app.route("/api/auth/confirm", methods=["POST"])
+@limiter.limit("10 per hour")
+def auth_confirm():
+    """
+    Exchange a Supabase email-confirmation token for a verified session.
+    Called by the frontend when the user lands on /?type=signup&token_hash=...
+    Body: { token_hash, type }   (type is usually "signup" or "email")
+    """
+    body = request.get_json() or {}
+    token_hash = (body.get("token_hash") or "").strip()
+    otp_type   = (body.get("type") or "signup").strip()
+
+    if not token_hash:
+        return err("token_hash is required", 400)
+
+    try:
+        res = _auth_rest_get_verify(token_hash, otp_type)
+    except Exception as exc:
+        logging.warning("auth_confirm failed: %s", exc)
+        return err("Invalid or expired confirmation link. Please sign up again.", 400)
+
+    user = res.get("user") or {}
+    email = user.get("email")
+    if not email:
+        return err("Could not verify email address.", 400)
+
+    # Mark the Supabase auth_user_id in our users table so email login works
+    auth_uid = user.get("id")
+    if auth_uid:
+        db.table("users") \
+          .update({"auth_user_id": auth_uid}) \
+          .eq("email", email) \
+          .execute()
+
+    return ok({"message": "Email confirmed. You can now sign in.", "email": email})
+
+
+def _auth_rest_get_verify(token_hash, otp_type):
+    """Call Supabase /auth/v1/verify to exchange a token_hash."""
+    url = f"{SUPABASE_URL.rstrip('/')}/auth/v1/verify"
+    payload = {"token_hash": token_hash, "type": otp_type}
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode("utf-8") or "{}")
+
+
+@app.route("/api/auth/set-new-password", methods=["POST"])
+@limiter.limit("10 per hour")
+def auth_set_new_password():
+    """
+    Complete a password-reset flow.
+    The frontend extracts access_token + refresh_token from the URL hash
+    (Supabase appends them after the user clicks the reset link), then
+    calls this endpoint to update the password.
+    Body: { access_token, refresh_token, password }
+    """
+    body = request.get_json() or {}
+    access_token  = (body.get("access_token") or "").strip()
+    refresh_token = (body.get("refresh_token") or "").strip()
+    new_password  = body.get("password") or ""
+
+    if not access_token or not refresh_token:
+        return err("access_token and refresh_token are required", 400)
+    if len(new_password) < 8:
+        return err("Password must be at least 8 characters", 400)
+
+    # Use the user's own access token to update their password
+    url = f"{SUPABASE_URL.rstrip('/')}/auth/v1/user"
+    payload = {"password": new_password}
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "apikey": SUPABASE_SERVICE_KEY,
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json",
+        },
+        method="PUT",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            user_data = json.loads(resp.read().decode("utf-8") or "{}")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="ignore")
+        logging.warning("set-new-password Supabase error: %s", detail)
+        return err("Reset link is invalid or expired. Please request a new one.", 400)
+
+    email = user_data.get("email")
+
+    # Also update the bcrypt hash in our own users table so username login stays in sync
+    if email:
+        hashed = bcrypt.hashpw(new_password.encode(), bcrypt.gensalt()).decode()
+        db.table("users").update({
+            "password_hash": hashed,
+            "must_change_password": False,
+        }).eq("email", email).execute()
+
+    return ok({"message": "Password updated. You can now sign in."})
 
 
 @app.route("/api/me", methods=["GET"])
@@ -584,8 +719,8 @@ def me():
 def change_password():
     body = request.get_json() or {}
     new_pw = body.get("password", "")
-    if len(new_pw) < 6:
-        return err("Password must be at least 6 characters")
+    if len(new_pw) < 8:
+        return err("Password must be at least 8 characters")
 
     hashed = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
     db.table("users").update({
@@ -1781,15 +1916,53 @@ BACKUP_TABLES = [
     "retail_sales", "operating_expenses", "clinic_settings",
 ]
 
+# Supabase Storage bucket — create this bucket in your Supabase dashboard
+# (Storage → New bucket, name: "clinic-backups", Private access)
+BACKUP_BUCKET = "clinic-backups"
+
+def _upload_backup_to_storage(cid: str, uid: str, payload: dict) -> str:
+    """
+    Upload the backup payload as a JSON file to Supabase Storage.
+    Returns the storage path (e.g. "abc123/2025-01-15T10:00:00Z_manual.json").
+    Falls back gracefully — if storage upload fails, returns "" so the
+    backup_log row is still written (just without a storage_path).
+    """
+    try:
+        ts = now_iso().replace(":", "-").replace(".", "-")
+        path = f"{cid}/{ts}_backup.json"
+        body = json.dumps(payload, default=str).encode("utf-8")
+
+        url = f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{BACKUP_BUCKET}/{path}"
+        req = urllib.request.Request(
+            url,
+            data=body,
+            headers={
+                "apikey":        SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Content-Type":  "application/json",
+                "x-upsert":      "true",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            resp.read()  # consume response
+        return path
+    except Exception:
+        logging.exception("Backup storage upload failed — metadata still saved")
+        return ""
+
 @app.route("/api/backup", methods=["POST"])
 @_auth(roles=["doctor", "super_admin"])
 def create_backup():
-    """Create a full clinic backup and record it in backup_log."""
+    """Create a full clinic backup.
+    The payload JSON is uploaded to Supabase Storage (bucket: clinic-backups).
+    Only metadata + row_counts are stored in backup_log — never the full blob.
+    """
     cid = session["clinic_id"]
     uid = session["user_id"]
     role = session.get("role")
 
-    # Trial clinics (7-day only) are not permitted to export their database as JSON.
+    # Trial clinics are not permitted to export their database as JSON.
     if role != "super_admin":
         lic_state = _license_state(cid)
         if lic_state.get("plan") == "trial":
@@ -1819,23 +1992,27 @@ def create_backup():
 
     row_counts = {k: len(v) for k, v in payload.items() if isinstance(v, list)}
 
+    # Upload payload to Supabase Storage (bucket: clinic-backups, private)
+    # Only row_counts metadata is stored in backup_log — never the full blob inline.
+    storage_path = _upload_backup_to_storage(cid, uid, payload)
+
     backup_res = db.table("backup_log").insert({
-        "clinic_id": cid,
-        "created_by": uid,
-        "kind": "manual",
-        "row_counts": row_counts,
-        "backup_data": payload,
-        "created_at": now_iso(),
+        "clinic_id":    cid,
+        "created_by":   uid,
+        "kind":         "manual",
+        "row_counts":   row_counts,
+        "storage_path": storage_path,   # path in Supabase Storage; backup_data col left NULL
+        "created_at":   now_iso(),
     }).execute()
 
     _write_audit(cid, uid, "create", "backup", None,
                  new_value={"row_counts": row_counts})
 
     return ok({
-        "backup_id": backup_res.data[0]["id"] if backup_res.data else None,
+        "backup_id":  backup_res.data[0]["id"] if backup_res.data else None,
         "created_at": payload["_meta"]["created_at"],
         "row_counts": row_counts,
-        "backup": payload,
+        "backup":     payload,          # still returned to caller for download
     })
 
 
@@ -2056,8 +2233,8 @@ def update_user(target_id):
         updates["is_active"] = bool(body["is_active"])
     if "password" in body:
         pw = body["password"]
-        if len(pw) < 6:
-            return err("Password too short")
+        if len(pw) < 8:
+            return err("Password too short (minimum 8 characters)")
         updates["password_hash"]        = bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
         updates["must_change_password"] = False
 
@@ -2078,8 +2255,8 @@ def reset_user_password(target_id):
     body = request.get_json() or {}
 
     new_pw = body.get("password", "")
-    if len(new_pw) < 6:
-        return err("Password must be at least 6 characters")
+    if len(new_pw) < 8:
+        return err("Password must be at least 8 characters")
 
     target = db.table("users").select("id,role,full_name").eq("clinic_id", cid).eq("id", target_id).single().execute()
     if not target.data:
@@ -2437,13 +2614,15 @@ def admin_backup_clinic(cid):
         payload[table] = query.execute().data or []
 
     row_counts = {k: len(v) for k, v in payload.items() if isinstance(v, list)}
+
+    storage_path = _upload_backup_to_storage(cid, session.get("user_id"), payload)
     backup_res = db.table("backup_log").insert({
-        "clinic_id": cid,
-        "created_by": session.get("user_id"),
-        "kind": "manual",
-        "row_counts": row_counts,
-        "backup_data": payload,
-        "created_at": now_iso(),
+        "clinic_id":    cid,
+        "created_by":   session.get("user_id"),
+        "kind":         "manual",
+        "row_counts":   row_counts,
+        "storage_path": storage_path,
+        "created_at":   now_iso(),
     }).execute()
 
     return ok({

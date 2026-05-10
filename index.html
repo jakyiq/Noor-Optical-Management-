@@ -6134,6 +6134,133 @@ function cancelRestore() {
   if (fileName)  fileName.textContent = '';
 }
 
+// ══════════════════════════════════════════════════════════
+// SUPABASE AUTH CALLBACK HANDLER
+// Runs on page load when Supabase redirects back from an
+// email confirmation or password-reset link.
+//
+// Supabase appends either:
+//   /?type=signup&token_hash=XXX          (email confirmation)
+//   /#access_token=XXX&type=recovery&...  (password reset — hash fragment)
+// ══════════════════════════════════════════════════════════
+(async function handleAuthCallback() {
+  // ── Parse both query string and hash fragment ──
+  const params      = new URLSearchParams(window.location.search);
+  const hashParams  = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+
+  const type        = params.get('type') || hashParams.get('type');
+  const tokenHash   = params.get('token_hash');
+  const accessToken = hashParams.get('access_token');
+  const refreshToken= hashParams.get('refresh_token');
+
+  if (!type) return; // Normal page load — nothing to do
+
+  // Clean the URL immediately so tokens don't linger in browser history
+  history.replaceState(null, '', '/');
+
+  // ── Email confirmation (type=signup or type=email) ──
+  if ((type === 'signup' || type === 'email') && tokenHash) {
+    try {
+      await post('/api/auth/confirm', { token_hash: tokenHash, type });
+      // Show login pane with a success message
+      switchAuthPane('signin');
+      const msgEl = document.getElementById('signin-success') || document.getElementById('signup-success');
+      if (msgEl) {
+        msgEl.querySelector('span') && (msgEl.querySelector('span').textContent =
+          NOOR.lang === 'ar'
+            ? 'تم تأكيد بريدك الإلكتروني. يمكنك تسجيل الدخول الآن.'
+            : 'Email confirmed! You can now sign in.');
+        msgEl.classList.add('show');
+      }
+    } catch (e) {
+      switchAuthPane('signin');
+      _authShowError('signin-error-text',
+        NOOR.lang === 'ar'
+          ? 'رابط التأكيد غير صالح أو منتهي الصلاحية. يرجى إنشاء حساب مجدداً.'
+          : 'Confirmation link is invalid or expired. Please sign up again.');
+    }
+    return;
+  }
+
+  // ── Password reset (type=recovery) ──
+  if (type === 'recovery' && accessToken) {
+    // Show the set-new-password modal/pane pre-filled with the tokens
+    _showResetPasswordModal(accessToken, refreshToken);
+    return;
+  }
+})();
+
+// Called when user submits the new password after clicking a reset email link
+async function submitNewPasswordFromLink(accessToken, refreshToken) {
+  const pw  = (document.getElementById('reset-link-pw')  || {}).value || '';
+  const pw2 = (document.getElementById('reset-link-pw2') || {}).value || '';
+  const errEl = document.getElementById('reset-link-error');
+
+  if (pw.length < 8) {
+    if (errEl) errEl.textContent = NOOR.lang === 'ar' ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل' : 'Password must be at least 8 characters';
+    return;
+  }
+  if (pw !== pw2) {
+    if (errEl) errEl.textContent = NOOR.lang === 'ar' ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match';
+    return;
+  }
+
+  const btn = document.getElementById('reset-link-btn');
+  if (btn) btn.disabled = true;
+  try {
+    await post('/api/auth/set-new-password', { access_token: accessToken, refresh_token: refreshToken, password: pw });
+    closeModal('modal-reset-link-pw');
+    switchAuthPane('signin');
+    const msgEl = document.getElementById('signin-success') || document.getElementById('reset-success');
+    if (msgEl) {
+      const span = msgEl.querySelector('span');
+      if (span) span.textContent = NOOR.lang === 'ar' ? 'تم تحديث كلمة المرور. سجّل الدخول الآن.' : 'Password updated. Sign in now.';
+      msgEl.classList.add('show');
+    }
+  } catch (e) {
+    if (errEl) errEl.textContent = e.message || (NOOR.lang === 'ar' ? 'حدث خطأ' : 'An error occurred');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function _showResetPasswordModal(accessToken, refreshToken) {
+  // Build a minimal modal on-the-fly if it doesn't already exist in the DOM
+  let modal = document.getElementById('modal-reset-link-pw');
+  if (!modal) {
+    const isAr = NOOR.lang === 'ar';
+    modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'modal-reset-link-pw';
+    modal.innerHTML = `
+      <div class="modal" style="width:min(420px,100%)">
+        <div class="modal-header">
+          <div class="modal-title">${isAr ? 'تعيين كلمة مرور جديدة' : 'Set New Password'}</div>
+        </div>
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+          <div class="form-group">
+            <label class="form-label">${isAr ? 'كلمة المرور الجديدة' : 'New Password'}</label>
+            <input type="password" class="form-input" id="reset-link-pw" autocomplete="new-password" placeholder="${isAr ? '٨ أحرف على الأقل' : 'Minimum 8 characters'}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">${isAr ? 'تأكيد كلمة المرور' : 'Confirm Password'}</label>
+            <input type="password" class="form-input" id="reset-link-pw2" autocomplete="new-password">
+          </div>
+          <div id="reset-link-error" style="color:var(--danger);font-size:.83rem;min-height:18px"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-burgundy" id="reset-link-btn"
+            onclick="submitNewPasswordFromLink('${accessToken}','${refreshToken || ''}')">
+            ${isAr ? 'حفظ كلمة المرور' : 'Save Password'}
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+  modal.classList.add('show');
+  setTimeout(() => document.getElementById('reset-link-pw')?.focus(), 100);
+}
+
 checkSession();  // restores session on page reload without showing login screen
 </script>
 
