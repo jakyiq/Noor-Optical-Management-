@@ -2024,24 +2024,17 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
               <button class="btn btn-burgundy" onclick="saveWATemplates()" data-i18n="save">حفظ</button>
             </div>
           </div>
-          <!-- PDF Share Message -->
+          <!-- Rx WhatsApp Message -->
           <div class="settings-section" style="margin-top:18px">
-            <div class="settings-section-header">رسالة مشاركة الوصفة (PDF)</div>
+            <div class="settings-section-header">رسالة واتساب مع الوصفة</div>
             <div class="settings-section-body">
               <p style="font-size:.82rem;color:var(--ink-light);margin-bottom:14px">
-                الرسالة التي تظهر عند مشاركة الوصفة عبر واتساب. اتركها فارغة أو أوقف تفعيل الخيار أدناه لإرسال الوصفة بدون أي رسالة.
-                <span style="display:block;margin-top:4px;font-size:.78rem">المتغيرات: {patient_name} {clinic_name} {date}</span>
+                الرسالة التي تُرسل مع الوصفة عبر واتساب. اتركها فارغة لفتح واتساب بدون أي نص.<br>
+                <span style="font-size:.78rem">المتغيرات: {patient_name} {clinic_name} {date} {next_visit}</span>
               </p>
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-                <label class="toggle-switch" style="margin:0"><input type="checkbox" id="wa-pdf-send-message" onchange="document.getElementById('wa-pdf-msg-wrap').style.opacity=this.checked?'1':'.4'"><span class="toggle-slider"></span></label>
-                <span style="font-size:.88rem">إرسال رسالة مع الوصفة</span>
-                <span style="font-size:.76rem;color:var(--ink-light)">(أوقف التفعيل لإرسال الوصفة فقط بدون رسالة)</span>
-              </div>
-              <div id="wa-pdf-msg-wrap" style="opacity:.4;transition:opacity .2s">
-                <div class="form-group" style="margin-bottom:16px">
-                  <label class="form-label">نص الرسالة</label>
-                  <textarea class="form-textarea" id="wa-pdf-message" rows="4" placeholder="مثال: وصفتك من عيادة {clinic_name} — {date}. نتمنى لك دوام الصحة والعافية، {patient_name}."></textarea>
-                </div>
+              <div class="form-group" style="margin-bottom:16px">
+                <label class="form-label">نص الرسالة</label>
+                <textarea class="form-textarea" id="wa-pdf-message" rows="5"></textarea>
               </div>
               <button class="btn btn-burgundy" onclick="saveWAPdfSettings()">حفظ</button>
             </div>
@@ -5139,36 +5132,33 @@ function _buildRxPrintBlob() {
 
 function printRxSlip() {
   const { blobURL, docTitle } = _buildRxPrintBlob();
-
-  // On desktop, open a sized popup; on mobile open a full new tab
-  var isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  var pw = isMobileDevice
-    ? window.open(blobURL, '_blank')
-    : window.open(blobURL, '_blank', 'width=650,height=850');
-
-  if (!pw) {
-    // Fallback if popup blocked: download the HTML file directly
-    var a = document.createElement('a');
-    a.href = blobURL;
-    a.download = docTitle + '.html';
-    a.click();
-  }
-
+  // Use a hidden <a> click — always works, never blocked by popup blockers.
+  // The HTML file auto-triggers window.print() on load.
+  const a = document.createElement('a');
+  a.href = blobURL;
+  a.download = docTitle + '.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   setTimeout(function() { URL.revokeObjectURL(blobURL); }, 30000);
 }
 
 // ══════════════════════════════════════════════════════════
-// SETTINGS
-// ══════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════
-// WHATSAPP RX PDF SEND
-// ══════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════
-// WHATSAPP RX PDF SEND  — pure jsPDF text, no html2canvas
+// WHATSAPP RX SEND
 // ══════════════════════════════════════════════════════════
 async function sendRxWhatsApp(vid, phone, patientName) {
   if (!phone) { toast('No phone number for this patient', 'error'); return; }
-  toast(NOOR.lang === 'ar' ? 'جارٍ تحضير الوصفة…' : 'Preparing Rx…', 'success');
+
+  // ── Normalise phone to Iraq +964 ────────────────────────────────────────
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('00964'))     digits = digits.slice(5);
+  else if (digits.startsWith('964'))  digits = digits.slice(3);
+  else if (digits.startsWith('0'))    digits = digits.slice(1);
+  const waPhone = '964' + digits;
+
+  // ── Build WhatsApp URL BEFORE any async work so it can be opened
+  //    synchronously inside the user-gesture. We'll fill the message after.
+  // ────────────────────────────────────────────────────────────────────────
 
   try {
     const res = await get(`/api/visits/${vid}/print`);
@@ -5178,84 +5168,38 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const cl = payload.clinic  || { name: NOOR.clinicName };
     const st = payload.settings || NOOR.settings || {};
 
-    // ── Iraq country code +964 ────────────────────────────────────────────
-    let digits = phone.replace(/\D/g, '');
-    if (digits.startsWith('00964'))     digits = digits.slice(5);
-    else if (digits.startsWith('964'))  digits = digits.slice(3);
-    else if (digits.startsWith('0'))    digits = digits.slice(1);
-    const waPhone = '964' + digits;
-    // ─────────────────────────────────────────────────────────────────────
-
     const visitDate  = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
-    const nextVisit  = v.next_visit_date ? fmtDate(v.next_visit_date) : '—';
-    const clinicName = cl.name || NOOR.clinicName || 'Noor Optical';
+    const clinicName = cl.name || NOOR.clinicName || '';
 
-    // ── Render the polished slip into the hidden modal content div ────────
-    // _renderRxSlip populates #rx-slip-content and sets window._rxPrint* vars
+    // ── Render slip & build the download blob ────────────────────────────
     _renderRxSlip(payload);
-
-    // ── Build the same high-quality print blob used by printRxSlip() ──────
     const { blobURL, docTitle } = _buildRxPrintBlob();
 
-    // ── WhatsApp companion message ────────────────────────────────────────
-    const lensDesc  = [v.lens_type, v.lens_material, v.lens_coating]
-      .filter(Boolean).map(x => String(x).replace(/_/g,' ')).join(' · ') || '—';
-    const frameDesc = [v.frame_brand, v.frame_type ? String(v.frame_type).replace(/_/g,' ') : '']
-      .filter(Boolean).join(' · ') || '—';
-    const fmtVal = x => (x === null || x === undefined || x === '') ? '—' : String(x);
+    // ── Download the file directly — no popup, never blocked ─────────────
+    const a = document.createElement('a');
+    a.href = blobURL;
+    a.download = docTitle + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobURL), 30000);
 
-    const waMsg = [
-      `*${clinicName}*`,
-      `📋 وصفة طبية — ${visitDate}`,
-      '',
-      `*المريض:* ${p.full_name || patientName || '—'}`,
-      `*العمر:* ${fmtVal(p.age)}   *الجنس:* ${p.gender ? (NOOR.lang==='ar' ? (p.gender==='male'?'ذكر':'أنثى') : p.gender) : '—'}`,
-      '',
-      `*OD (R):* SPH ${fmtVal(v.od_sphere)} | CYL ${fmtVal(v.od_cylinder)} | AXIS ${fmtVal(v.od_axis)} | VA ${fmtVal(v.od_va)} | BCVA ${fmtVal(v.od_bcva)}`,
-      `*OS (L):* SPH ${fmtVal(v.os_sphere)} | CYL ${fmtVal(v.os_cylinder)} | AXIS ${fmtVal(v.os_axis)} | VA ${fmtVal(v.os_va)} | BCVA ${fmtVal(v.os_bcva)}`,
-      ...(v.ipd ? [`*IPD:* ${fmtVal(v.ipd)} mm`] : []),
-      '',
-      `*العدسة:* ${lensDesc}`,
-      `*الإطار:* ${frameDesc}`,
-      ...(v.next_visit_date ? [`\n📅 *الموعد القادم:* ${nextVisit}`] : []),
-      ...(st.print_warning_text ? [`\n⚠️ ${st.print_warning_text}`] : []),
-      '',
-      `— ${clinicName}${cl.phone ? ' · ' + cl.phone : ''}`,
-    ].join('\n');
-
-    const waURL = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`;
-
-    // ── Download the polished print file so the user can attach it ────────
-    const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobileDevice) {
-      // On mobile: open the print page in a new tab (user can share/print from there)
-      const pw = window.open(blobURL, '_blank');
-      if (!pw) {
-        // Fallback: download the file
-        const a = document.createElement('a');
-        a.href = blobURL; a.download = docTitle + '.html'; a.click();
-      }
-    } else {
-      // On desktop: open the print popup (same as printRxSlip)
-      const pw = window.open(blobURL, '_blank', 'width=650,height=850');
-      if (!pw) {
-        const a = document.createElement('a');
-        a.href = blobURL; a.download = docTitle + '.html'; a.click();
-      }
+    // ── Build WhatsApp message from custom template (or empty) ────────────
+    const tpl = (st.wa_pdf_message || '').trim();
+    let waMsg = '';
+    if (tpl) {
+      waMsg = tpl
+        .replace(/\{patient_name\}/g, p.full_name || patientName || '')
+        .replace(/\{clinic_name\}/g,  clinicName)
+        .replace(/\{date\}/g,         visitDate)
+        .replace(/\{next_visit\}/g,   v.next_visit_date ? fmtDate(v.next_visit_date) : '');
     }
 
-    // ── Open WhatsApp after a short delay so the print window loads first ─
-    setTimeout(() => {
-      window.open(waURL, '_blank');
-      setTimeout(() => URL.revokeObjectURL(blobURL), 30000);
-    }, 800);
+    // ── Open WhatsApp ─────────────────────────────────────────────────────
+    const waURL = 'https://wa.me/' + waPhone + (waMsg ? '?text=' + encodeURIComponent(waMsg) : '');
+    window.open(waURL, '_blank');
 
-    toast(
-      NOOR.lang === 'ar'
-        ? 'تم فتح الوصفة — سيفتح واتساب تلقائياً'
-        : 'Rx opened — WhatsApp will open shortly',
-      'success'
-    );
+    toast(NOOR.lang === 'ar' ? 'تم تنزيل الوصفة وفتح واتساب' : 'Rx saved & WhatsApp opened', 'success');
 
   } catch(e) {
     toast('Error: ' + e.message, 'error');
@@ -5296,14 +5240,11 @@ async function renderSettings() {
       if (prev && img) { img.src = st.print_qr_data; prev.style.display='block'; }
     }
     _renderAssociateRows(JSON.parse(st.print_associates||'[]'));
-    document.getElementById('wa-tpl-1').value = st.wa_template_1||'';
-    document.getElementById('wa-tpl-2').value = st.wa_template_2||'';
-    document.getElementById('wa-tpl-3').value = st.wa_template_3||'';
+    document.getElementById('wa-tpl-1').value = st.wa_template_1 != null ? st.wa_template_1 : '';
+    document.getElementById('wa-tpl-2').value = st.wa_template_2 != null ? st.wa_template_2 : '';
+    document.getElementById('wa-tpl-3').value = st.wa_template_3 != null ? st.wa_template_3 : '';
     // PDF message settings
-    const pdfSend = !!st.wa_pdf_send_message;
-    document.getElementById('wa-pdf-send-message').checked = pdfSend;
-    document.getElementById('wa-pdf-msg-wrap').style.opacity = pdfSend ? '1' : '.4';
-    document.getElementById('wa-pdf-message').value = st.wa_pdf_message||'';
+    document.getElementById('wa-pdf-message').value = st.wa_pdf_message != null ? st.wa_pdf_message : '';
     document.getElementById('set-followup-months').value = st.followup_months_default||3;
     NOOR.waTemplates = { wa_template_1: st.wa_template_1||'', wa_template_2: st.wa_template_2||'', wa_template_3: st.wa_template_3||'' };
     renderPermissionsToggles();
@@ -5416,8 +5357,7 @@ async function saveWATemplates() {
 
 async function saveWAPdfSettings() {
   const body = {
-    wa_pdf_send_message: document.getElementById('wa-pdf-send-message').checked,
-    wa_pdf_message:      document.getElementById('wa-pdf-message').value,
+    wa_pdf_message: document.getElementById('wa-pdf-message').value,
   };
   try {
     await put('/api/settings', body);
