@@ -2693,9 +2693,6 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   </div>
 </div>
 
-<!-- Off-screen container for PDF rendering — always in DOM, never display:none -->
-<div id="rx-pdf-stage" aria-hidden="true" style="position:fixed;left:-9999px;top:0;width:500px;background:#fff;z-index:-1;pointer-events:none;"></div>
-
 <!-- Rx Slip Modal -->
 <div class="modal-overlay" id="modal-rx-slip">
   <div class="modal" style="width:min(540px,100%)">
@@ -5148,7 +5145,7 @@ function printRxSlip() {
 }
 
 // ══════════════════════════════════════════════════════════
-// WHATSAPP RX SEND  — generates a real PDF and shares it
+// WHATSAPP RX SEND
 // ══════════════════════════════════════════════════════════
 async function sendRxWhatsApp(vid, phone, patientName) {
   if (!phone) { toast('No phone number for this patient', 'error'); return; }
@@ -5160,7 +5157,9 @@ async function sendRxWhatsApp(vid, phone, patientName) {
   else if (digits.startsWith('0'))    digits = digits.slice(1);
   const waPhone = '964' + digits;
 
-  toast(NOOR.lang === 'ar' ? 'جارٍ إنشاء الوصفة…' : 'Generating Rx…', 'info');
+  // ── Build WhatsApp URL BEFORE any async work so it can be opened
+  //    synchronously inside the user-gesture. We'll fill the message after.
+  // ────────────────────────────────────────────────────────────────────────
 
   try {
     const res = await get(`/api/visits/${vid}/print`);
@@ -5173,62 +5172,25 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const visitDate  = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
     const clinicName = cl.name || NOOR.clinicName || '';
 
-    // ── Render slip into the always-visible off-screen stage ─────────────
-    // We can't use the modal element directly because display:none means
-    // html2canvas gets zero dimensions. The stage div is always rendered.
+    // ── Render slip & build the download blob ────────────────────────────
     _renderRxSlip(payload);
-
-    const safeName = (window._rxPrintPatientName || '').replace(/\s+/g, '_') || 'Patient';
-    const rawDate  = window._rxPrintVisitDate || new Date().toISOString().slice(0, 10);
-    const fileName = safeName + '_' + rawDate + '.pdf';
-
-    // Clone the rendered slip into the off-screen stage so html2canvas
-    // sees a real laid-out element with known width (500 px).
-    const stage   = document.getElementById('rx-pdf-stage');
-    const slipSrc = document.getElementById('rx-slip-content');
-    stage.innerHTML = slipSrc.innerHTML;
-
-    // Wait one frame so the browser paints the stage before we screenshot it
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-    const canvas = await html2canvas(stage, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      width:  stage.scrollWidth,
-      height: stage.scrollHeight,
+    // ── Generate PDF and download it ─────────────────────────
+    const safeName = (p.full_name || patientName || 'Patient').replace(/\s+/g, '_');
+    const docTitle = safeName + '_' + (v.visit_date || new Date().toISOString().slice(0,10));
+    const slipEl   = document.getElementById('rx-slip-content');
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+    await new Promise(resolve => {
+      pdf.html(slipEl, {
+        callback: doc => { doc.save(docTitle + '.pdf'); resolve(); },
+        x: 9, y: 8,
+        width: 130,
+        windowWidth: slipEl.scrollWidth || 500,
+        html2canvas: { scale: 0.5, useCORS: true, logging: false }
+      });
     });
 
-    stage.innerHTML = ''; // clean up
-
-    // ── Convert canvas → A5 PDF ───────────────────────────────────────────
-    const { jsPDF } = window.jspdf;
-    const pdf    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
-    const pageW  = pdf.internal.pageSize.getWidth();   // 148 mm
-    const pageH  = pdf.internal.pageSize.getHeight();  // 210 mm
-    const margin = 8; // mm on each side
-
-    const maxW   = pageW  - margin * 2;
-    const maxH   = pageH  - margin * 2;
-    const imgW   = canvas.width  / 2; // undo scale:2 for mm calculation
-    const imgH   = canvas.height / 2;
-
-    // Pixels → mm (96 dpi screen, 1 inch = 25.4 mm)
-    const pxToMm = 25.4 / 96;
-    let drawW = imgW * pxToMm;
-    let drawH = imgH * pxToMm;
-
-    // Scale down if it overflows the page
-    if (drawW > maxW) { const s = maxW / drawW; drawW *= s; drawH *= s; }
-    if (drawH > maxH) { const s = maxH / drawH; drawW *= s; drawH *= s; }
-
-    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, drawW, drawH);
-    const pdfBlob = pdf.output('blob');
-    const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-    // ── Build WhatsApp message from custom template ───────────────────────
+    // ── Build WhatsApp message from custom template (or empty) ────────────
     const tpl = (st.wa_pdf_message || '').trim();
     let waMsg = '';
     if (tpl) {
@@ -5239,37 +5201,13 @@ async function sendRxWhatsApp(vid, phone, patientName) {
         .replace(/\{next_visit\}/g,   v.next_visit_date ? fmtDate(v.next_visit_date) : '');
     }
 
+    // ── Open WhatsApp ─────────────────────────────────────────────────────
     const waURL = 'https://wa.me/' + waPhone + (waMsg ? '?text=' + encodeURIComponent(waMsg) : '');
-
-    // ── Native Share API — try unconditionally if share exists ────────────
-    // canShare() returns false on some Android versions even when sharing works.
-    // We try directly and catch errors instead of trusting canShare as gatekeeper.
-    if (navigator.share) {
-      toast('share API found — opening share sheet…', 'info');
-      try {
-        await navigator.share({ files: [pdfFile], title: fileName, text: waMsg || undefined });
-        toast(NOOR.lang === 'ar' ? 'تمت مشاركة الوصفة' : 'Rx shared successfully', 'success');
-        return;
-      } catch (shareErr) {
-        if (shareErr.name === 'AbortError') return; // user dismissed — do nothing
-        // NotAllowedError, TypeError, etc. → fall through to download fallback
-      }
-    }
-
-    // ── Fallback: download PDF then open WhatsApp chat ────────────────────
-    const blobURL = URL.createObjectURL(pdfBlob);
-    const a = document.createElement('a');
-    a.href     = blobURL;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobURL), 30000);
-
     window.open(waURL, '_blank');
-    toast(NOOR.lang === 'ar' ? 'تم حفظ الوصفة وفتح واتساب' : 'Rx PDF saved & WhatsApp opened', 'success');
 
-  } catch (e) {
+    toast(NOOR.lang === 'ar' ? 'تم تنزيل الوصفة وفتح واتساب' : 'Rx saved & WhatsApp opened', 'success');
+
+  } catch(e) {
     toast('Error: ' + e.message, 'error');
   }
 }
