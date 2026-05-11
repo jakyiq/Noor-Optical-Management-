@@ -7,7 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -52,8 +52,14 @@ html[data-rx-scheme="onyx"] {
   --rx-primary:#111111;--rx-accent:#888888;--rx-bg:#ffffff;--rx-paper:#f2f2f2;--rx-border:#d0d0d0;--rx-text:#111111;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:16px}
-body{background:var(--cream);color:var(--ink);font-family:'Cairo','DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+/* ── Qty/SPH/CYL stepper ── */
+.qty-stepper{display:flex;align-items:stretch;border:1.5px solid var(--cream-border);border-radius:var(--radius-sm);overflow:hidden;background:var(--surface)}
+.qty-stepper .qty-input{border:none!important;border-radius:0!important;text-align:center;flex:1;min-width:0;box-shadow:none!important;padding:10px 4px;font-family:'Figtree','DM Sans',sans-serif}
+.qty-stepper .qty-btn{flex-shrink:0;width:36px;background:var(--cream);border:none;font-size:1.15rem;font-weight:600;color:var(--ink-mid);cursor:pointer;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center}
+.qty-stepper .qty-btn:hover{background:var(--cream-dark);color:var(--burgundy)}
+.qty-stepper .qty-btn:first-child{border-inline-end:1.5px solid var(--cream-border)}
+.qty-stepper .qty-btn:last-child{border-inline-start:1.5px solid var(--cream-border)}
+body{background:var(--cream);color:var(--ink);font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
 #app,.main-content,.page-content{max-width:100%;overflow-x:hidden}
 html[dir=ltr] body{font-family:'DM Sans','Cairo',sans-serif}
 ::-webkit-scrollbar{width:6px;height:6px}
@@ -374,7 +380,8 @@ html[data-theme="amber"] {
 #app.ready{display:flex}
 
 /* SIDEBAR */
-.sidebar{width:var(--sidebar-w);background:var(--burgundy);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;inset-inline-start:0;z-index:100;overflow-y:auto;transition:transform .3s ease}
+.sidebar{width:var(--sidebar-w);background:var(--burgundy);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;inset-inline-start:0;z-index:100;overflow-y:auto;transition:transform .3s ease;scrollbar-width:none}
+.sidebar::-webkit-scrollbar{display:none}
 .sidebar-header{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
 .sidebar-brand{display:flex;align-items:center;gap:12px}
 .brand-icon{width:40px;height:40px;background:rgba(255,255,255,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -524,7 +531,7 @@ tbody tr:hover{background:var(--cream)}
 .badge-burgundy{background:var(--burgundy-pale);color:var(--burgundy)}
 
 /* MODAL */
-.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;touch-action:none}
 .modal-overlay.show{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:min(700px,100%);position:relative;animation:modalIn .22s ease}
 @keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
@@ -557,6 +564,62 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .rx-table td.eye-label{background:var(--burgundy-pale);text-align:center;font-size:.72rem;font-weight:700;color:var(--burgundy);white-space:nowrap;padding:8px 12px}
 .rx-input{width:100%;padding:6px 8px;border:none;background:transparent;font-family:'Figtree','DM Sans',sans-serif;font-size:.85rem;text-align:center;color:var(--ink);outline:none}
 .rx-input:focus{background:var(--cream);border-radius:4px}
+
+/* Mobile RX: stacked card layout per eye — no horizontal scroll */
+@media(max-width:600px){
+  .rx-table-wrap{overflow-x:visible}
+  .rx-table,
+  .rx-table thead,
+  .rx-table tbody,
+  .rx-table tr,
+  .rx-table th,
+  .rx-table td{ display:block; }
+  .rx-table thead{ display:none }
+  .rx-table tbody{ display:flex; flex-direction:column; gap:10px }
+  .rx-table tr{
+    background:var(--surface);
+    border:1px solid var(--cream-border);
+    border-radius:var(--radius-md);
+    padding:10px 12px 12px;
+    box-shadow:var(--shadow-sm);
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px 10px;
+  }
+  .rx-table td{ border:none; padding:0; }
+  .rx-table td.eye-label{
+    grid-column:1/-1;
+    text-align:start;
+    padding:0 0 8px;
+    border-bottom:1px solid var(--cream-border);
+    background:transparent;
+    font-size:.82rem;
+  }
+  /* Label each cell with its column name */
+  .rx-table td[data-col]::before{
+    content:attr(data-col);
+    display:block;
+    font-size:.6rem;
+    font-weight:700;
+    color:var(--ink-light);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-bottom:3px;
+  }
+  .rx-input{
+    text-align:start;
+    padding:8px 10px;
+    border:1.5px solid var(--cream-border);
+    border-radius:var(--radius-sm);
+    background:var(--cream);
+    font-size:1rem;
+    width:100%;
+  }
+  .rx-input:focus{ border-color:var(--burgundy); background:white; }
+  .rx-sign-wrap{ width:100%; }
+  .rx-sign-wrap .rx-input{ min-width:0; }
+  .rx-sign-btn{ height:40px; }
+}
 /* Sign toggle button — single button that flips positive ↔ negative */
 .rx-sign-wrap{display:flex;align-items:center;gap:0;position:relative}
 .rx-sign-wrap .rx-input{flex:1;min-width:0}
@@ -1097,6 +1160,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 .more-menu-overlay{
   display:none;position:fixed;inset:0;z-index:210;
   background:rgba(26,20,16,.22);backdrop-filter:blur(2px);
+  touch-action:none;
 }
 .more-menu-overlay.show{display:block}
 .more-menu-sheet{
@@ -1109,6 +1173,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
   transform:translateY(calc(100% + var(--bottom-nav-h)));
   transition:transform .24s ease;
+  touch-action:none;
 }
 .more-menu-sheet.show{transform:translateY(0)}
 .more-tile{
@@ -1141,7 +1206,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   body.printing-rx #rx-print-mount .rx-slip{
     border:none!important;box-shadow:none!important;
     padding:0!important;margin:0!important;
-    width:100%!important;font-size:9pt!important;line-height:1.5!important;
+    width:100%!important;font-size:9.4pt!important;line-height:1.5!important;
   }
   body.printing-rx #rx-print-mount table{border-collapse:collapse!important;width:100%!important;font-size:8.5pt!important}
   body.printing-rx #rx-print-mount th,
@@ -1444,7 +1509,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
     <div class="sidebar-header">
       <div class="sidebar-brand">
         <div class="brand-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="white" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="white"/></svg></div>
-        <div><div class="brand-name" data-i18n="brand">نور</div><div class="brand-tagline" data-i18n="brandTagline">Optical Clinic SaaS</div></div>
+        <div><div class="brand-name">Noor OMS</div><div class="brand-tagline">Optical Management System</div></div>
       </div>
     </div>
     <div class="sidebar-clinic">
@@ -1761,7 +1826,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <table>
             <thead><tr>
               <th data-i18n="type">النوع</th><th data-i18n="material">المادة</th><th data-i18n="coating">الطلاء</th>
-              <th>SPH</th><th>CYL</th><th data-i18n="qty">الكمية</th><th data-i18n="minStock">الحد الأدنى</th>
+              <th>SPH</th><th>CYL</th><th data-i18n="qty">الكمية</th>
               <th data-i18n="status">الحالة</th><th data-i18n="sellPrice">سعر البيع</th><th data-i18n="actions">إجراءات</th>
             </tr></thead>
             <tbody id="lenses-tbody"></tbody>
@@ -1820,7 +1885,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <table>
             <thead><tr>
               <th data-i18n="brand">العلامة</th><th data-i18n="type">النوع</th><th data-i18n="material">المادة</th>
-              <th data-i18n="qty">الكمية</th><th data-i18n="status">الحالة</th>
+              <th data-i18n="color">اللون</th><th data-i18n="qty">الكمية</th><th data-i18n="status">الحالة</th>
               <th data-i18n="costPrice">التكلفة</th><th data-i18n="sellPrice">سعر البيع</th><th data-i18n="actions">إجراءات</th>
             </tr></thead>
             <tbody id="frames-tbody"></tbody>
@@ -1957,6 +2022,28 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
               <div class="form-group" style="margin-bottom:14px"><label class="form-label" data-i18n="template2">قالب 2</label><textarea class="form-textarea" id="wa-tpl-2" rows="4"></textarea></div>
               <div class="form-group" style="margin-bottom:14px"><label class="form-label" data-i18n="template3">قالب 3</label><textarea class="form-textarea" id="wa-tpl-3" rows="4"></textarea></div>
               <button class="btn btn-burgundy" onclick="saveWATemplates()" data-i18n="save">حفظ</button>
+            </div>
+          </div>
+          <!-- PDF Share Message -->
+          <div class="settings-section" style="margin-top:18px">
+            <div class="settings-section-header">رسالة مشاركة الوصفة (PDF)</div>
+            <div class="settings-section-body">
+              <p style="font-size:.82rem;color:var(--ink-light);margin-bottom:14px">
+                الرسالة التي تظهر عند مشاركة الوصفة عبر واتساب. اتركها فارغة أو أوقف تفعيل الخيار أدناه لإرسال الوصفة بدون أي رسالة.
+                <span style="display:block;margin-top:4px;font-size:.78rem">المتغيرات: {patient_name} {clinic_name} {date}</span>
+              </p>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                <label class="toggle-switch" style="margin:0"><input type="checkbox" id="wa-pdf-send-message" onchange="document.getElementById('wa-pdf-msg-wrap').style.opacity=this.checked?'1':'.4'"><span class="toggle-slider"></span></label>
+                <span style="font-size:.88rem">إرسال رسالة مع الوصفة</span>
+                <span style="font-size:.76rem;color:var(--ink-light)">(أوقف التفعيل لإرسال الوصفة فقط بدون رسالة)</span>
+              </div>
+              <div id="wa-pdf-msg-wrap" style="opacity:.4;transition:opacity .2s">
+                <div class="form-group" style="margin-bottom:16px">
+                  <label class="form-label">نص الرسالة</label>
+                  <textarea class="form-textarea" id="wa-pdf-message" rows="4" placeholder="مثال: وصفتك من عيادة {clinic_name} — {date}. نتمنى لك دوام الصحة والعافية، {patient_name}."></textarea>
+                </div>
+              </div>
+              <button class="btn btn-burgundy" onclick="saveWAPdfSettings()">حفظ</button>
             </div>
           </div>
         </div>
@@ -2332,41 +2419,41 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <tbody>
               <tr>
                 <td class="eye-label">OD (R)</td>
-                <td>
+                <td data-col="SPH">
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-od-sph" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-od-sph')" onblur="applyPendingSign('rx-od-sph')">
                     <button type="button" class="rx-sign-btn" id="rx-od-sph-sign" onclick="toggleRxSign('rx-od-sph')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td>
+                <td data-col="CYL">
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-od-cyl" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-od-cyl')" onblur="applyPendingSign('rx-od-cyl')">
                     <button type="button" class="rx-sign-btn" id="rx-od-cyl-sign" onclick="toggleRxSign('rx-od-cyl')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
-                <td><input class="rx-input" id="rx-od-add" type="number" step=".25" placeholder="0.00"></td>
-                <td><input class="rx-input" id="rx-od-va" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
-                <td><input class="rx-input" id="rx-od-bcva" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="AXIS"><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
+                <td data-col="ADD"><input class="rx-input" id="rx-od-add" type="number" step=".25" placeholder="0.00"></td>
+                <td data-col="VA"><input class="rx-input" id="rx-od-va" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="BCVA"><input class="rx-input" id="rx-od-bcva" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
               </tr>
               <tr>
                 <td class="eye-label">OS (L)</td>
-                <td>
+                <td data-col="SPH">
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-os-sph" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-os-sph')" onblur="applyPendingSign('rx-os-sph')">
                     <button type="button" class="rx-sign-btn" id="rx-os-sph-sign" onclick="toggleRxSign('rx-os-sph')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td>
+                <td data-col="CYL">
                   <div class="rx-sign-wrap">
                     <input class="rx-input" id="rx-os-cyl" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-os-cyl')" onblur="applyPendingSign('rx-os-cyl')">
                     <button type="button" class="rx-sign-btn" id="rx-os-cyl-sign" onclick="toggleRxSign('rx-os-cyl')" tabindex="-1" title="Toggle sign"></button>
                   </div>
                 </td>
-                <td><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
-                <td><input class="rx-input" id="rx-os-add" type="number" step=".25" placeholder="0.00"></td>
-                <td><input class="rx-input" id="rx-os-va" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
-                <td><input class="rx-input" id="rx-os-bcva" type="text" placeholder="6/6" inputmode="numeric" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="AXIS"><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
+                <td data-col="ADD"><input class="rx-input" id="rx-os-add" type="number" step=".25" placeholder="0.00"></td>
+                <td data-col="VA"><input class="rx-input" id="rx-os-va" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="BCVA"><input class="rx-input" id="rx-os-bcva" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
               </tr>
             </tbody>
           </table>
@@ -2452,8 +2539,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
       <div class="form-grid">
         <div class="form-group"><label class="form-label">النوع</label><select class="form-select" id="l-type"><option value="single_vision">Single Vision</option><option value="bifocal">Bifocal</option><option value="trifocal">Trifocal</option><option value="progressive">Progressive</option><option value="reading">Reading</option><option value="plano">Plano</option><option value="prism">Prism</option><option value="occupational">Occupational</option></select></div>
         <div class="form-group"><label class="form-label">المادة</label><select class="form-select" id="l-material"><option value="plastic">Plastic (CR-39)</option><option value="polycarbonate">Polycarbonate</option><option value="high_index_16">High-Index 1.6</option><option value="high_index_167">High-Index 1.67</option><option value="high_index_174">High-Index 1.74</option><option value="trivex">Trivex</option><option value="glass">Glass</option><option value="contact">Contact</option></select></div>
-        <div class="form-group"><label class="form-label">SPH</label><input type="number" class="form-input" id="l-sph" step=".25"></div>
-        <div class="form-group"><label class="form-label">CYL</label><input type="number" class="form-input" id="l-cyl" step=".25"></div>
+        <div class="form-group"><label class="form-label">SPH</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepSph('l-sph',-0.25)">−</button><input type="number" class="form-input qty-input" id="l-sph" step=".25"><button type="button" class="qty-btn" onclick="stepSph('l-sph',0.25)">+</button></div></div>
+        <div class="form-group"><label class="form-label">CYL</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepSph('l-cyl',-0.25)">−</button><input type="number" class="form-input qty-input" id="l-cyl" step=".25"><button type="button" class="qty-btn" onclick="stepSph('l-cyl',0.25)">+</button></div></div>
         <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><input type="number" class="form-input" id="l-qty" min="0"></div>
         <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><input type="number" class="form-input" id="l-min" min="0" value="2"></div>
         <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="l-cost" min="0" step="1" inputmode="numeric"></div>
@@ -2475,8 +2562,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
         <div class="form-group"><label class="form-label" data-i18n="type">النوع</label><select class="form-select" id="fr-type"><option value="full_rim">Full Rim</option><option value="half_rim">Half Rim</option><option value="rimless">Rimless</option><option value="wrap">Wrap / Sport</option><option value="butterfly">Butterfly</option><option value="aviator">Aviator</option><option value="round">Round</option><option value="cat_eye">Cat Eye</option></select></div>
         <div class="form-group"><label class="form-label" data-i18n="material">المادة</label><select class="form-select" id="fr-material"><option value="acetate">Acetate</option><option value="metal">Metal</option><option value="titanium">Titanium</option><option value="tr90">TR90</option><option value="wood">Wood</option><option value="carbon_fiber">Carbon Fiber</option><option value="nylon">Nylon</option><option value="stainless_steel">Stainless Steel</option></select></div>
         <div class="form-group"><label class="form-label" data-i18n="color">اللون</label><input type="text" class="form-input" id="fr-color"></div>
-        <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><input type="number" class="form-input" id="fr-qty" min="0"></div>
-        <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><input type="number" class="form-input" id="fr-min" min="0" value="2"></div>
+        <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepQty('fr-qty',-1)">−</button><input type="number" class="form-input qty-input" id="fr-qty" min="0" value="0"><button type="button" class="qty-btn" onclick="stepQty('fr-qty',1)">+</button></div></div>
+        <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepQty('fr-min',-1)">−</button><input type="number" class="form-input qty-input" id="fr-min" min="0" value="2"><button type="button" class="qty-btn" onclick="stepQty('fr-min',1)">+</button></div></div>
         <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="fr-cost" min="0" step="1" inputmode="numeric"></div>
         <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="fr-sell" min="0" step="1" inputmode="numeric"></div>
       </div>
@@ -3149,6 +3236,13 @@ function toggleMoreMenu() {
   sheet.classList.toggle('show', open);
   overlay.classList.toggle('show', open);
   sheet.setAttribute('aria-hidden', open ? 'false' : 'true');
+  // Guard touch events once on first open
+  if (open && !sheet._touchGuarded) {
+    sheet.addEventListener('touchstart', e => e.stopPropagation(), {passive:false});
+    sheet.addEventListener('touchend',   e => e.stopPropagation(), {passive:false});
+    sheet.addEventListener('touchmove',  e => e.stopPropagation(), {passive:false});
+    sheet._touchGuarded = true;
+  }
 }
 
 function closeMoreMenu() {
@@ -3201,7 +3295,17 @@ function toast(msg, type='success', duration=3500) {
 }
 
 function openModal(id){
-  document.getElementById(id).classList.add('show');
+  closeMoreMenu();
+  const overlay = document.getElementById(id);
+  if (!overlay) return;
+  overlay.classList.add('show');
+  // Stop any touch/click on the overlay reaching the bottom-nav or page beneath
+  if (!overlay._touchGuarded) {
+    overlay.addEventListener('touchstart', e => e.stopPropagation(), {passive:false});
+    overlay.addEventListener('touchend',   e => e.stopPropagation(), {passive:false});
+    overlay.addEventListener('touchmove',  e => e.stopPropagation(), {passive:false});
+    overlay._touchGuarded = true;
+  }
   if (id === 'modal-patient') setTimeout(markPatientFormClean, 0);
 }
 function closeModal(id){
@@ -4347,8 +4451,9 @@ function filterLenses() {
   tbody.innerHTML = list.map(l => {
     const st = l.quantity===0?['danger',t('out')]:l.quantity<=l.min_stock?['warning',t('low')]:['success',t('ok')];
     return `<tr>
-      <td class="td-name">${esc((l.lens_type||'').replace(/_/g,' '))} · ${esc((l.coating||'').replace(/_/g,' '))}</td>
+      <td class="td-name">${esc((l.lens_type||'').replace(/_/g,' '))}</td>
       <td data-label="${t('material')}">${esc(l.material)}</td>
+      <td data-label="${t('coating')}">${esc((l.coating||'').replace(/_/g,' '))}</td>
       <td data-label="SPH" style="font-family:'Figtree','DM Sans',sans-serif">${l.sphere>0?'+':''}${l.sphere}</td>
       <td data-label="CYL" style="font-family:'Figtree','DM Sans',sans-serif">${esc(l.cylinder||0)}</td>
       <td data-label="${t('qty')}" style="font-family:'Figtree','DM Sans',sans-serif">${l.quantity}</td>
@@ -4357,16 +4462,41 @@ function filterLenses() {
       <td class="td-actions-cell">
         <button class="btn btn-outline btn-sm" onclick="openRestockModal('lens','${escAttr(l.id)}')">${t('restock')}</button>
         <button class="btn btn-outline btn-sm" onclick="openEditLens('${escAttr(l.id)}')">${t('edit')}</button>
+        <button class="btn btn-outline btn-sm" onclick="duplicateLens('${escAttr(l.id)}')" title="${NOOR.lang==='ar'?'نسخ':'Duplicate'}">${NOOR.lang==='ar'?'نسخ':'Copy'}</button>
         <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteLens('${escAttr(l.id)}')">${t('delete')}</button>
       </td>
     </tr>`;
   }).join('');
 }
 
+function stepSph(id, delta) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const val = parseFloat(el.value) || 0;
+  el.value = Math.round((val + delta) * 100) / 100;
+}
+
+function duplicateLens(id) {
+  const l = NOOR.lenses.find(x=>x.id===id); if(!l)return;
+  NOOR.editingLensId = null;
+  document.getElementById('modal-lens-title').textContent = NOOR.lang==='ar' ? 'نسخ عدسة' : 'Duplicate Lens';
+  document.getElementById('l-type').value     = l.lens_type;
+  document.getElementById('l-material').value = l.material;
+  document.getElementById('l-coating').value  = l.coating;
+  document.getElementById('l-sph').value      = l.sphere;
+  document.getElementById('l-cyl').value      = l.cylinder||0;
+  document.getElementById('l-qty').value      = l.quantity;
+  document.getElementById('l-min').value      = l.min_stock;
+  document.getElementById('l-cost').value     = l.cost_price;
+  document.getElementById('l-sell').value     = l.sell_price;
+  openModal('modal-lens');
+}
+
 function openAddLens() {
   NOOR.editingLensId = null;
   document.getElementById('modal-lens-title').textContent = t('addLens');
-  ['l-sph','l-cyl','l-qty','l-cost','l-sell'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['l-sph','l-cyl','l-cost','l-sell'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('l-qty').value='0';
   document.getElementById('l-min').value='2';
   openModal('modal-lens');
 }
@@ -4449,15 +4579,18 @@ function filterFrames() {
   tbody.innerHTML = list.map(f => {
     const st = f.quantity===0?['danger',t('out')]:f.quantity<=f.min_stock?['warning',t('low')]:['success',t('ok')];
     return `<tr>
-      <td class="td-name">${esc(f.brand)} · ${esc((f.frame_type||'').replace(/_/g,' '))}</td>
+      <td data-label="${t('brand')}">${esc(f.brand)}</td>
+      <td data-label="${t('type')}">${esc((f.frame_type||'').replace(/_/g,' '))}</td>
       <td data-label="${t('material')}">${esc(f.frame_material)}</td>
       <td data-label="${t('color')}">${esc(f.color)}</td>
       <td data-label="${t('qty')}" style="font-family:'Figtree','DM Sans',sans-serif">${f.quantity}</td>
       <td data-label="${t('status')}"><span class="badge badge-${st[0]}">${st[1]}</span></td>
+      <td data-label="${t('costPrice')}" style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(f.cost_price)}</td>
       <td data-label="${t('sellPrice')}" style="font-family:'Figtree','DM Sans',sans-serif">${fmtNum(f.sell_price)}</td>
       <td class="td-actions-cell">
         <button class="btn btn-outline btn-sm" onclick="openRestockModal('frame','${escAttr(f.id)}')">${t('restock')}</button>
         <button class="btn btn-outline btn-sm" onclick="openEditFrame('${escAttr(f.id)}')">${t('edit')}</button>
+        <button class="btn btn-outline btn-sm" onclick="duplicateFrame('${escAttr(f.id)}')" title="${NOOR.lang==='ar'?'نسخ':'Duplicate'}" style="color:var(--ink-mid)">⧉</button>
         <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteFrame('${escAttr(f.id)}')">${t('delete')}</button>
       </td>
     </tr>`;
@@ -4467,7 +4600,8 @@ function filterFrames() {
 function openAddFrame() {
   NOOR.editingFrameId = null;
   document.getElementById('modal-frame-title').textContent = t('addFrame');
-  ['fr-brand','fr-color','fr-qty','fr-cost','fr-sell'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['fr-brand','fr-color','fr-cost','fr-sell'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('fr-qty').value='0';
   document.getElementById('fr-min').value='2';
   openModal('modal-frame');
 }
@@ -4476,6 +4610,21 @@ function openEditFrame(id) {
   const f = NOOR.frames.find(x=>x.id===id); if(!f)return;
   NOOR.editingFrameId = id;
   document.getElementById('modal-frame-title').textContent = t('edit');
+  document.getElementById('fr-brand').value    = f.brand||'';
+  document.getElementById('fr-type').value     = f.frame_type||'full_rim';
+  document.getElementById('fr-material').value = f.frame_material||'acetate';
+  document.getElementById('fr-color').value    = f.color||'';
+  document.getElementById('fr-qty').value      = f.quantity;
+  document.getElementById('fr-min').value      = f.min_stock;
+  document.getElementById('fr-cost').value     = f.cost_price;
+  document.getElementById('fr-sell').value     = f.sell_price;
+  openModal('modal-frame');
+}
+
+function duplicateFrame(id) {
+  const f = NOOR.frames.find(x=>x.id===id); if(!f)return;
+  NOOR.editingFrameId = null;
+  document.getElementById('modal-frame-title').textContent = (NOOR.lang==='ar' ? 'نسخ إطار' : 'Duplicate Frame');
   document.getElementById('fr-brand').value    = f.brand||'';
   document.getElementById('fr-type').value     = f.frame_type||'full_rim';
   document.getElementById('fr-material').value = f.frame_material||'acetate';
@@ -4842,7 +4991,7 @@ function _renderRxSlip(payload) {
     </div>` : '';
 
   document.getElementById('rx-slip-content').innerHTML = `
-<div class="rx-slip" style="box-sizing:border-box;width:100%;padding:13px 15px;font-size:.81rem;line-height:1.45">
+<div class="rx-slip" style="box-sizing:border-box;width:100%;padding:13px 15px;font-size:.842rem;line-height:1.45">
 
   <!-- HEADER -->
   <div style="text-align:${headerTA};margin-bottom:9px">
@@ -4880,18 +5029,22 @@ function _renderRxSlip(payload) {
       <th style="padding:4px 5px;text-align:center">AXIS</th>
       <th style="padding:4px 5px;text-align:center">ADD</th>
       <th style="padding:4px 5px;text-align:center">VA</th>
+      <th style="padding:4px 5px;text-align:center">BCVA</th>
     </tr></thead>
     <tbody>
       <tr style="background:var(--cream-bg)">
         <td style="padding:4px 5px;font-weight:700;font-size:.73rem;border:1px solid var(--cream-border)">OD (R)</td>
-        ${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
+        ${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va,v.od_bcva].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
       </tr>
       <tr>
         <td style="padding:4px 5px;font-weight:700;font-size:.73rem;border:1px solid var(--cream-border)">OS (L)</td>
-        ${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
+        ${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va,v.os_bcva].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
       </tr>
     </tbody>
   </table>
+
+  <!-- IPD -->
+  ${v.ipd != null ? `<div style="font-size:.76rem;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)"><span class="rx-slip-label">IPD</span> <strong style="font-family:'Figtree','DM Sans',sans-serif">${esc(v.ipd)} mm</strong></div>` : ''}
 
   <!-- LENS / FRAME -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:.76rem;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
@@ -4925,16 +5078,17 @@ function _renderRxSlip(payload) {
 
 </div>`;
 }
-function printRxSlip() {
+// ── Shared helper: build the print-ready HTML blob and filename ──
+// Returns { blob, blobURL, docTitle } using the currently rendered rx-slip-content.
+function _buildRxPrintBlob() {
   const patientName = (window._rxPrintPatientName || '').trim();
   const visitDate   = (window._rxPrintVisitDate || new Date().toISOString().slice(0, 10));
-  const docTitle    = patientName
-    ? 'Rx_' + patientName.replace(/\s+/g,'_') + '_' + visitDate
-    : 'Prescription';
+  // Filename: PatientName_YYYY-MM-DD  (spaces → underscores, keep Arabic chars)
+  const safeName    = patientName.replace(/\s+/g, '_') || 'Patient';
+  const docTitle    = safeName + '_' + visitDate;
 
   const slipHTML = document.getElementById('rx-slip-content').innerHTML;
 
-  // CSS for the print document — no border, no extra padding, clean A5
   const rxScheme = _getRxScheme ? _getRxScheme() : 'burgundy';
   const schemeColors = {
     burgundy: {primary:'#6b1a2a',accent:'#c49a3c',bg:'#ffffff',paper:'#faf6f0',border:'#e8dcc8',text:'#1a1410'},
@@ -4950,11 +5104,11 @@ function printRxSlip() {
   const printCSS = `
     :root{--burgundy:${sc.primary};--burgundy-pale:${sc.paper};--cream:${sc.paper};--cream-dark:${sc.paper};--cream-border:${sc.border};--cream-bg:${sc.paper};--ink:${sc.text};--ink-mid:${sc.text};--ink-light:#8a8a7a;--ink-dark:${sc.text};--surface:${sc.bg};--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{background:white;font-family:'Cairo','DM Sans',sans-serif;width:100%;height:auto;}
-    .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9pt;line-height:1.5;}
-    .rx-slip-label{font-size:6.5pt;text-transform:uppercase;letter-spacing:.08em;color:${sc.text}99}
-    .rx-slip-val{font-weight:600;font-size:9pt}
-    table{border-collapse:collapse;width:100%;font-size:8.5pt}
+    html,body{background:white;font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;width:100%;height:auto;}
+    .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9.4pt;line-height:1.5;}
+    .rx-slip-label{font-size:6.8pt;text-transform:uppercase;letter-spacing:.08em;color:${sc.text}99}
+    .rx-slip-val{font-weight:600;font-size:9.4pt}
+    table{border-collapse:collapse;width:100%;font-size:8.85pt}
     th,td{border:1px solid ${sc.border};padding:3px 5px}
     thead tr{background:${sc.primary};color:#fff}
     @page{size:A5 portrait;margin:8mm 9mm}
@@ -4972,15 +5126,19 @@ function printRxSlip() {
     '<title>' + docTitle + '</title>' +
     '<link rel="preconnect" href="https://fonts.googleapis.com">' +
     '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
-    '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Amiri:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">' +
+    '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Amiri:wght@400;700&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Noto+Sans+Arabic:wght@300;400;600;700&display=swap" rel="stylesheet">' +
     '<style>' + printCSS + '</style>' +
     '</head>' +
     '<body onload="document.fonts.ready.then(function(){setTimeout(function(){window.print();},200)})">' + slipHTML + '</body>' +
     '</html>';
 
-  // Blob URL approach: fully isolated page, no app UI bleed-through on any device
-  var blob = new Blob([printHTML], { type: 'text/html;charset=utf-8' });
-  var blobURL = URL.createObjectURL(blob);
+  const blob    = new Blob([printHTML], { type: 'text/html;charset=utf-8' });
+  const blobURL = URL.createObjectURL(blob);
+  return { blob, blobURL, docTitle };
+}
+
+function printRxSlip() {
+  const { blobURL, docTitle } = _buildRxPrintBlob();
 
   // On desktop, open a sized popup; on mobile open a full new tab
   var isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -4989,7 +5147,7 @@ function printRxSlip() {
     : window.open(blobURL, '_blank', 'width=650,height=850');
 
   if (!pw) {
-    // Fallback if popup blocked: force download as HTML and let browser handle it
+    // Fallback if popup blocked: download the HTML file directly
     var a = document.createElement('a');
     a.href = blobURL;
     a.download = docTitle + '.html';
@@ -5010,7 +5168,7 @@ function printRxSlip() {
 // ══════════════════════════════════════════════════════════
 async function sendRxWhatsApp(vid, phone, patientName) {
   if (!phone) { toast('No phone number for this patient', 'error'); return; }
-  toast('Preparing Rx PDF…', 'success');
+  toast(NOOR.lang === 'ar' ? 'جارٍ تحضير الوصفة…' : 'Preparing Rx…', 'success');
 
   try {
     const res = await get(`/api/visits/${vid}/print`);
@@ -5032,18 +5190,14 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const nextVisit  = v.next_visit_date ? fmtDate(v.next_visit_date) : '—';
     const clinicName = cl.name || NOOR.clinicName || 'Noor Optical';
 
-    // jsPDF cannot render Arabic (Helvetica is Latin-only) — strip to ASCII for PDF,
-    // send the full Arabic details separately via WhatsApp text.
-    const latinOnly = s => (s || '').replace(/[\u0600-\u06FF\u200C-\u200F\u202A-\u202E]/g, '').trim() || '—';
+    // ── Render the polished slip into the hidden modal content div ────────
+    // _renderRxSlip populates #rx-slip-content and sets window._rxPrint* vars
+    _renderRxSlip(payload);
 
-    const pdfClinicName = latinOnly(clinicName) !== '—' ? latinOnly(clinicName) : 'Noor Optical';
-    const pdfPatient    = latinOnly(p.full_name || patientName);
-    const pdfDoctor     = latinOnly(st.print_doctor_name || '');
-    const pdfCred       = latinOnly(st.print_doctor_credentials || st.print_certification_text || '');
-    const pdfWarning    = latinOnly(st.print_warning_text || '');
-    const pdfAddress    = latinOnly(cl.address || '');
+    // ── Build the same high-quality print blob used by printRxSlip() ──────
+    const { blobURL, docTitle } = _buildRxPrintBlob();
 
-    // WhatsApp companion message (sent first so user gets it immediately)
+    // ── WhatsApp companion message ────────────────────────────────────────
     const lensDesc  = [v.lens_type, v.lens_material, v.lens_coating]
       .filter(Boolean).map(x => String(x).replace(/_/g,' ')).join(' · ') || '—';
     const frameDesc = [v.frame_brand, v.frame_type ? String(v.frame_type).replace(/_/g,' ') : '']
@@ -5057,8 +5211,9 @@ async function sendRxWhatsApp(vid, phone, patientName) {
       `*المريض:* ${p.full_name || patientName || '—'}`,
       `*العمر:* ${fmtVal(p.age)}   *الجنس:* ${p.gender ? (NOOR.lang==='ar' ? (p.gender==='male'?'ذكر':'أنثى') : p.gender) : '—'}`,
       '',
-      `*OD (R):* SPH ${fmtVal(v.od_sphere)} | CYL ${fmtVal(v.od_cylinder)} | AXIS ${fmtVal(v.od_axis)}`,
-      `*OS (L):* SPH ${fmtVal(v.os_sphere)} | CYL ${fmtVal(v.os_cylinder)} | AXIS ${fmtVal(v.os_axis)}`,
+      `*OD (R):* SPH ${fmtVal(v.od_sphere)} | CYL ${fmtVal(v.od_cylinder)} | AXIS ${fmtVal(v.od_axis)} | VA ${fmtVal(v.od_va)} | BCVA ${fmtVal(v.od_bcva)}`,
+      `*OS (L):* SPH ${fmtVal(v.os_sphere)} | CYL ${fmtVal(v.os_cylinder)} | AXIS ${fmtVal(v.os_axis)} | VA ${fmtVal(v.os_va)} | BCVA ${fmtVal(v.os_bcva)}`,
+      ...(v.ipd ? [`*IPD:* ${fmtVal(v.ipd)} mm`] : []),
       '',
       `*العدسة:* ${lensDesc}`,
       `*الإطار:* ${frameDesc}`,
@@ -5070,129 +5225,37 @@ async function sendRxWhatsApp(vid, phone, patientName) {
 
     const waURL = `https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`;
 
-    if (window.jspdf) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
-      const W = 148, L = 10, R = W - 10;
-      let y = 12;
-
-      const hline = (yy, thick) => {
-        doc.setDrawColor(...(thick ? [107,26,42] : [220,200,180]));
-        doc.setLineWidth(thick ? 0.5 : 0.2);
-        doc.line(L, yy, R, yy);
-      };
-      const txt = (s, x, yy, size, style, color) => {
-        doc.setFontSize(size || 9);
-        doc.setFont('helvetica', style || 'normal');
-        doc.setTextColor(...(color || [30, 20, 16]));
-        doc.text(String(s ?? '—'), x, yy);
-      };
-
-      // Clinic header (Latin-safe strings only)
-      doc.setFontSize(13); doc.setFont('helvetica','bold'); doc.setTextColor(107,26,42);
-      doc.text(pdfClinicName, W/2, y, { align:'center' }); y += 5;
-      if (pdfDoctor && pdfDoctor !== '—') {
-        doc.setFontSize(9); doc.setFont('helvetica','normal'); doc.setTextColor(60,50,40);
-        doc.text(pdfDoctor, W/2, y, {align:'center'}); y += 4;
+    // ── Download the polished print file so the user can attach it ────────
+    const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobileDevice) {
+      // On mobile: open the print page in a new tab (user can share/print from there)
+      const pw = window.open(blobURL, '_blank');
+      if (!pw) {
+        // Fallback: download the file
+        const a = document.createElement('a');
+        a.href = blobURL; a.download = docTitle + '.html'; a.click();
       }
-      if (pdfCred && pdfCred !== '—') {
-        doc.setFontSize(7); doc.setFont('helvetica','italic'); doc.setTextColor(120,110,100);
-        doc.text(pdfCred, W/2, y, {align:'center'}); y += 4;
-      }
-      if (cl.phone) {
-        doc.setFontSize(7); doc.setFont('helvetica','normal'); doc.setTextColor(120,110,100);
-        doc.text('Tel: ' + cl.phone, W/2, y, {align:'center'}); y += 4;
-      }
-      hline(y, true); y += 3;
-
-      // Title row
-      txt('PRESCRIPTION', L, y, 8, 'bold', [107,26,42]);
-      doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.setTextColor(120,110,100);
-      doc.text(visitDate, R, y, {align:'right'});
-      y += 2; hline(y, false); y += 5;
-
-      // Patient info (use latin-safe name; phone number is always latin)
-      txt('Patient: ' + pdfPatient, L, y, 9, 'bold');
-      txt('Age: ' + fmtVal(p.age), 95, y, 9);
-      txt(p.gender ? p.gender.charAt(0).toUpperCase()+p.gender.slice(1) : '', 120, y, 9);
-      y += 4;
-      txt('Next Visit: ' + nextVisit, L, y, 8, 'normal', [80,70,60]);
-      y += 2; hline(y, false); y += 5;
-
-      // Rx table
-      const cols = [L, 38, 62, 86, 106, 122];
-      const headers = ['Eye','SPH','CYL','AXIS','ADD','VA'];
-      doc.setFillColor(107,26,42);
-      doc.rect(L, y-4, R-L, 6, 'F');
-      headers.forEach((h,i) => {
-        doc.setFontSize(7.5); doc.setFont('helvetica','bold'); doc.setTextColor(255,255,255);
-        doc.text(h, cols[i]+1, y);
-      });
-      y += 3;
-
-      const rxRow = (eye, s, c, a, add, va, bg) => {
-        doc.setFillColor(...bg);
-        doc.rect(L, y-3, R-L, 6, 'F');
-        txt(eye, cols[0]+1, y, 8, 'bold', [107,26,42]);
-        [s,c,a,add,va].forEach((val,i) => txt(fmtVal(val), cols[i+1]+1, y, 8));
-        y += 6;
-      };
-      rxRow('OD (R)', v.od_sphere, v.od_cylinder, v.od_axis, v.od_addition, v.od_va, [250,246,240]);
-      rxRow('OS (L)', v.os_sphere, v.os_cylinder, v.os_axis, v.os_addition, v.os_va, [245,240,235]);
-
-      if (v.ipd) { y += 1; txt('IPD: ' + v.ipd + ' mm', L, y, 8, 'normal', [80,70,60]); y += 5; }
-      else y += 3;
-
-      hline(y, false); y += 4;
-
-      // Lens & frame (already Latin from DB enum values)
-      txt('Lens: ' + (lensDesc || '—'), L, y, 8); y += 4;
-      txt('Frame: ' + (frameDesc || '—'), L, y, 8); y += 4;
-
-      // Financials
-      if (st.print_show_financials !== false) {
-        hline(y, false); y += 4;
-        txt('Total: ' + fmtIQD(v.total_amount), L, y, 8);
-        txt('Paid: ' + fmtIQD(v.amount_paid), 65, y, 8);
-        const remColor = (v.remaining||0) > 0 ? [192,57,43] : [30,126,90];
-        txt('Remaining: ' + fmtIQD(v.remaining), 107, y, 8, 'normal', remColor);
-        y += 5;
-      }
-
-      // Instructions (Latin only)
-      if (pdfWarning && pdfWarning !== '—') {
-        hline(y, false); y += 4;
-        doc.setFontSize(7); doc.setFont('helvetica','bold'); doc.setTextColor(107,26,42);
-        doc.text('Instructions:', L, y); y += 3;
-        doc.setFont('helvetica','normal'); doc.setTextColor(60,50,40);
-        const lines = doc.splitTextToSize(pdfWarning, R-L);
-        doc.text(lines, L, y); y += lines.length * 3.5 + 2;
-      }
-
-      // Footer
-      hline(y, false); y += 3;
-      doc.setFontSize(6.5); doc.setFont('helvetica','normal'); doc.setTextColor(140,130,120);
-      doc.text(pdfClinicName + (pdfAddress && pdfAddress !== '—' ? ' · ' + pdfAddress : ''), L, y);
-
-      // ── Download PDF then open WhatsApp ─────────────────────────────────
-      // Download the PDF so the user can share it inside WhatsApp
-      const safePatient = (p.full_name || patientName || 'patient')
-        .replace(/[\u0600-\u06FF\s]+/g, '_').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,30) || 'patient';
-      const filename = `Rx_${safePatient}_${visitDate.replace(/\//g,'-')}.pdf`;
-      doc.save(filename);
-
-      // After a brief delay open WhatsApp with the text summary
-      setTimeout(() => {
-        window.open(waURL, '_blank');
-      }, 800);
-
-      toast('PDF downloaded — open WhatsApp to send the message', 'success');
-
     } else {
-      // jsPDF not available — text-only WhatsApp message
-      window.open(waURL, '_blank');
-      toast('Sent as WhatsApp text (PDF library not loaded yet)', 'warning');
+      // On desktop: open the print popup (same as printRxSlip)
+      const pw = window.open(blobURL, '_blank', 'width=650,height=850');
+      if (!pw) {
+        const a = document.createElement('a');
+        a.href = blobURL; a.download = docTitle + '.html'; a.click();
+      }
     }
+
+    // ── Open WhatsApp after a short delay so the print window loads first ─
+    setTimeout(() => {
+      window.open(waURL, '_blank');
+      setTimeout(() => URL.revokeObjectURL(blobURL), 30000);
+    }, 800);
+
+    toast(
+      NOOR.lang === 'ar'
+        ? 'تم فتح الوصفة — سيفتح واتساب تلقائياً'
+        : 'Rx opened — WhatsApp will open shortly',
+      'success'
+    );
 
   } catch(e) {
     toast('Error: ' + e.message, 'error');
@@ -5236,6 +5299,11 @@ async function renderSettings() {
     document.getElementById('wa-tpl-1').value = st.wa_template_1||'';
     document.getElementById('wa-tpl-2').value = st.wa_template_2||'';
     document.getElementById('wa-tpl-3').value = st.wa_template_3||'';
+    // PDF message settings
+    const pdfSend = !!st.wa_pdf_send_message;
+    document.getElementById('wa-pdf-send-message').checked = pdfSend;
+    document.getElementById('wa-pdf-msg-wrap').style.opacity = pdfSend ? '1' : '.4';
+    document.getElementById('wa-pdf-message').value = st.wa_pdf_message||'';
     document.getElementById('set-followup-months').value = st.followup_months_default||3;
     NOOR.waTemplates = { wa_template_1: st.wa_template_1||'', wa_template_2: st.wa_template_2||'', wa_template_3: st.wa_template_3||'' };
     renderPermissionsToggles();
@@ -5342,6 +5410,18 @@ async function saveWATemplates() {
   try {
     await put('/api/settings', body);
     NOOR.waTemplates = body;
+    toast(t('successSaved'));
+  } catch(e) { toast(e.message,'error'); }
+}
+
+async function saveWAPdfSettings() {
+  const body = {
+    wa_pdf_send_message: document.getElementById('wa-pdf-send-message').checked,
+    wa_pdf_message:      document.getElementById('wa-pdf-message').value,
+  };
+  try {
+    await put('/api/settings', body);
+    Object.assign(NOOR.settings, body);
     toast(t('successSaved'));
   } catch(e) { toast(e.message,'error'); }
 }
