@@ -2412,6 +2412,9 @@ def admin_create_clinic():
         "recept_view_audit":       False,
         "default_checkup_fee":      body.get("default_checkup_fee") or 0,
         "print_show_financials":    True,
+        "wa_template_1":           "Dear {patient_name}, your next visit at {clinic_name} is on {next_visit}.",
+        "wa_template_2":           "Hello {patient_name}! Time for your annual eye check at {clinic_name}.",
+        "wa_template_3":           "{patient_name}, follow-up reminder: {next_visit}. {clinic_name}.",
     }).execute()
 
     # Create license
