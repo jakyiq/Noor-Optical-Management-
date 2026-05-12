@@ -11,6 +11,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <!-- Bug fix #19: Load the local-first layer so NoorLF is available before any writes -->
 <script src="/localFirst.js"></script>
 <style>
@@ -62,6 +63,7 @@ html[data-rx-scheme="onyx"] {
 .qty-stepper .qty-btn:first-child{border-inline-end:1.5px solid var(--cream-border)}
 .qty-stepper .qty-btn:last-child{border-inline-start:1.5px solid var(--cream-border)}
 body{background:var(--cream);color:var(--ink);font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+body.modal-scroll-locked{position:fixed;width:100%;overflow:hidden;touch-action:none}
 #app,.main-content,.page-content{max-width:100%;overflow-x:hidden}
 html[dir=ltr] body{font-family:'DM Sans','Cairo',sans-serif}
 ::-webkit-scrollbar{width:6px;height:6px}
@@ -533,7 +535,7 @@ tbody tr:hover{background:var(--cream)}
 .badge-burgundy{background:var(--burgundy-pale);color:var(--burgundy)}
 
 /* MODAL */
-.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;touch-action:none}
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain}
 .modal-overlay.show{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:min(700px,100%);position:relative;animation:modalIn .22s ease}
 @keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
@@ -2996,6 +2998,7 @@ const NOOR = {
   patientFormSnapshot: '',
   patientFormDirty: false,
   savingPatient: false,
+  modalScrollY: 0,
   sessionWarningTimer: null,
   sessionExpiryTimer: null,
   // cached data (refreshed from API on each section visit)
@@ -3416,7 +3419,58 @@ function canShareRxPdf(file) {
   return !!(file && navigator.share && navigator.canShare?.({ files: [file] }));
 }
 
-function buildRxPdfFile(payload, filename) {
+async function buildRxPdfFile(payload, filename) {
+  const jsPDFCtor = window.jspdf?.jsPDF;
+  if (!jsPDFCtor || typeof File === 'undefined' || typeof html2canvas === 'undefined') return null;
+  const slip = document.getElementById('rx-slip-content')?.querySelector('.rx-slip');
+  if (!slip) return null;
+  if (document.fonts?.ready) await document.fonts.ready.catch(() => {});
+
+  const host = document.createElement('div');
+  host.style.cssText = [
+    'position:fixed',
+    'left:-10000px',
+    'top:0',
+    'width:148mm',
+    'min-height:210mm',
+    'background:#fff',
+    'padding:8mm 9mm',
+    'z-index:-1',
+    'direction:' + document.documentElement.dir,
+    'font-family:Cairo, Noto Sans Arabic, DM Sans, sans-serif'
+  ].join(';');
+  const clone = slip.cloneNode(true);
+  clone.style.width = '100%';
+  clone.style.border = 'none';
+  clone.style.boxShadow = 'none';
+  clone.style.margin = '0';
+  clone.style.background = '#fff';
+  host.appendChild(clone);
+  document.body.appendChild(host);
+  try {
+    const canvas = await html2canvas(host, {
+      backgroundColor: '#ffffff',
+      scale: Math.min(2.5, window.devicePixelRatio || 2),
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+    });
+    const doc = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: [148, 210], compress: true });
+    const img = canvas.toDataURL('image/jpeg', 0.96);
+    const pageW = 148;
+    const pageH = 210;
+    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+    const imgW = canvas.width * ratio;
+    const imgH = canvas.height * ratio;
+    doc.setProperties({ title: filename, subject: 'A5 prescription', creator: 'Noor Optical' });
+    doc.addImage(img, 'JPEG', (pageW - imgW) / 2, 0, imgW, imgH);
+    return new File([doc.output('blob')], filename + '.pdf', { type: 'application/pdf' });
+  } finally {
+    host.remove();
+  }
+}
+
+function buildRxPdfFileLegacy(payload, filename) {
   const jsPDFCtor = window.jspdf?.jsPDF;
   if (!jsPDFCtor || typeof File === 'undefined') return null;
   const v = payload.visit || {};
@@ -3529,10 +3583,27 @@ function toast(msg, type='success', duration=3500) {
   setTimeout(()=>el.remove(), duration);
 }
 
+function lockPageScrollForModal() {
+  if (document.body.classList.contains('modal-scroll-locked')) return;
+  NOOR.modalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+  document.body.style.top = `-${NOOR.modalScrollY}px`;
+  document.body.classList.add('modal-scroll-locked');
+}
+
+function unlockPageScrollIfNoModal() {
+  if (document.querySelector('.modal-overlay.show')) return;
+  const y = NOOR.modalScrollY || 0;
+  document.body.classList.remove('modal-scroll-locked');
+  document.body.style.top = '';
+  window.scrollTo(0, y);
+  NOOR.modalScrollY = 0;
+}
+
 function openModal(id){
   closeMoreMenu();
   const overlay = document.getElementById(id);
   if (!overlay) return;
+  lockPageScrollForModal();
   overlay.classList.add('show');
   // Stop any touch/click on the overlay reaching the bottom-nav or page beneath
   if (!overlay._touchGuarded) {
@@ -3545,8 +3616,9 @@ function openModal(id){
 }
 function closeModal(id){
   if (id === 'modal-patient' && NOOR.patientFormDirty && !confirmUnsavedPatientForm()) return;
-  document.getElementById(id).classList.remove('show');
+  document.getElementById(id)?.classList.remove('show');
   if (id === 'modal-patient') markPatientFormClean();
+  unlockPageScrollIfNoModal();
 }
 
 function patientFormState() {
@@ -5794,7 +5866,7 @@ async function sendRxWhatsApp(vid, phone, patientName) {
 
     _renderRxSlip(payload);
     const printFile = _buildRxPrintBlob();
-    const pdfFile = buildRxPdfFile(payload, filename);
+    const pdfFile = await buildRxPdfFile(payload, filename);
 
     if (canShareRxPdf(pdfFile)) {
       await navigator.share({ files: [pdfFile], text: waMsg, title: filename });

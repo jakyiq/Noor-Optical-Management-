@@ -1182,7 +1182,10 @@ def create_visit():
         return err("Patient not found", 404)
 
     # ── Enum-safe helpers ──────────────────────────────────────
-    VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
+    VALID_FRAME_TYPES = {
+        "full_rim", "half_rim", "rimless", "wrap", "butterfly",
+        "aviator", "round", "cat_eye",
+    }
 
     def _enum_or_none(val, valid_set):
         """Return val if it's a non-empty member of valid_set, else None."""
