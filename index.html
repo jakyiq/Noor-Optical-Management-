@@ -536,7 +536,7 @@ tbody tr:hover{background:var(--cream)}
 
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;touch-action:none;overscroll-behavior:none}
-@media(pointer:fine){.modal-overlay{overflow-y:auto}}
+@media(pointer:fine){.modal-overlay{overflow-y:scroll}}
 .modal-overlay.show{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:min(700px,100%);max-height:calc(100dvh - 80px);position:relative;animation:modalIn .22s ease;display:flex;flex-direction:column;overflow:hidden}
 @keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
@@ -546,7 +546,7 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .modal-close{width:32px;height:32px;background:var(--cream);border:1px solid var(--cream-border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-mid);transition:all .15s}
 .modal-close:hover{background:var(--danger);color:white;border-color:var(--danger)}
 .modal-body{padding:24px 28px;overflow-y:auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
-@media(pointer:fine){.modal-body{overflow-y:auto}}
+@media(pointer:fine){.modal-body{overflow-y:scroll}}
 .modal-footer{padding:16px 28px 24px;display:flex;gap:10px;justify-content:flex-end}
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--cream-border);margin-bottom:24px;overflow-x:auto}
 .tab-btn{padding:10px 20px;background:none;border:none;border-bottom:2px solid transparent;font-family:inherit;font-size:.85rem;font-weight:600;color:var(--ink-light);cursor:pointer;white-space:nowrap;transition:all .15s;margin-bottom:-1px}
@@ -4229,16 +4229,20 @@ async function onRxChange() {
       const osList = result.os || [];
       const single = result.single;
 
-      // Single-eye mode: one list, no labels needed
+      // Always render each eye independently.
+      // single=true means only one eye was provided — show that eye's results
+      // without a label. When both eyes are provided, show labelled groups.
+      let html = '';
       if (single) {
-        const list = odList.length ? odList : osList;
+        // Only one eye has data — show that eye's matches without a header
+        const list = odSph !== null ? odList : osList;
+        const eye  = odSph !== null ? 'od' : 'os';
         if (!list.length) { cont.innerHTML = '<span class="inv-match-empty">No matching lenses</span>'; return; }
-        cont.innerHTML = list.map(l => _lensChipHtml(l, 'both')).join('');
+        cont.innerHTML = list.map(l => _lensChipHtml(l, eye)).join('');
         return;
       }
 
-      // Both eyes: render OD group + OS group independently
-      let html = '';
+      // Both eyes provided — render OD group + OS group independently
       if (odList.length) {
         html += `<div style="font-size:.72rem;font-weight:700;color:var(--ink-mid);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">OD (R)</div>`;
         html += odList.map(l => _lensChipHtml(l, 'od')).join('');
@@ -4282,6 +4286,7 @@ function importPrevRx() {
     const btn = document.getElementById(id + '-sign');
     if (btn) btn.classList.toggle('is-negative', !isNaN(val) && val < 0);
   });
+  onRxChange(); // trigger inventory match after importing Rx
   toast(t('successSaved'));
 }
 
@@ -4455,13 +4460,34 @@ function confirmDuplicatePatient(duplicates) {
   if (cancel) cancel.textContent = isAr ? 'إلغاء' : 'Cancel';
   if (proceed) proceed.textContent = isAr ? 'المتابعة والحفظ' : 'Proceed and Save';
   if (list) {
+    // Gather the current payload to determine match type
+    const currentName  = (document.getElementById('p-name')?.value || '').trim().toLowerCase();
+    const currentPhone = (document.getElementById('p-phone')?.value || '').replace(/\D/g, '');
+
     const rows = (duplicates || []).slice(0, 5);
-    list.innerHTML = rows.length ? rows.map(p => `
-      <div style="border:1px solid var(--cream-border);background:var(--cream);border-radius:8px;padding:10px 12px">
-        <div style="font-weight:700;color:var(--ink)">${esc(p.full_name || (isAr ? 'بدون اسم' : 'Unnamed'))}</div>
-        <div style="font-family:'Figtree','DM Sans',sans-serif;font-size:.86rem;color:var(--ink-mid);margin-top:2px">${esc(p.phone || '—')}</div>
-      </div>
-    `).join('') : `<div style="color:var(--ink-mid)">${isAr ? 'تم العثور على مراجع مشابه.' : 'A similar patient was found.'}</div>`;
+    list.innerHTML = rows.length ? rows.map(p => {
+      const pName  = (p.full_name || '').trim().toLowerCase();
+      const pPhone = (p.phone || '').replace(/\D/g, '');
+      const nameMatch  = currentName  && pName  && pName  === currentName;
+      const phoneMatch = currentPhone && pPhone && pPhone === currentPhone;
+      let matchLabel = '';
+      if (nameMatch && phoneMatch) {
+        matchLabel = isAr ? 'تطابق: الاسم والهاتف' : 'Match: Name & Phone';
+      } else if (nameMatch) {
+        matchLabel = isAr ? 'تطابق: الاسم' : 'Match: Name';
+      } else if (phoneMatch) {
+        matchLabel = isAr ? 'تطابق: رقم الهاتف' : 'Match: Phone';
+      }
+      return `
+        <div style="border:1px solid var(--cream-border);background:var(--cream);border-radius:8px;padding:10px 12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div style="font-weight:700;color:var(--ink)">${esc(p.full_name || (isAr ? 'بدون اسم' : 'Unnamed'))}</div>
+            ${matchLabel ? `<span style="font-size:.73rem;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--burgundy-pale);color:var(--burgundy)">${esc(matchLabel)}</span>` : ''}
+          </div>
+          <div style="font-family:'Figtree','DM Sans',sans-serif;font-size:.86rem;color:var(--ink-mid);margin-top:2px">${esc(p.phone || '—')}</div>
+        </div>
+      `;
+    }).join('') : `<div style="color:var(--ink-mid)">${isAr ? 'تم العثور على مراجع مشابه.' : 'A similar patient was found.'}</div>`;
   }
 
   openModal('modal-duplicate-patient');
@@ -4734,6 +4760,7 @@ async function openEditVisit(visitId) {
 
   // Sync sign buttons
   ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'].forEach(id => syncRxSign(id));
+  onRxChange(); // trigger inventory match when editing an existing visit
 
   // Fill lens/frame
   if (visit.lens_type) setSelectValue('rx-lens-type', visit.lens_type, catalogLabel('type', visit.lens_type));
