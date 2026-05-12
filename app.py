@@ -93,8 +93,10 @@ def _parse_iso(ts):
 def today_str():
     return date.today().isoformat()
 
-def err(msg, code=400):
-    return jsonify({"error": msg}), code
+def err(msg, code=400, **extra):
+    payload = {"error": msg}
+    payload.update(extra)
+    return jsonify(payload), code
 
 def ok(data=None, **kwargs):
     payload = {"ok": True}
@@ -102,6 +104,68 @@ def ok(data=None, **kwargs):
         payload["data"] = data
     payload.update(kwargs)
     return jsonify(payload)
+
+
+DEFAULT_LENS_CATALOG = {
+    "type": [
+        ("single_vision", "Single Vision"),
+        ("bifocal", "Bifocal"),
+        ("trifocal", "Trifocal"),
+        ("progressive", "Progressive"),
+        ("reading", "Reading"),
+        ("plano", "Plano"),
+        ("prism", "Prism"),
+        ("occupational", "Occupational"),
+    ],
+    "material": [
+        ("plastic", "Plastic (CR-39)"),
+        ("polycarbonate", "Polycarbonate"),
+        ("high_index_16", "High-Index 1.6"),
+        ("high_index_167", "High-Index 1.67"),
+        ("high_index_174", "High-Index 1.74"),
+        ("trivex", "Trivex"),
+        ("glass", "Glass"),
+        ("contact", "Contact"),
+    ],
+    "coating": [
+        ("clear", "Clear"),
+        ("blue_cut", "Blue Cut"),
+        ("green_cut", "Green Cut"),
+        ("photochromic", "Photochromic"),
+        ("photo_blue", "Photochromic Blue"),
+        ("photo_green", "Photochromic Green"),
+        ("polarized", "Polarized"),
+        ("anti_reflective", "Anti-Reflective (AR)"),
+        ("tinted", "Tinted"),
+        ("uv400", "UV400"),
+        ("mirror", "Mirror"),
+        ("anti_scratch", "Anti-Scratch"),
+        ("anti_fog", "Anti-Fog"),
+        ("oleophobic", "Oleophobic"),
+        ("combo_ar_bc", "AR + Blue Cut Combo"),
+    ],
+}
+
+
+def _slugify_lens_value(value):
+    raw = (value or "").strip().lower()
+    out = []
+    prev_us = False
+    for ch in raw:
+        if ch.isalnum():
+            out.append(ch)
+            prev_us = False
+        elif not prev_us:
+            out.append("_")
+            prev_us = True
+    return "".join(out).strip("_") or "custom"
+
+
+def _num_or_zero(value):
+    try:
+        return float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
 
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -896,6 +960,52 @@ def list_patients():
     return ok(rows, total=total, page=page, limit=limit)
 
 
+def _norm_phone(value):
+    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+    if digits.startswith("00964"):
+        digits = digits[5:]
+    elif digits.startswith("964"):
+        digits = digits[3:]
+    elif digits.startswith("0"):
+        digits = digits[1:]
+    return digits
+
+
+def _patient_duplicate_matches(cid, full_name, phone, exclude_id=None):
+    phone_key = _norm_phone(phone)
+    matches = {}
+
+    if (full_name or "").strip():
+        name_res = db.table("patients").select("id,full_name,phone") \
+            .eq("clinic_id", cid).ilike("full_name", full_name.strip()).limit(8).execute()
+        for row in (name_res.data or []):
+            if row.get("id") != exclude_id:
+                matches[row["id"]] = row
+
+    if phone_key:
+        variants = list({
+            phone or "",
+            phone_key,
+            "0" + phone_key,
+            "964" + phone_key,
+            "+964" + phone_key,
+            "00964" + phone_key,
+        })
+        phone_res = db.table("patients").select("id,full_name,phone") \
+            .eq("clinic_id", cid).in_("phone", variants).limit(12).execute()
+        for row in (phone_res.data or []):
+            if row.get("id") != exclude_id and _norm_phone(row.get("phone")) == phone_key:
+                matches[row["id"]] = row
+        if not matches:
+            broad_phone_res = db.table("patients").select("id,full_name,phone") \
+                .eq("clinic_id", cid).limit(1000).execute()
+            for row in (broad_phone_res.data or []):
+                if row.get("id") != exclude_id and _norm_phone(row.get("phone")) == phone_key:
+                    matches[row["id"]] = row
+
+    return list(matches.values())
+
+
 @app.route("/api/patients", methods=["POST"])
 @_auth(roles=["doctor", "super_admin", "receptionist"], setting="recept_edit_patients")
 def create_patient():
@@ -913,15 +1023,14 @@ def create_patient():
     # Check for duplicates using targeted server-side queries — avoids a
     # full-table scan that would break on large clinics or exceed Supabase's
     # default 1 000-row response limit.
-    name_match = db.table("patients").select("id") \
-        .eq("clinic_id", cid).ilike("full_name", full_name).limit(1).execute()
-    if name_match.data:
-        return err("A patient with the same name or phone already exists", 409)
-    if phone:
-        phone_match = db.table("patients").select("id") \
-            .eq("clinic_id", cid).eq("phone", phone).limit(1).execute()
-        if phone_match.data:
-            return err("A patient with the same name or phone already exists", 409)
+    duplicates = _patient_duplicate_matches(cid, full_name, phone)
+    if duplicates and not bool(body.get("allow_duplicate")):
+        return err(
+            "A patient with the same name or phone already exists",
+            409,
+            duplicates=duplicates,
+            code="duplicate_patient",
+        )
 
     row = {
         "clinic_id":  cid,
@@ -969,6 +1078,17 @@ def update_patient(pid):
 
     allowed = ["full_name","phone","age","gender","address","notes"]
     updates = {k: v for k, v in body.items() if k in allowed}
+    if "full_name" in updates or "phone" in updates:
+        new_name = updates.get("full_name", old.data.get("full_name"))
+        new_phone = updates.get("phone", old.data.get("phone"))
+        duplicates = _patient_duplicate_matches(cid, new_name, new_phone, exclude_id=pid)
+        if duplicates and not bool(body.get("allow_duplicate")):
+            return err(
+                "A patient with the same name or phone already exists",
+                409,
+                duplicates=duplicates,
+                code="duplicate_patient",
+            )
     updates["updated_at"] = now_iso()
 
     res = db.table("patients").update(updates).eq("clinic_id", cid).eq("id", pid).execute()
@@ -1034,8 +1154,6 @@ def create_visit():
         return err("Patient not found", 404)
 
     # ── Enum-safe helpers ──────────────────────────────────────
-    VALID_LENS_TYPES     = {"single_vision","bifocal","trifocal","progressive","reading","plano","prism","occupational"}
-    VALID_LENS_MATERIALS = {"plastic","glass","contact"}
     VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
 
     def _enum_or_none(val, valid_set):
@@ -1052,7 +1170,7 @@ def create_visit():
 
     # ── Plano guard — force zero power if lens_type == plano ──
     raw_lens_type = body.get("lens_type") or ""
-    lens_type = _enum_or_none(raw_lens_type.strip(), VALID_LENS_TYPES)
+    lens_type = raw_lens_type.strip() or None
     if lens_type == "plano":
         for fld in ["od_sphere","od_cylinder","os_sphere","os_cylinder"]:
             body[fld] = 0
@@ -1066,7 +1184,7 @@ def create_visit():
     frame_type = _enum_or_none((body.get("frame_type") or "").strip(), VALID_FRAME_TYPES)
 
     # ── Lens material: must be valid enum or None ───────────────
-    lens_material = _enum_or_none((body.get("lens_material") or "").strip(), VALID_LENS_MATERIALS)
+    lens_material = (body.get("lens_material") or "").strip() or None
 
     frame_price   = float(body.get("frame_price", 0) or 0)
     lens_price    = float(body.get("lens_price", 0) or 0)
@@ -1235,16 +1353,14 @@ def update_visit(vid):
         updates["remaining"]    = max(0, updates["total_amount"] - paid)
 
     # ── Enum-safe sanitisation ──────────────────────────────────
-    VALID_LENS_TYPES     = {"single_vision","bifocal","trifocal","progressive","reading","plano","prism","occupational"}
-    VALID_LENS_MATERIALS = {"plastic","glass","contact"}
     VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
 
     if "lens_type" in updates:
         v = (updates["lens_type"] or "").strip()
-        updates["lens_type"] = v if v in VALID_LENS_TYPES else None
+        updates["lens_type"] = v or None
     if "lens_material" in updates:
         v = (updates["lens_material"] or "").strip()
-        updates["lens_material"] = v if v in VALID_LENS_MATERIALS else None
+        updates["lens_material"] = v or None
     if "frame_type" in updates:
         v = (updates["frame_type"] or "").strip()
         updates["frame_type"] = v if v in VALID_FRAME_TYPES else None
@@ -1304,6 +1420,197 @@ def list_followups():
 # ─────────────────────────────────────────────────────────────
 # LENS INVENTORY
 # ─────────────────────────────────────────────────────────────
+
+def _seed_lens_catalog(cid):
+    rows = []
+    for category, items in DEFAULT_LENS_CATALOG.items():
+        for idx, (value, label) in enumerate(items):
+            rows.append({
+                "clinic_id": cid,
+                "category": category,
+                "value": value,
+                "label": label,
+                "is_active": True,
+                "sort_order": idx,
+            })
+    if rows:
+        db.table("clinic_lens_catalog").insert(rows).execute()
+
+
+def _get_lens_catalog_rows(cid):
+    res = db.table("clinic_lens_catalog").select("*").eq("clinic_id", cid) \
+        .order("category").order("sort_order").execute()
+    rows = res.data or []
+    if not rows:
+        _seed_lens_catalog(cid)
+        res = db.table("clinic_lens_catalog").select("*").eq("clinic_id", cid) \
+            .order("category").order("sort_order").execute()
+        rows = res.data or []
+    return rows
+
+
+def _catalog_response(rows):
+    catalog = {"type": [], "material": [], "coating": []}
+    for row in rows:
+        category = row.get("category")
+        if category in catalog:
+            catalog[category].append({
+                "value": row.get("value"),
+                "label": row.get("label") or row.get("value"),
+                "is_active": row.get("is_active") is not False,
+                "sort_order": row.get("sort_order") or 0,
+            })
+    return catalog
+
+
+@app.route("/api/lens-catalog", methods=["GET"])
+@_auth()
+def get_lens_catalog():
+    cid = session["clinic_id"]
+    return ok(_catalog_response(_get_lens_catalog_rows(cid)))
+
+
+@app.route("/api/lens-catalog", methods=["PUT"])
+@_auth(roles=["doctor", "super_admin"])
+def update_lens_catalog():
+    cid = session["clinic_id"]
+    uid = session["user_id"]
+    body = request.get_json() or {}
+    rows = []
+    for category in ["type", "material", "coating"]:
+        for idx, item in enumerate(body.get(category) or []):
+            label = (item.get("label") or item.get("value") or "").strip()
+            value = _slugify_lens_value(item.get("value") or label)
+            if not label or not value:
+                continue
+            rows.append({
+                "clinic_id": cid,
+                "category": category,
+                "value": value,
+                "label": label,
+                "is_active": item.get("is_active", True) is not False,
+                "sort_order": int(item.get("sort_order", idx) or idx),
+            })
+
+    db.table("clinic_lens_catalog").delete().eq("clinic_id", cid).execute()
+    if rows:
+        db.table("clinic_lens_catalog").insert(rows).execute()
+    _write_audit(cid, uid, "update", "lens_catalog", cid, new_value={"items": len(rows)})
+    return ok(_catalog_response(rows))
+
+
+def _lens_inventory_key(row):
+    return (
+        str(row.get("lens_type") or ""),
+        str(row.get("material") or ""),
+        str(row.get("coating") or "clear"),
+        round(_num_or_zero(row.get("sphere")), 2),
+        round(_num_or_zero(row.get("cylinder")), 2),
+    )
+
+
+def _power_range(start, end, step):
+    start = float(start)
+    end = float(end)
+    step = abs(float(step or 0.25))
+    if step <= 0:
+        step = 0.25
+    direction = 1 if end >= start else -1
+    values = []
+    cur = start
+    guard = 0
+    while (cur <= end + 1e-9 if direction > 0 else cur >= end - 1e-9):
+        values.append(round(cur, 2))
+        cur += direction * step
+        guard += 1
+        if guard > 1000:
+            break
+    return values
+
+
+@app.route("/api/lenses/bulk-generate", methods=["POST"])
+@_auth(roles=["doctor", "super_admin"])
+def bulk_generate_lenses():
+    cid = session["clinic_id"]
+    uid = session["user_id"]
+    body = request.get_json() or {}
+    existing_mode = body.get("existing_mode") if body.get("existing_mode") in {"update", "skip"} else "skip"
+    lens_types = body.get("lens_types") or []
+    materials = body.get("materials") or []
+    coatings = body.get("coatings") or ["clear"]
+    ranges = body.get("ranges") or {}
+    defaults = body.get("defaults") or {}
+
+    if not lens_types or not materials or not coatings:
+        return err("Choose at least one type, material, and coating")
+
+    spheres = _power_range(ranges.get("sphere_start", 0), ranges.get("sphere_end", 0), ranges.get("sphere_step", 0.25))
+    cylinders = _power_range(ranges.get("cylinder_start", 0), ranges.get("cylinder_end", 0), ranges.get("cylinder_step", 0.25))
+    generated_count = len(lens_types) * len(materials) * len(coatings) * len(spheres) * len(cylinders)
+    if generated_count > 500 and not bool(body.get("confirm_large")):
+        return err("Large generation requires confirmation", 409, code="large_lens_generation", count=generated_count)
+    if generated_count > 10000:
+        return err("Please narrow the ranges. Maximum is 10000 generated rows.", 400)
+
+    existing_rows = db.table("lenses").select("*").eq("clinic_id", cid).execute()
+    existing = {_lens_inventory_key(row): row for row in (existing_rows.data or [])}
+    to_insert = []
+    updated = 0
+    skipped = 0
+    quantity = int(defaults.get("quantity") or 0)
+    min_stock = int(defaults.get("min_stock") or 2)
+    cost_price = defaults.get("cost_price") or 0
+    sell_price = defaults.get("sell_price") or 0
+
+    for lens_type in lens_types:
+        for material in materials:
+            for coating in coatings:
+                for sphere in spheres:
+                    for cylinder in cylinders:
+                        row = {
+                            "clinic_id": cid,
+                            "lens_type": lens_type,
+                            "material": material,
+                            "coating": coating or "clear",
+                            "sphere": sphere,
+                            "cylinder": cylinder,
+                            "quantity": quantity,
+                            "min_stock": min_stock,
+                            "cost_price": cost_price,
+                            "sell_price": sell_price,
+                            "updated_at": now_iso(),
+                        }
+                        key = _lens_inventory_key(row)
+                        if key in existing:
+                            if existing_mode == "update":
+                                db.table("lenses").update({
+                                    "quantity": quantity,
+                                    "min_stock": min_stock,
+                                    "cost_price": cost_price,
+                                    "sell_price": sell_price,
+                                    "updated_at": now_iso(),
+                                }).eq("clinic_id", cid).eq("id", existing[key]["id"]).execute()
+                                updated += 1
+                            else:
+                                skipped += 1
+                        else:
+                            to_insert.append(row)
+
+    inserted = 0
+    for i in range(0, len(to_insert), 500):
+        chunk = to_insert[i:i + 500]
+        if chunk:
+            db.table("lenses").insert(chunk).execute()
+            inserted += len(chunk)
+
+    _write_audit(cid, uid, "create", "lens", new_value={
+        "bulk_generated": generated_count,
+        "inserted": inserted,
+        "updated": updated,
+        "skipped": skipped,
+    })
+    return ok({"generated": generated_count, "inserted": inserted, "updated": updated, "skipped": skipped})
+
 
 @app.route("/api/lenses", methods=["GET"])
 @_auth(setting="recept_access_inventory")
@@ -1962,6 +2269,7 @@ BACKUP_FORMAT_VERSION = "2"
 BACKUP_TABLES = [
     "patients", "visits", "frames", "lenses",
     "retail_sales", "operating_expenses", "clinic_settings",
+    "clinic_lens_catalog",
 ]
 
 # Supabase Storage bucket — create this bucket in your Supabase dashboard
@@ -2167,7 +2475,7 @@ def restore_backup():
             continue
 
         try:
-            conflict_key = "clinic_id" if table == "clinic_settings" else "id"
+            conflict_key = "clinic_id" if table == "clinic_settings" else ("clinic_id,category,value" if table == "clinic_lens_catalog" else "id")
             db.table(table).upsert(safe_rows, on_conflict=conflict_key).execute()
             restored[table] = len(safe_rows)
         except Exception as e:
@@ -2648,7 +2956,7 @@ def admin_backup_clinic(cid):
         },
         "clinic": clinic.data,
     }
-    for table in ["patients", "visits", "frames", "lenses", "retail_sales", "operating_expenses", "users", "clinic_settings", "licenses"]:
+    for table in ["patients", "visits", "frames", "lenses", "clinic_lens_catalog", "retail_sales", "operating_expenses", "users", "clinic_settings", "licenses"]:
         payload[table] = db.table(table).select("*").eq("clinic_id", cid).execute().data or []
 
     row_counts = {k: len(v) for k, v in payload.items() if isinstance(v, list)}

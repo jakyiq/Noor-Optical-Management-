@@ -38,6 +38,7 @@ SYNCABLE_TABLES = {
     'retail_sales':       'clinic_id',
     'operating_expenses': 'clinic_id',
     'clinic_settings':    'clinic_id',
+    'clinic_lens_catalog':'clinic_id',
 }
 
 

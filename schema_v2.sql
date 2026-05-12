@@ -215,6 +215,21 @@ CREATE TABLE IF NOT EXISTS frames (
 
 CREATE INDEX IF NOT EXISTS idx_frames_clinic ON frames(clinic_id);
 
+CREATE TABLE IF NOT EXISTS clinic_lens_catalog (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id   UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  category    TEXT NOT NULL CHECK (category IN ('type','material','coating')),
+  value       TEXT NOT NULL,
+  label       TEXT NOT NULL,
+  is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (clinic_id, category, value)
+);
+
+CREATE INDEX IF NOT EXISTS idx_clinic_lens_catalog_clinic ON clinic_lens_catalog(clinic_id, category, sort_order);
+
 -- ─────────────────────────────────────────────
 -- LENSES INVENTORY
 -- ─────────────────────────────────────────────
@@ -236,6 +251,12 @@ CREATE TABLE IF NOT EXISTS lenses (
 
 CREATE INDEX IF NOT EXISTS idx_lenses_clinic ON lenses(clinic_id);
 CREATE INDEX IF NOT EXISTS idx_lenses_power  ON lenses(clinic_id, sphere, cylinder);
+
+ALTER TABLE lenses ALTER COLUMN coating DROP DEFAULT;
+ALTER TABLE lenses ALTER COLUMN lens_type TYPE TEXT USING lens_type::TEXT;
+ALTER TABLE lenses ALTER COLUMN material  TYPE TEXT USING material::TEXT;
+ALTER TABLE lenses ALTER COLUMN coating   TYPE TEXT USING coating::TEXT;
+ALTER TABLE lenses ALTER COLUMN coating SET DEFAULT 'clear';
 
 -- ─────────────────────────────────────────────
 -- VISITS (prescriptions)
@@ -295,6 +316,9 @@ CREATE INDEX IF NOT EXISTS idx_visits_clinic  ON visits(clinic_id);
 CREATE INDEX IF NOT EXISTS idx_visits_patient ON visits(clinic_id, patient_id);
 CREATE INDEX IF NOT EXISTS idx_visits_date    ON visits(clinic_id, visit_date);
 CREATE INDEX IF NOT EXISTS idx_visits_next    ON visits(clinic_id, next_visit_date);
+
+ALTER TABLE visits ALTER COLUMN lens_type     TYPE TEXT USING lens_type::TEXT;
+ALTER TABLE visits ALTER COLUMN lens_material TYPE TEXT USING lens_material::TEXT;
 
 -- ─────────────────────────────────────────────
 -- RETAIL / MISCELLANEOUS SALES
@@ -393,6 +417,7 @@ ALTER TABLE clinic_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE patients        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE visits          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lenses          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clinic_lens_catalog ENABLE ROW LEVEL SECURITY;
 ALTER TABLE frames          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE retail_sales    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE operating_expenses ENABLE ROW LEVEL SECURITY;
@@ -511,6 +536,12 @@ CREATE POLICY visits_same_clinic_delete ON visits
 -- ─────────────────────────────────────────────
 DROP POLICY IF EXISTS lenses_same_clinic_all ON lenses;
 CREATE POLICY lenses_same_clinic_all ON lenses
+  FOR ALL TO authenticated
+  USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin')
+  WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
+
+DROP POLICY IF EXISTS clinic_lens_catalog_same_clinic_all ON clinic_lens_catalog;
+CREATE POLICY clinic_lens_catalog_same_clinic_all ON clinic_lens_catalog
   FOR ALL TO authenticated
   USING (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin')
   WITH CHECK (clinic_id = jwt_clinic_id() OR jwt_app_role() = 'super_admin');
