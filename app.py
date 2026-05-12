@@ -1228,6 +1228,13 @@ def create_visit():
     def _va_clean(val):
         return (val or "").strip() or None
 
+    od_lens_id = body.get("od_lens_id") or None
+    os_lens_id = body.get("os_lens_id") or None
+    selected_lens_ids = [x for x in [od_lens_id, os_lens_id] if x]
+    legacy_lens_id = body.get("lens_id") or None
+    if not selected_lens_ids and legacy_lens_id:
+        selected_lens_ids = [legacy_lens_id] * max(1, _int_or_none(body.get("lens_count")) or 1)
+
     row = {
         "clinic_id":     cid,
         "patient_id":    patient_id,
@@ -1274,24 +1281,26 @@ def create_visit():
         "notes":         (body.get("notes") or "").strip() or None,
         "created_by":    uid,
         # Inventory reference
-        "lens_id":       body.get("lens_id") or None,
+        "lens_id":       legacy_lens_id or (selected_lens_ids[0] if selected_lens_ids else None),
     }
 
     # ── Inventory deduction (optimistic-lock guard) ──────────────────────────
     # Each UPDATE conditions on the quantity we just read.  If a concurrent
     # request already decremented it, the WHERE clause won't match and .data
     # will be empty — we treat that as a stock conflict and abort.
-    lens_id  = body.get("lens_id")
     frame_id = body.get("frame_id")
-    lens_count = int(body.get("lens_count", 2))
 
-    if lens_id:
+    lens_counts = {}
+    for lid in selected_lens_ids:
+        lens_counts[lid] = lens_counts.get(lid, 0) + 1
+
+    for lens_id, needed_qty in lens_counts.items():
         l = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).eq("id", lens_id).single().execute()
         if l.data:
             current_qty = l.data["quantity"]
-            if current_qty < lens_count:
-                return err(f"Insufficient lens stock (have {current_qty}, need {lens_count})", 409)
-            new_qty = current_qty - lens_count
+            if current_qty < needed_qty:
+                return err(f"Insufficient lens stock (have {current_qty}, need {needed_qty})", 409)
+            new_qty = current_qty - needed_qty
             updated = db.table("lenses").update({"quantity": new_qty}) \
                 .eq("clinic_id", cid).eq("id", lens_id) \
                 .eq("quantity", current_qty).execute()   # optimistic lock
@@ -1790,6 +1799,15 @@ def match_lenses():
 
     res  = db.table("lenses").select("*").eq("clinic_id", cid).gt("quantity", 0).execute()
     rows = res.data or []
+    lens_type = (args.get("lens_type") or "").strip()
+    material = (args.get("material") or "").strip()
+    coatings = [c.strip() for c in (args.get("coating") or "").split(",") if c.strip()]
+    if lens_type:
+        rows = [r for r in rows if r.get("lens_type") == lens_type]
+    if material:
+        rows = [r for r in rows if r.get("material") == material]
+    if coatings:
+        rows = [r for r in rows if (r.get("coating") or "clear") in coatings]
 
     def _eye_matches(row_list, sph_str, cyl_str):
         if sph_str is None:

@@ -4,12 +4,14 @@
     { "src": "app.py", "use": "@vercel/python" },
     { "src": "static/**", "use": "@vercel/static" },
     { "src": "index.html", "use": "@vercel/static" },
+    { "src": "manifest.json", "use": "@vercel/static" },
     { "src": "sw.js", "use": "@vercel/static" },
     { "src": "localFirst.js", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "app.py" },
     { "src": "/static/(.*)", "dest": "/static/$1" },
+    { "src": "/manifest.json", "dest": "manifest.json" },
     { "src": "/sw.js", "dest": "sw.js" },
     { "src": "/localFirst.js", "dest": "localFirst.js" },
     { "src": "/(.*)", "dest": "index.html" }

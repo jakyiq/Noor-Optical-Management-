@@ -1,0 +1,10 @@
+{
+  "name": "Noor OMS",
+  "short_name": "Noor OMS",
+  "description": "Offline-capable optical clinic management system",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf6f0",
+  "theme_color": "#6b1a2a",
+  "icons": []
+}

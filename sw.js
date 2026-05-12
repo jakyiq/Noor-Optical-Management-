@@ -3,7 +3,7 @@
 // API calls always go to network only — patient data is never cached.
 // Background Sync registration support added for LocalFirst flush.
 
-const CACHE_NAME  = 'noor-shell-v3';
+const CACHE_NAME  = 'noor-shell-v4';
 const SYNC_TAG    = 'noor-lf-flush';   // matches the tag used in localFirst.js
 
 const SHELL_ASSETS = [
@@ -11,6 +11,20 @@ const SHELL_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/localFirst.js',   // make the LF module available offline
+  '/static/style.css',
+  '/static/core.js',
+  '/static/auth.js',
+  '/static/nav.js',
+  '/static/patients.js',
+  '/static/visits.js',
+  '/static/lenses.js',
+  '/static/frames.js',
+  '/static/followups.js',
+  '/static/reports.js',
+  '/static/settings.js',
+  '/static/admin.js',
+  '/static/backup.js',
+  '/static/main.js',
 ];
 
 // ── Install: cache the shell ──────────────────────────────────────────────────
