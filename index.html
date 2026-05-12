@@ -1155,8 +1155,21 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   width:24px;height:3px;background:var(--burgundy);
   border-radius:3px 3px 0 0;
 }
+.table-footer-actions{
+  display:flex;justify-content:center;align-items:center;gap:10px;
+  padding:14px;border-top:1px solid var(--cream-border);
+}
+.table-footer-actions .muted{font-size:.82rem;color:var(--ink-light)}
 @media(max-width:400px){
   .bnav-hide-sm{display:flex}
+}
+
+@media(max-width:600px){
+  #modal-lens-wizard .modal{width:100%!important;max-height:96dvh;border-radius:16px 16px 0 0}
+  #modal-lens-wizard .modal-body{max-height:calc(96dvh - 132px);padding:14px;overflow-y:auto}
+  #modal-lens-wizard .modal-footer{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--cream-border)}
+  #modal-lens-wizard .settings-section-body>div[style*="grid-template-columns"]{grid-template-columns:1fr!important}
+  #modal-lens-wizard select[multiple]{min-height:132px}
 }
 
 .more-menu-overlay{
@@ -1484,6 +1497,10 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
     <button class="more-tile" type="button" onclick="navigateFromMore('lenses')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
       <span data-i18n="lenses">Lenses</span>
+    </button>
+    <button class="more-tile" type="button" onclick="openLensWizard()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18"/><path d="M3 12h18"/><path d="M5 5l14 14"/><path d="M19 5L5 19"/></svg>
+      <span>Setup Wizard</span>
     </button>
     <button class="more-tile" type="button" onclick="navigateFromMore('reports')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16l3-5 3 3 4-7"/></svg>
@@ -1843,6 +1860,10 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <div class="empty-state" id="lenses-empty" style="display:none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
             <h3 data-i18n="noLenses">لا توجد عدسات</h3><p data-i18n="noLensesSub">أضف عدسة يدوياً أو استخدم المعالج</p>
+          </div>
+          <div class="table-footer-actions" id="lenses-load-wrap" style="display:none">
+            <span class="muted" id="lenses-render-count"></span>
+            <button class="btn btn-outline btn-sm" type="button" onclick="loadMoreLenses()">Load more</button>
           </div>
         </div>
       </section>
@@ -2982,6 +3003,7 @@ const NOOR = {
   users: [], auditLog: [], clinics: [],
   reportHiddenItems: new Set(),
   reportChartItems: [],
+  lensRenderLimit: 250,
   settings: {},
   lensCatalog: { type: [], material: [], coating: [] },
   waTemplates: { wa_template_1:'', wa_template_2:'', wa_template_3:'' },
@@ -3388,6 +3410,10 @@ function defaultRxWhatsAppMessage(values) {
       : 'Your prescription from {clinic_name} dated {date}. Wishing you good health, {patient_name}.',
     values
   );
+}
+
+function canShareRxPdf(file) {
+  return !!(file && navigator.share && navigator.canShare?.({ files: [file] }));
 }
 
 function buildRxPdfFile(payload, filename) {
@@ -4207,7 +4233,7 @@ function confirmDuplicatePatient(duplicates) {
   const rows = (duplicates || []).slice(0, 4).map(p => {
     const phone = p.phone ? ` - ${p.phone}` : '';
     return `${p.full_name || 'Unnamed'}${phone}`;
-  }).join('\n');
+  }).join('\n') || (NOOR.lang === 'ar' ? 'تم العثور على مراجع مشابه.' : 'A similar patient was found.');
   const isAr = NOOR.lang === 'ar';
   return confirm(isAr
     ? `يوجد مراجع بنفس الاسم أو رقم الهاتف:\n${rows}\n\nهل تريد الحفظ كمراجع جديد رغم ذلك؟`
@@ -4773,6 +4799,7 @@ function fillWizardMultiselects() {
 }
 
 async function openLensWizard() {
+  closeMoreMenu();
   await ensureLensCatalog();
   fillWizardCatalogTextareas();
   fillWizardMultiselects();
@@ -4863,7 +4890,7 @@ async function renderLenses() {
     await ensureLensCatalog();
     const data = await get('/api/lenses');
     NOOR.lenses = data.data || [];
-    const low = NOOR.lenses.filter(l=>l.quantity<=l.min_stock);
+    const low = NOOR.lenses.filter(l=>l.quantity<=l.min_stock).slice(0, 40);
     const banner = document.getElementById('lenses-low-banner');
     if (low.length) {
       banner.classList.add('show');
@@ -4873,7 +4900,17 @@ async function renderLenses() {
   } catch(e) { toast(e.message,'error'); }
 }
 
-function filterLenses() {
+function baseLensRenderLimit() {
+  return isMobile() ? 80 : 250;
+}
+
+function loadMoreLenses() {
+  NOOR.lensRenderLimit = (NOOR.lensRenderLimit || baseLensRenderLimit()) + baseLensRenderLimit();
+  filterLenses(false);
+}
+
+function filterLenses(resetLimit = true) {
+  if (resetLimit) NOOR.lensRenderLimit = baseLensRenderLimit();
   const typ = document.getElementById('lens-type-filter')?.value||'';
   const mat = document.getElementById('lens-material-filter')?.value||'';
   const sphRaw = document.getElementById('lens-sph-filter')?.value;
@@ -4892,9 +4929,19 @@ function filterLenses() {
   });
   const tbody = document.getElementById('lenses-tbody');
   const empty = document.getElementById('lenses-empty');
-  if (!list.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  const loadWrap = document.getElementById('lenses-load-wrap');
+  const countEl = document.getElementById('lenses-render-count');
+  if (!list.length) {
+    tbody.innerHTML='';
+    empty.style.display='block';
+    if (loadWrap) loadWrap.style.display = 'none';
+    return;
+  }
   empty.style.display = 'none';
-  tbody.innerHTML = list.map(l => {
+  const visible = list.slice(0, NOOR.lensRenderLimit || baseLensRenderLimit());
+  if (loadWrap) loadWrap.style.display = list.length > visible.length ? 'flex' : 'none';
+  if (countEl) countEl.textContent = `Showing ${fmtNum(visible.length)} of ${fmtNum(list.length)}`;
+  tbody.innerHTML = visible.map(l => {
     const st = l.quantity===0?['danger',t('out')]:l.quantity<=l.min_stock?['warning',t('low')]:['success',t('ok')];
     return `<tr>
       <td class="td-name">${esc(catalogLabel('type', l.lens_type))}</td>
@@ -5749,7 +5796,7 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const printFile = _buildRxPrintBlob();
     const pdfFile = buildRxPdfFile(payload, filename);
 
-    if (pdfFile && navigator.canShare?.({ files: [pdfFile] }) && navigator.share) {
+    if (canShareRxPdf(pdfFile)) {
       await navigator.share({ files: [pdfFile], text: waMsg, title: filename });
       setTimeout(() => URL.revokeObjectURL(printFile.blobURL), 30000);
       toast(NOOR.lang === 'ar' ? 'تم فتح المشاركة لإرسال ملف PDF' : 'Share sheet opened with the PDF attached', 'success');
@@ -5775,7 +5822,13 @@ async function sendRxWhatsApp(vid, phone, patientName) {
 
     window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`, '_blank');
     setTimeout(() => URL.revokeObjectURL(printFile.blobURL), 30000);
-    toast(NOOR.lang === 'ar' ? 'تم تجهيز ملف PDF وفتح واتساب' : 'PDF prepared and WhatsApp opened', 'success');
+    toast(
+      NOOR.lang === 'ar'
+        ? 'تم تنزيل ملف PDF وفتح واتساب. إرفاق الملف تلقائياً يحتاج متصفحاً يدعم مشاركة الملفات.'
+        : 'PDF downloaded and WhatsApp opened. Auto-attachment needs browser file sharing support.',
+      'success',
+      6000
+    );
   } catch(e) {
     toast('Error: ' + e.message, 'error');
   }

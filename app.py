@@ -1006,6 +1006,34 @@ def _patient_duplicate_matches(cid, full_name, phone, exclude_id=None):
     return list(matches.values())
 
 
+def _looks_like_duplicate_db_error(exc):
+    text = str(exc or "").lower()
+    return "duplicate" in text or "unique constraint" in text or "23505" in text
+
+
+def _duplicate_patient_response_from_request():
+    body = request.get_json(silent=True) or {}
+    cid = session.get("clinic_id")
+    pid = request.view_args.get("pid") if request.view_args else None
+    duplicates = []
+    if cid:
+        try:
+            duplicates = _patient_duplicate_matches(
+                cid,
+                body.get("full_name"),
+                body.get("phone"),
+                exclude_id=pid,
+            )
+        except Exception:
+            logging.exception("Failed to collect duplicate patient matches")
+    return err(
+        "A patient with the same name or phone already exists",
+        409,
+        duplicates=duplicates,
+        code="duplicate_patient",
+    )
+
+
 @app.route("/api/patients", methods=["POST"])
 @_auth(roles=["doctor", "super_admin", "receptionist"], setting="recept_edit_patients")
 def create_patient():
@@ -3004,6 +3032,8 @@ def method_not_allowed(e):
 def internal_error(e):
     tb = traceback.format_exc()
     logging.error(tb)
+    if request.path.startswith("/api/patients") and _looks_like_duplicate_db_error(e):
+        return _duplicate_patient_response_from_request()
     if app.debug:
         return jsonify({"error": "Internal server error", "detail": str(e), "traceback": tb}), 500
     return jsonify({"error": "Internal server error"}), 500
@@ -3012,6 +3042,8 @@ def internal_error(e):
 def unhandled_exception(e):
     tb = traceback.format_exc()
     logging.error(tb)
+    if request.path.startswith("/api/patients") and _looks_like_duplicate_db_error(e):
+        return _duplicate_patient_response_from_request()
     if app.debug:
         return jsonify({"error": str(e), "traceback": tb}), 500
     return jsonify({"error": "Internal server error"}), 500
