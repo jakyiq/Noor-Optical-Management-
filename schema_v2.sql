@@ -76,6 +76,7 @@ ALTER TABLE clinics ADD COLUMN IF NOT EXISTS owner_auth_user_id UUID;
 ALTER TABLE clinics ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE clinics ADD COLUMN IF NOT EXISTS banned_at TIMESTAMPTZ;
 ALTER TABLE clinics ADD COLUMN IF NOT EXISTS banned_reason TEXT;
+ALTER TABLE clinics ADD COLUMN IF NOT EXISTS address TEXT;
 
 -- ─────────────────────────────────────────────
 -- LICENSES
@@ -215,6 +216,8 @@ CREATE TABLE IF NOT EXISTS frames (
 
 CREATE INDEX IF NOT EXISTS idx_frames_clinic ON frames(clinic_id);
 
+ALTER TABLE frames ALTER COLUMN frame_type TYPE TEXT USING frame_type::TEXT;
+
 CREATE TABLE IF NOT EXISTS clinic_lens_catalog (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id   UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
@@ -319,6 +322,8 @@ CREATE INDEX IF NOT EXISTS idx_visits_next    ON visits(clinic_id, next_visit_da
 
 ALTER TABLE visits ALTER COLUMN lens_type     TYPE TEXT USING lens_type::TEXT;
 ALTER TABLE visits ALTER COLUMN lens_material TYPE TEXT USING lens_material::TEXT;
+ALTER TABLE visits ALTER COLUMN frame_type    TYPE TEXT USING frame_type::TEXT;
+ALTER TABLE visits ADD COLUMN IF NOT EXISTS lens_id UUID REFERENCES lenses(id) ON DELETE SET NULL;
 
 -- ─────────────────────────────────────────────
 -- RETAIL / MISCELLANEOUS SALES
