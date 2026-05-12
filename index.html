@@ -535,16 +535,16 @@ tbody tr:hover{background:var(--cream)}
 .badge-burgundy{background:var(--burgundy-pale);color:var(--burgundy)}
 
 /* MODAL */
-.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain}
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:hidden;touch-action:none;overscroll-behavior:none}
 .modal-overlay.show{display:flex}
-.modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:min(700px,100%);position:relative;animation:modalIn .22s ease}
+.modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:min(700px,100%);max-height:calc(100dvh - 80px);position:relative;animation:modalIn .22s ease;display:flex;flex-direction:column;overflow:hidden}
 @keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
 .modal-header{padding:24px 28px 20px;border-bottom:1px solid var(--cream-border);display:flex;align-items:center;justify-content:space-between}
 .modal-title{font-family:'Amiri','Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--ink)}
 html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .modal-close{width:32px;height:32px;background:var(--cream);border:1px solid var(--cream-border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-mid);transition:all .15s}
 .modal-close:hover{background:var(--danger);color:white;border-color:var(--danger)}
-.modal-body{padding:24px 28px}
+.modal-body{padding:24px 28px;overflow-y:auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .modal-footer{padding:16px 28px 24px;display:flex;gap:10px;justify-content:flex-end}
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--cream-border);margin-bottom:24px;overflow-x:auto}
 .tab-btn{padding:10px 20px;background:none;border:none;border-bottom:2px solid transparent;font-family:inherit;font-size:.85rem;font-weight:600;color:var(--ink-light);cursor:pointer;white-space:nowrap;transition:all .15s;margin-bottom:-1px}
@@ -1050,7 +1050,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   /* ── Modals: bottom sheet ── */
   .modal{ border-radius:var(--radius-lg) var(--radius-lg) 0 0; width:100%; max-height:92vh }
   .modal-overlay{ align-items:flex-end; padding:0 }
-  .modal-body{ padding:16px 16px; max-height:65vh; overflow-y:auto }
+  .modal-body{ padding:16px 16px; overflow-y:auto }
   .modal-header{ padding:18px 16px 14px }
   .modal-footer{ padding:14px 16px 24px; flex-wrap:wrap; gap:10px }
   .modal-footer .btn{ flex:1; justify-content:center; padding:12px }
@@ -2797,6 +2797,39 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-rx-share">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">Send RX PDF</div>
+      <button class="modal-close" onclick="closeModal('modal-rx-share')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.92rem;color:var(--ink-mid);line-height:1.7" id="rx-share-text">The polished A5 prescription PDF is ready. Tap Share PDF and choose WhatsApp.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-rx-share')" data-i18n="cancel">إلغاء</button>
+      <button class="btn btn-burgundy" type="button" onclick="sharePreparedRxPdf()">Share PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-duplicate-patient">
+  <div class="modal" style="width:min(440px,100%)">
+    <div class="modal-header">
+      <div class="modal-title" id="dup-patient-title">Duplicate Patient</div>
+      <button class="modal-close" onclick="resolveDuplicatePatient(false)">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.92rem;color:var(--ink-mid);line-height:1.7;margin-bottom:12px" id="dup-patient-message"></p>
+      <div id="dup-patient-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" type="button" onclick="resolveDuplicatePatient(false)" id="dup-cancel-btn">Cancel</button>
+      <button class="btn btn-burgundy" type="button" onclick="resolveDuplicatePatient(true)" id="dup-proceed-btn">Proceed</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════
 // API BASE — auto-detects local vs Vercel
@@ -2999,6 +3032,8 @@ const NOOR = {
   patientFormDirty: false,
   savingPatient: false,
   modalScrollY: 0,
+  pendingRxShare: null,
+  duplicatePatientResolver: null,
   sessionWarningTimer: null,
   sessionExpiryTimer: null,
   // cached data (refreshed from API on each section visit)
@@ -3419,6 +3454,45 @@ function canShareRxPdf(file) {
   return !!(file && navigator.share && navigator.canShare?.({ files: [file] }));
 }
 
+function openRxSharePrompt(file, text, title, waPhone) {
+  NOOR.pendingRxShare = { file, text, title, waPhone };
+  const isAr = NOOR.lang === 'ar';
+  const msg = document.getElementById('rx-share-text');
+  if (msg) msg.textContent = isAr
+    ? 'ملف وصفة A5 جاهز. اضغط مشاركة PDF ثم اختر واتساب لإرسال الملف.'
+    : 'The A5 prescription PDF is ready. Tap Share PDF and choose WhatsApp to send the file.';
+  openModal('modal-rx-share');
+}
+
+function sharePreparedRxPdf() {
+  const share = NOOR.pendingRxShare;
+  if (!share?.file || !navigator.share) {
+    toast(NOOR.lang === 'ar' ? 'المشاركة غير مدعومة في هذا المتصفح' : 'Sharing is not supported in this browser', 'error');
+    return;
+  }
+  if (navigator.canShare && !navigator.canShare({ files: [share.file] })) {
+    toast(NOOR.lang === 'ar' ? 'لا يمكن مشاركة ملف PDF من هذا المتصفح' : 'This browser cannot share the PDF file', 'error');
+    return;
+  }
+
+  const sharePromise = navigator.share({
+    files: [share.file],
+    text: share.text || '',
+    title: share.title || share.file.name,
+  });
+
+  sharePromise
+    .then(() => {
+      NOOR.pendingRxShare = null;
+      closeModal('modal-rx-share');
+      toast(NOOR.lang === 'ar' ? 'تم فتح المشاركة' : 'Share sheet opened', 'success');
+    })
+    .catch(e => {
+      if (e?.name === 'AbortError') return;
+      toast(e?.message || (NOOR.lang === 'ar' ? 'تعذر فتح المشاركة' : 'Could not open share sheet'), 'error');
+    });
+}
+
 async function buildRxPdfFile(payload, filename) {
   const jsPDFCtor = window.jspdf?.jsPDF;
   if (!jsPDFCtor || typeof File === 'undefined' || typeof html2canvas === 'undefined') return null;
@@ -3445,6 +3519,17 @@ async function buildRxPdfFile(payload, filename) {
   clone.style.boxShadow = 'none';
   clone.style.margin = '0';
   clone.style.background = '#fff';
+  clone.querySelectorAll('img').forEach(img => {
+    try {
+      const src = img.getAttribute('src') || '';
+      const url = new URL(src, window.location.href);
+      if (!src.startsWith('data:') && !src.startsWith('blob:') && url.origin !== window.location.origin) {
+        img.remove();
+      }
+    } catch(_) {
+      img.remove();
+    }
+  });
   host.appendChild(clone);
   document.body.appendChild(host);
   try {
@@ -3609,7 +3694,10 @@ function openModal(id){
   if (!overlay._touchGuarded) {
     overlay.addEventListener('touchstart', e => e.stopPropagation(), {passive:false});
     overlay.addEventListener('touchend',   e => e.stopPropagation(), {passive:false});
-    overlay.addEventListener('touchmove',  e => e.stopPropagation(), {passive:false});
+    overlay.addEventListener('touchmove',  e => {
+      e.stopPropagation();
+      if (!e.target.closest?.('.modal-body')) e.preventDefault();
+    }, {passive:false});
     overlay._touchGuarded = true;
   }
   if (id === 'modal-patient') setTimeout(markPatientFormClean, 0);
@@ -3618,6 +3706,11 @@ function closeModal(id){
   if (id === 'modal-patient' && NOOR.patientFormDirty && !confirmUnsavedPatientForm()) return;
   document.getElementById(id)?.classList.remove('show');
   if (id === 'modal-patient') markPatientFormClean();
+  if (id === 'modal-duplicate-patient' && NOOR.duplicatePatientResolver) {
+    const resolve = NOOR.duplicatePatientResolver;
+    NOOR.duplicatePatientResolver = null;
+    resolve(false);
+  }
   unlockPageScrollIfNoModal();
 }
 
@@ -4302,14 +4395,38 @@ function patientProfilePayload(extra = {}) {
 }
 
 function confirmDuplicatePatient(duplicates) {
-  const rows = (duplicates || []).slice(0, 4).map(p => {
-    const phone = p.phone ? ` - ${p.phone}` : '';
-    return `${p.full_name || 'Unnamed'}${phone}`;
-  }).join('\n') || (NOOR.lang === 'ar' ? 'تم العثور على مراجع مشابه.' : 'A similar patient was found.');
   const isAr = NOOR.lang === 'ar';
-  return confirm(isAr
-    ? `يوجد مراجع بنفس الاسم أو رقم الهاتف:\n${rows}\n\nهل تريد الحفظ كمراجع جديد رغم ذلك؟`
-    : `A patient with the same name or phone already exists:\n${rows}\n\nSave as a new patient anyway?`);
+  const title = document.getElementById('dup-patient-title');
+  const message = document.getElementById('dup-patient-message');
+  const list = document.getElementById('dup-patient-list');
+  const cancel = document.getElementById('dup-cancel-btn');
+  const proceed = document.getElementById('dup-proceed-btn');
+
+  if (title) title.textContent = isAr ? 'مراجع مشابه موجود' : 'Similar Patient Found';
+  if (message) message.textContent = isAr
+    ? 'يوجد مراجع بنفس الاسم أو رقم الهاتف. راجع المعلومات ثم اختر المتابعة أو الإلغاء.'
+    : 'A patient with the same name or phone already exists. Review the match, then proceed or cancel.';
+  if (cancel) cancel.textContent = isAr ? 'إلغاء' : 'Cancel';
+  if (proceed) proceed.textContent = isAr ? 'المتابعة والحفظ' : 'Proceed and Save';
+  if (list) {
+    const rows = (duplicates || []).slice(0, 5);
+    list.innerHTML = rows.length ? rows.map(p => `
+      <div style="border:1px solid var(--cream-border);background:var(--cream);border-radius:8px;padding:10px 12px">
+        <div style="font-weight:700;color:var(--ink)">${esc(p.full_name || (isAr ? 'بدون اسم' : 'Unnamed'))}</div>
+        <div style="font-family:'Figtree','DM Sans',sans-serif;font-size:.86rem;color:var(--ink-mid);margin-top:2px">${esc(p.phone || '—')}</div>
+      </div>
+    `).join('') : `<div style="color:var(--ink-mid)">${isAr ? 'تم العثور على مراجع مشابه.' : 'A similar patient was found.'}</div>`;
+  }
+
+  openModal('modal-duplicate-patient');
+  return new Promise(resolve => { NOOR.duplicatePatientResolver = resolve; });
+}
+
+function resolveDuplicatePatient(shouldProceed) {
+  const resolve = NOOR.duplicatePatientResolver;
+  NOOR.duplicatePatientResolver = null;
+  closeModal('modal-duplicate-patient');
+  if (resolve) resolve(!!shouldProceed);
 }
 
 async function savePatientProfile(pid, payload, isNewPatient) {
@@ -4324,7 +4441,7 @@ async function savePatientProfile(pid, payload, isNewPatient) {
     return pid;
   } catch (e) {
     if (e.status === 409 && e.data?.code === 'duplicate_patient') {
-      if (!confirmDuplicatePatient(e.data.duplicates || [])) {
+      if (!(await confirmDuplicatePatient(e.data.duplicates || []))) {
         e.silent = true;
         throw e;
       }
@@ -5869,9 +5986,9 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const pdfFile = await buildRxPdfFile(payload, filename);
 
     if (canShareRxPdf(pdfFile)) {
-      await navigator.share({ files: [pdfFile], text: waMsg, title: filename });
       setTimeout(() => URL.revokeObjectURL(printFile.blobURL), 30000);
-      toast(NOOR.lang === 'ar' ? 'تم فتح المشاركة لإرسال ملف PDF' : 'Share sheet opened with the PDF attached', 'success');
+      openRxSharePrompt(pdfFile, waMsg, filename, waPhone);
+      toast(NOOR.lang === 'ar' ? 'ملف PDF جاهز للمشاركة' : 'PDF is ready to share', 'success');
       return;
     }
 

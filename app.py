@@ -1384,7 +1384,10 @@ def update_visit(vid):
         updates["remaining"]    = max(0, updates["total_amount"] - paid)
 
     # ── Enum-safe sanitisation ──────────────────────────────────
-    VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
+    VALID_FRAME_TYPES = {
+        "full_rim", "half_rim", "rimless", "wrap", "butterfly",
+        "aviator", "round", "cat_eye",
+    }
 
     if "lens_type" in updates:
         v = (updates["lens_type"] or "").strip()
