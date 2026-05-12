@@ -1,5 +1,16 @@
 /* patients.js - extracted from index.html. Plain script, globals intentionally preserved. */
 async function renderPatients() {
+  const cached = getCachedApiData('/api/patients?limit=200');
+  if (cached?.data) {
+    setPatients(cached.data || []);
+    document.getElementById('patients-total').textContent = cached.total || NOOR.patients.length;
+    filterPatients();
+  } else {
+    const tbody = document.getElementById('patients-tbody');
+    const empty = document.getElementById('patients-empty');
+    if (tbody) tbody.innerHTML = skeletonRows(6, 6);
+    if (empty) empty.style.display = 'none';
+  }
   try {
     const data = await get('/api/patients?limit=200');
     setPatients(data.data || []);
@@ -412,8 +423,10 @@ async function savePatient() {
         lens_type:       NOOR.patientModalMode === 'old_rx' ? null : document.getElementById('rx-lens-type').value,
         lens_material:   NOOR.patientModalMode === 'old_rx' ? null : document.getElementById('rx-material').value,
         lens_coating:    NOOR.patientModalMode === 'old_rx' ? null : (coatings||'clear'),
-        lens_count:      NOOR.patientModalMode === 'old_rx' ? null : (parseInt(document.getElementById('rx-lens-count').value)||2),
+        lens_count:      NOOR.patientModalMode === 'old_rx' ? null : (Object.values(NOOR._selectedLensIds || {}).filter(Boolean).length || parseInt(document.getElementById('rx-lens-count').value)||2),
         lens_id:         NOOR._selectedLensId||null,
+        od_lens_id:      NOOR.patientModalMode === 'old_rx' ? null : ((NOOR._selectedLensIds || {}).od || null),
+        os_lens_id:      NOOR.patientModalMode === 'old_rx' ? null : ((NOOR._selectedLensIds || {}).os || null),
         frame_id:        NOOR.patientModalMode === 'old_rx' ? null : (NOOR._selectedFrameInvId||null),
         frame_brand:     NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-brand').value||null),
         frame_type:      NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-type').value||null),

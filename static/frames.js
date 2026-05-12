@@ -1,5 +1,15 @@
 /* frames.js - extracted from index.html. Plain script, globals intentionally preserved. */
 async function renderFrames() {
+  const cached = getCachedApiData('/api/frames');
+  if (cached?.data) {
+    NOOR.frames = cached.data || [];
+    filterFrames();
+  } else {
+    const tbody = document.getElementById('frames-tbody');
+    const empty = document.getElementById('frames-empty');
+    if (tbody) tbody.innerHTML = skeletonRows(8, 6);
+    if (empty) empty.style.display = 'none';
+  }
   try {
     const data = await get('/api/frames');
     NOOR.frames = data.data || [];

@@ -627,7 +627,14 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .inv-match-chip{padding:6px 12px;border:1.5px solid var(--cream-border);border-radius:var(--radius-sm);font-size:.78rem;font-family:'Figtree','DM Sans',sans-serif;cursor:pointer;background:white;transition:all .15s}
 .inv-match-chip:hover{border-color:var(--burgundy);color:var(--burgundy)}
 .inv-match-chip.selected{border-color:var(--burgundy);background:var(--burgundy-pale);color:var(--burgundy);font-weight:600}
+.inv-match-chip.disabled{opacity:.42;cursor:not-allowed;background:var(--cream);border-style:dashed}
 .inv-match-empty{font-size:.8rem;color:var(--ink-light)}
+
+.skeleton-line,.skeleton-card{position:relative;overflow:hidden;background:linear-gradient(90deg,var(--cream-border),var(--cream),var(--cream-border));background-size:220% 100%;animation:skeleton-shimmer 1.1s ease-in-out infinite}
+.skeleton-line{height:14px;border-radius:99px;max-width:150px}
+.skeleton-line.short{max-width:80px}.skeleton-line.wide{max-width:220px}
+.skeleton-card{min-height:82px;border-radius:var(--radius-sm);border:1px solid var(--cream-border);padding:14px;display:flex;flex-direction:column;gap:12px}
+@keyframes skeleton-shimmer{0%{background-position:120% 0}100%{background-position:-120% 0}}
 
 /* FIN SUMMARY */
 .fin-summary{background:var(--cream);border:1px solid var(--cream-border);border-radius:var(--radius-sm);padding:16px;margin-top:16px}

@@ -105,7 +105,7 @@ function fillVisitForm(v) {
   document.getElementById('f-next-visit').value = v.next_visit_date || '';
   document.getElementById('f-followup-months').value = v.followup_months || NOOR.settings.followup_months_default || 3;
   document.getElementById('f-visit-notes').value = v.notes || '';
-  onLensTypeChange();
+  onLensTypeChange(true);
   calcTotal();
 }
 
@@ -124,6 +124,9 @@ function clearPatientForm() {
   document.getElementById('f-visit-date').value = todayStr();
   document.getElementById('inv-match-items').innerHTML = `<span class="inv-match-empty">${t('enterRxFirst')}</span>`;
   NOOR._selectedLensId = null;
+  NOOR._selectedLensIds = { od: null, os: null };
+  NOOR._matchLensById = new Map();
+  NOOR._lastLensMatchSignature = '';
   // Reset sign-toggle buttons
   ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'].forEach(id => {
     document.getElementById(id + '-sign')?.classList.remove('is-negative');
@@ -143,7 +146,7 @@ function switchPatientTab(tab) {
   document.getElementById(map[tab])?.classList.add('active');
 }
 
-function onLensTypeChange() {
+function onLensTypeChange(skipMatch=false) {
   const val = document.getElementById('rx-lens-type').value;
   if (val === 'plano') {
     ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'].forEach(id => {
@@ -154,9 +157,10 @@ function onLensTypeChange() {
       const el = document.getElementById(id); if(el) el.disabled=false;
     });
   }
+  if (!skipMatch) onRxChange();
 }
 
-function toggleCoating(el){ el.classList.toggle('selected'); updatePatientFormDirty(); }
+function toggleCoating(el){ el.classList.toggle('selected'); updatePatientFormDirty(); onRxChange(); }
 
 function _clampRxInput(id) {
   const el = document.getElementById(id);
@@ -188,15 +192,33 @@ async function onRxChange() {
     const params = new URLSearchParams();
     if (odSph !== null) { params.set('od_sph', odSph); params.set('od_cyl', odCyl); }
     if (osSph !== null) { params.set('os_sph', osSph); params.set('os_cyl', osCyl); }
+    const lensType = document.getElementById('rx-lens-type')?.value || '';
+    const material = document.getElementById('rx-material')?.value || '';
+    const coatings = [...document.querySelectorAll('.coating-chip.selected')].map(c=>c.dataset.val).filter(Boolean);
+    if (lensType) params.set('lens_type', lensType);
+    if (material) params.set('material', material);
+    if (coatings.length) params.set('coating', coatings.join(','));
+    const matchSignature = params.toString();
+    if (NOOR._lastLensMatchSignature && NOOR._lastLensMatchSignature !== matchSignature) {
+      NOOR._selectedLensId = null;
+      NOOR._selectedLensIds = { od: null, os: null };
+      document.getElementById('f-lens-cost').value = '';
+      document.getElementById('f-lens-price').value = '';
+      calcTotal();
+    }
+    NOOR._lastLensMatchSignature = matchSignature;
 
     try {
       const data   = await get(`/api/lenses/match?${params}`);
       const result = data.data || {};
+      NOOR._matchLensById = new Map();
+      [...(Array.isArray(result) ? result : []), ...(result.od || []), ...(result.os || [])].forEach(l => NOOR._matchLensById.set(l.id, l));
 
       // Legacy flat array (old backend) — fall back gracefully
       if (Array.isArray(result)) {
         if (!result.length) { cont.innerHTML = '<span class="inv-match-empty">No matching lenses</span>'; return; }
         cont.innerHTML = result.map(l => _lensChipHtml(l, 'both')).join('');
+        _syncLensSelectionAvailability();
         return;
       }
 
@@ -214,6 +236,7 @@ async function onRxChange() {
         const eye  = odSph !== null ? 'od' : 'os';
         if (!list.length) { cont.innerHTML = '<span class="inv-match-empty">No matching lenses</span>'; return; }
         cont.innerHTML = list.map(l => _lensChipHtml(l, eye)).join('');
+        _syncLensSelectionAvailability();
         return;
       }
 
@@ -228,23 +251,88 @@ async function onRxChange() {
       }
       if (!html) { cont.innerHTML = '<span class="inv-match-empty">No matching lenses</span>'; return; }
       cont.innerHTML = html;
+      _syncLensSelectionAvailability();
     } catch(_) {}
   }, 300);
 }
 
-function _lensChipHtml(l, eye) {
+function _legacyLensChipHtml(l, eye) {
   const sphStr = (l.sphere > 0 ? '+' : '') + esc(l.sphere);
   const label  = `SPH ${sphStr} CYL ${esc(l.cylinder || 0)} · ${esc((l.lens_type || '').replace(/_/g, ' '))} · Qty: ${esc(l.quantity)}`;
   return `<div class="inv-match-chip" data-id="${escAttr(l.id)}" data-eye="${escAttr(eye)}" onclick="selectMatchLens(this,'${escAttr(l.id)}')">${label}</div>`;
 }
 
-function selectMatchLens(el, id) {
+function _legacySelectMatchLens(el, id) {
   document.querySelectorAll('.inv-match-chip').forEach(c=>c.classList.remove('selected'));
   el.classList.add('selected');
   NOOR._selectedLensId = id;
   // Try to fill price from cached lenses
   const lens = NOOR.lenses.find(l=>l.id===id);
   if (lens) { document.getElementById('f-lens-cost').value=lens.cost_price||''; document.getElementById('f-lens-price').value=lens.sell_price||''; calcTotal(); }
+}
+
+function _lensChipHtml(l, eye) {
+  const sphStr = (l.sphere > 0 ? '+' : '') + esc(l.sphere);
+  const label  = `SPH ${sphStr} CYL ${esc(l.cylinder || 0)} - ${esc((l.lens_type || '').replace(/_/g, ' '))} - ${esc((l.material || '').replace(/_/g, ' '))} - Qty: ${esc(l.quantity)}`;
+  return `<div class="inv-match-chip" data-id="${escAttr(l.id)}" data-eye="${escAttr(eye)}" data-qty="${escAttr(l.quantity || 0)}" data-cost="${escAttr(l.cost_price || 0)}" data-price="${escAttr(l.sell_price || 0)}" onclick="selectMatchLens(this,'${escAttr(l.id)}')">${label}</div>`;
+}
+
+function selectMatchLens(el, id) {
+  const eye = el.dataset.eye || 'both';
+  if (!NOOR._selectedLensIds) NOOR._selectedLensIds = { od: null, os: null };
+  const otherEye = eye === 'od' ? 'os' : eye === 'os' ? 'od' : null;
+  const qty = parseInt(el.dataset.qty || '0') || 0;
+  if (otherEye && NOOR._selectedLensIds[otherEye] === id && qty <= 1) {
+    toast(NOOR.lang === 'ar' ? 'هذه العدسة متبقية منها قطعة واحدة فقط.' : 'Only one of this lens is left in inventory.', 'warning');
+    return;
+  }
+  document.querySelectorAll(`.inv-match-chip[data-eye="${eye}"]`).forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  if (eye === 'both') {
+    NOOR._selectedLensIds.od = id;
+    NOOR._selectedLensIds.os = id;
+  } else {
+    NOOR._selectedLensIds[eye] = id;
+  }
+  _syncLensSelectionAvailability();
+  _applySelectedLensPricing();
+}
+
+function _lensById(id) {
+  return (NOOR._matchLensById && NOOR._matchLensById.get(id)) || (NOOR.lenses || []).find(l => l.id === id) || null;
+}
+
+function _selectedLensList() {
+  const ids = NOOR._selectedLensIds || {};
+  return ['od','os'].map(eye => ids[eye]).filter(Boolean).map(id => _lensById(id)).filter(Boolean);
+}
+
+function _applySelectedLensPricing() {
+  const lenses = _selectedLensList();
+  if (!lenses.length) return;
+  const cost = lenses.reduce((sum, l) => sum + (parseFloat(l.cost_price) || 0), 0);
+  const price = lenses.reduce((sum, l) => sum + (parseFloat(l.sell_price) || 0), 0);
+  document.getElementById('f-lens-cost').value = cost || '';
+  document.getElementById('f-lens-price').value = price || '';
+  document.getElementById('rx-lens-count').value = String(lenses.length);
+  NOOR._selectedLensId = (NOOR._selectedLensIds.od && NOOR._selectedLensIds.od === NOOR._selectedLensIds.os)
+    ? NOOR._selectedLensIds.od
+    : (NOOR._selectedLensIds.od || NOOR._selectedLensIds.os || null);
+  calcTotal();
+}
+
+function _syncLensSelectionAvailability() {
+  if (!NOOR._selectedLensIds) NOOR._selectedLensIds = { od: null, os: null };
+  document.querySelectorAll('.inv-match-chip').forEach(chip => {
+    const eye = chip.dataset.eye;
+    const id = chip.dataset.id;
+    const qty = parseInt(chip.dataset.qty || '0') || 0;
+    const otherEye = eye === 'od' ? 'os' : eye === 'os' ? 'od' : null;
+    const blocked = otherEye && NOOR._selectedLensIds[otherEye] === id && qty <= 1 && NOOR._selectedLensIds[eye] !== id;
+    chip.classList.toggle('disabled', !!blocked);
+    chip.setAttribute('aria-disabled', blocked ? 'true' : 'false');
+    chip.classList.toggle('selected', NOOR._selectedLensIds[eye] === id || (eye === 'both' && (NOOR._selectedLensIds.od === id || NOOR._selectedLensIds.os === id)));
+  });
 }
 
 function importPrevRx() {

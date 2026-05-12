@@ -23,6 +23,9 @@ function ensureApiBase() {
 }
 
 async function api(method, path, body) {
+  if (typeof NOOR !== 'undefined' && NOOR.offlineMode) {
+    return offlineApi(method, path, body);
+  }
   const base = ensureApiBase();
   const opts = {
     method,
@@ -33,22 +36,400 @@ async function api(method, path, body) {
     opts.headers['X-CSRF-Token'] = NOOR.csrfToken;
   }
   if (body !== undefined) opts.body = JSON.stringify(body);
-  const res = await fetch(base + path, opts);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const error = new Error(data.error || `HTTP ${res.status}`);
-    error.status = res.status;
-    error.data = data;
+  try {
+    const res = await fetch(base + path, opts);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const error = new Error(data.error || `HTTP ${res.status}`);
+      error.status = res.status;
+      error.data = data;
+      if (shouldUseOfflineApi(path, error)) return offlineApi(method, path, body);
+      throw error;
+    }
+    if (data.data?.csrf_token) NOOR.csrfToken = data.data.csrf_token;
+    if (method === 'GET') setCachedApiData(path, data);
+    else invalidateApiCache('/api/');
+    return data;
+  } catch (error) {
+    const cached = method === 'GET' ? getCachedApiData(path) : null;
+    if (cached && shouldUseOfflineApi(path, error)) return cached;
+    if (shouldUseOfflineApi(path, error)) return offlineApi(method, path, body);
     throw error;
   }
-  if (data.data?.csrf_token) NOOR.csrfToken = data.data.csrf_token;
-  return data;
 }
 
 const get  = (path)        => api('GET',    path);
 const post = (path, body)  => api('POST',   path, body);
 const put  = (path, body)  => api('PUT',    path, body);
 const del  = (path)        => api('DELETE', path);
+
+const OFFLINE_DB_KEY = 'noor_offline_db_v1';
+const API_CACHE_KEY = 'noor_api_cache_v1';
+const API_CACHE_TTL = 10 * 60 * 1000;
+
+function apiCacheStore() {
+  try { return JSON.parse(localStorage.getItem(API_CACHE_KEY) || '{}'); }
+  catch (_) { return {}; }
+}
+
+function apiCacheSave(store) {
+  try { localStorage.setItem(API_CACHE_KEY, JSON.stringify(store)); } catch (_) {}
+}
+
+function isCacheableApiGet(path) {
+  const p = String(path || '');
+  return p.startsWith('/api/')
+    && !p.startsWith('/api/me')
+    && !p.startsWith('/api/login')
+    && !p.startsWith('/api/logout')
+    && !p.startsWith('/api/auth/')
+    && !p.startsWith('/api/reset-password')
+    && !p.startsWith('/api/change-password')
+    && !p.startsWith('/api/backup')
+    && !p.startsWith('/api/restore');
+}
+
+function getCachedApiData(path, maxAge = API_CACHE_TTL) {
+  const entry = apiCacheStore()[String(path || '')];
+  if (!entry || !entry.value) return null;
+  if (maxAge && Date.now() - (entry.at || 0) > maxAge) return null;
+  return entry.value;
+}
+
+function setCachedApiData(path, value) {
+  if (!isCacheableApiGet(path)) return;
+  const store = apiCacheStore();
+  store[String(path)] = { at: Date.now(), value };
+  apiCacheSave(store);
+}
+
+function invalidateApiCache(prefix = '/api/') {
+  const store = apiCacheStore();
+  Object.keys(store).forEach(key => { if (key.startsWith(prefix)) delete store[key]; });
+  apiCacheSave(store);
+}
+
+function shouldUseOfflineApi(path, error) {
+  const status = error?.status;
+  if (typeof NOOR !== 'undefined' && NOOR.offlineMode) return true;
+  if (!String(path || '').startsWith('/api/')) return false;
+  if (status === 401 || status === 403) return false;
+  return !status || status === 404 || status >= 500;
+}
+
+function makeOfflineId(prefix) {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function offlineDefaultCatalog() {
+  return {
+    type: [
+      { value: 'single_vision', label_ar: 'Single Vision', label_en: 'Single Vision' },
+      { value: 'bifocal', label_ar: 'Bifocal', label_en: 'Bifocal' },
+      { value: 'progressive', label_ar: 'Progressive', label_en: 'Progressive' },
+    ],
+    material: [
+      { value: 'cr39', label_ar: 'CR-39', label_en: 'CR-39' },
+      { value: 'polycarbonate', label_ar: 'Polycarbonate', label_en: 'Polycarbonate' },
+      { value: 'high_index', label_ar: 'High Index', label_en: 'High Index' },
+    ],
+    coating: [
+      { value: 'clear', label_ar: 'Clear', label_en: 'Clear' },
+      { value: 'anti_reflective', label_ar: 'Anti-reflective', label_en: 'Anti-reflective' },
+      { value: 'blue_cut', label_ar: 'Blue cut', label_en: 'Blue cut' },
+    ],
+  };
+}
+
+function offlineLoadDb() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(OFFLINE_DB_KEY) || '{}');
+    return {
+      patients: Array.isArray(parsed.patients) ? parsed.patients : [],
+      visits: Array.isArray(parsed.visits) ? parsed.visits : [],
+      lenses: Array.isArray(parsed.lenses) ? parsed.lenses : [],
+      frames: Array.isArray(parsed.frames) ? parsed.frames : [],
+      retail_sales: Array.isArray(parsed.retail_sales) ? parsed.retail_sales : [],
+      operating_expenses: Array.isArray(parsed.operating_expenses) ? parsed.operating_expenses : [],
+      settings: parsed.settings && typeof parsed.settings === 'object' ? parsed.settings : {},
+      lensCatalog: parsed.lensCatalog && typeof parsed.lensCatalog === 'object' ? parsed.lensCatalog : offlineDefaultCatalog(),
+    };
+  } catch (_) {
+    return { patients: [], visits: [], lenses: [], frames: [], retail_sales: [], operating_expenses: [], settings: {}, lensCatalog: offlineDefaultCatalog() };
+  }
+}
+
+function offlineSaveDb(db) {
+  localStorage.setItem(OFFLINE_DB_KEY, JSON.stringify(db));
+  invalidateApiCache('/api/');
+}
+
+function offlineUserPayload() {
+  return {
+    id: 'offline-user',
+    username: 'offline',
+    full_name: 'Offline User',
+    role: 'doctor',
+    clinic_id: 'offline-clinic',
+    csrf_token: 'offline',
+    expires_at: null,
+    license: { is_active: true, plan: 'offline' },
+  };
+}
+
+function enableOfflineMode() {
+  NOOR.offlineMode = true;
+  NOOR.user = offlineUserPayload();
+  NOOR.role = NOOR.user.role;
+  NOOR.clinicId = NOOR.user.clinic_id;
+  NOOR.csrfToken = NOOR.user.csrf_token;
+  NOOR.license = NOOR.user.license;
+  NOOR.clinicName = 'Noor OMS Offline';
+  document.body?.classList.add('offline-mode');
+  const banner = document.getElementById('license-banner');
+  const bannerText = document.getElementById('license-banner-text');
+  if (banner && bannerText) {
+    bannerText.textContent = NOOR.lang === 'ar'
+      ? 'وضع بدون اتصال: يتم حفظ البيانات على هذا الجهاز فقط.'
+      : 'Offline mode: data is saved on this device only.';
+    banner.classList.add('show');
+  }
+}
+
+function offlinePatientRows(db) {
+  return db.patients.map(p => {
+    const visits = db.visits.filter(v => v.patient_id === p.id);
+    const outstanding = visits.reduce((sum, v) => sum + (parseFloat(v.remaining) || 0), 0);
+    const latest = visits[0]?.visit_date || p.updated_at || p.created_at;
+    return { ...p, outstanding_remaining: outstanding, updated_at: latest || p.updated_at || p.created_at };
+  });
+}
+
+function offlineSummary(db) {
+  const today = todayStr();
+  const month = today.slice(0, 7);
+  const todayVisits = db.visits.filter(v => String(v.visit_date || '').slice(0, 10) === today);
+  const monthVisits = db.visits.filter(v => String(v.visit_date || '').slice(0, 7) === month);
+  const chart = {};
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    chart[d.toISOString().slice(0, 10)] = 0;
+  }
+  db.visits.forEach(v => {
+    const d = String(v.visit_date || '').slice(0, 10);
+    if (chart[d] !== undefined) chart[d] += parseFloat(v.total_amount) || 0;
+  });
+  return {
+    today_patients: new Set(todayVisits.map(v => v.patient_id)).size,
+    today_earnings: todayVisits.reduce((s, v) => s + (parseFloat(v.amount_paid) || 0), 0),
+    outstanding_debt: db.visits.reduce((s, v) => s + (parseFloat(v.remaining) || 0), 0),
+    low_stock_count: [...db.lenses, ...db.frames].filter(x => (parseInt(x.quantity) || 0) <= (parseInt(x.min_stock) || 0)).length,
+    monthly_revenue: monthVisits.reduce((s, v) => s + (parseFloat(v.amount_paid) || 0), 0),
+    chart_7days: chart,
+    recent_visits: [...db.visits].sort((a, b) => String(b.visit_date || '').localeCompare(String(a.visit_date || ''))).slice(0, 6),
+  };
+}
+
+function offlineReportSummary(db) {
+  const visits = [...db.visits].sort((a, b) => String(b.visit_date || '').localeCompare(String(a.visit_date || '')));
+  const totalRevenue = visits.reduce((s, v) => s + (parseFloat(v.amount_paid) || 0), 0);
+  const totalOutstanding = visits.reduce((s, v) => s + (parseFloat(v.remaining) || 0), 0);
+  const expenses = db.operating_expenses || [];
+  const operatingCosts = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  return {
+    total_revenue: totalRevenue,
+    total_outstanding: totalOutstanding,
+    operating_costs: operatingCosts,
+    gross_profit: totalRevenue - operatingCosts,
+    patients_seen: new Set(visits.map(v => v.patient_id)).size,
+    new_patients: db.patients.length,
+    chart_items: [
+      { key: 'visits', label: 'Visits', kind: 'service', amount: totalRevenue, count: visits.length },
+      { key: 'expenses', label: 'Expenses', kind: 'expense', amount: operatingCosts, count: expenses.length },
+    ],
+    visits,
+    retail_sales: db.retail_sales || [],
+    expenses,
+  };
+}
+
+function offlineOk(data, extra = {}) {
+  return { ok: true, data, offline: true, ...extra };
+}
+
+function skeletonRows(cols = 5, rows = 5) {
+  return Array.from({ length: rows }, () => `<tr>${Array.from({ length: cols }, () => '<td><div class="skeleton-line"></div></td>').join('')}</tr>`).join('');
+}
+
+function skeletonCards(count = 4) {
+  return Array.from({ length: count }, () => '<div class="skeleton-card"><div class="skeleton-line wide"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>').join('');
+}
+
+async function offlineApi(method, path, body) {
+  enableOfflineMode();
+  const db = offlineLoadDb();
+  const url = new URL(path, window.location.origin);
+  const pathname = url.pathname;
+  const now = new Date().toISOString();
+
+  if (pathname === '/api/me' || pathname === '/api/login') return offlineOk(offlineUserPayload());
+  if (pathname === '/api/logout') return offlineOk({});
+  if (pathname === '/api/dashboard/stats') return offlineOk(offlineSummary(db));
+  if (pathname === '/api/settings') {
+    if (method === 'PUT') {
+      db.settings = { ...db.settings, ...(body || {}) };
+      offlineSaveDb(db);
+    }
+    return offlineOk({ clinic: { id: 'offline-clinic', name: NOOR.clinicName || 'Noor OMS Offline' }, settings: db.settings });
+  }
+  if (pathname === '/api/lens-catalog') {
+    if (method === 'PUT') {
+      db.lensCatalog = { ...db.lensCatalog, ...(body || {}) };
+      offlineSaveDb(db);
+    }
+    return offlineOk(db.lensCatalog);
+  }
+  if (pathname === '/api/lenses/match') {
+    const type = url.searchParams.get('lens_type') || '';
+    const material = url.searchParams.get('material') || '';
+    const coatings = (url.searchParams.get('coating') || '').split(',').map(x => x.trim()).filter(Boolean);
+    const rows = db.lenses.filter(l => {
+      if ((parseInt(l.quantity) || 0) <= 0) return false;
+      if (type && l.lens_type !== type) return false;
+      if (material && l.material !== material) return false;
+      if (coatings.length && !coatings.includes(l.coating || 'clear')) return false;
+      return true;
+    });
+    const matchEye = (sphRaw, cylRaw) => {
+      if (sphRaw === null) return [];
+      const sph = parseFloat(sphRaw);
+      const cyl = cylRaw !== null ? parseFloat(cylRaw) : 0;
+      if (isNaN(sph)) return [];
+      return rows.filter(l => Math.abs((Number(l.sphere) || 0) - sph) <= 0.25 && Math.abs((Number(l.cylinder) || 0) - (isNaN(cyl) ? 0 : cyl)) <= 0.25);
+    };
+    const odProvided = url.searchParams.get('od_sph') !== null;
+    const osProvided = url.searchParams.get('os_sph') !== null;
+    return offlineOk({
+      od: matchEye(url.searchParams.get('od_sph'), url.searchParams.get('od_cyl')),
+      os: matchEye(url.searchParams.get('os_sph'), url.searchParams.get('os_cyl')),
+      single: !!(odProvided ^ osProvided),
+    });
+  }
+  if (pathname === '/api/lenses') {
+    if (method === 'POST') {
+      const row = { ...(body || {}), id: makeOfflineId('lens'), created_at: now, updated_at: now };
+      db.lenses.unshift(row); offlineSaveDb(db); return offlineOk(row);
+    }
+    return offlineOk(db.lenses);
+  }
+  if (pathname.startsWith('/api/lenses/')) {
+    const id = pathname.split('/').pop();
+    if (method === 'PUT') db.lenses = db.lenses.map(x => x.id === id ? { ...x, ...(body || {}), updated_at: now } : x);
+    if (method === 'DELETE') db.lenses = db.lenses.filter(x => x.id !== id);
+    offlineSaveDb(db);
+    return offlineOk(db.lenses.find(x => x.id === id) || {});
+  }
+  if (pathname === '/api/frames') {
+    if (method === 'POST') {
+      const row = { ...(body || {}), id: makeOfflineId('frame'), created_at: now, updated_at: now };
+      db.frames.unshift(row); offlineSaveDb(db); return offlineOk(row);
+    }
+    return offlineOk(db.frames);
+  }
+  if (pathname.startsWith('/api/frames/')) {
+    const id = pathname.split('/').pop();
+    if (method === 'PUT') db.frames = db.frames.map(x => x.id === id ? { ...x, ...(body || {}), updated_at: now } : x);
+    if (method === 'DELETE') db.frames = db.frames.filter(x => x.id !== id);
+    offlineSaveDb(db);
+    return offlineOk(db.frames.find(x => x.id === id) || {});
+  }
+  if (pathname === '/api/patients') {
+    if (method === 'POST') {
+      const row = { ...(body || {}), id: makeOfflineId('patient'), created_at: now, updated_at: now };
+      db.patients.unshift(row); offlineSaveDb(db); return offlineOk(row);
+    }
+    let rows = offlinePatientRows(db);
+    const q = (url.searchParams.get('q') || '').toLowerCase();
+    if (q) rows = rows.filter(p => String(p.full_name || '').toLowerCase().includes(q) || String(p.phone || '').includes(q));
+    return offlineOk(rows, { total: rows.length });
+  }
+  if (pathname.startsWith('/api/patients/')) {
+    const id = pathname.split('/').pop();
+    if (method === 'PUT') db.patients = db.patients.map(p => p.id === id ? { ...p, ...(body || {}), updated_at: now } : p);
+    if (method === 'DELETE') {
+      db.patients = db.patients.filter(p => p.id !== id);
+      db.visits = db.visits.filter(v => v.patient_id !== id);
+    }
+    offlineSaveDb(db);
+    const patient = offlinePatientRows(db).find(p => p.id === id) || {};
+    patient.visits = db.visits.filter(v => v.patient_id === id).sort((a, b) => String(b.visit_date || '').localeCompare(String(a.visit_date || '')));
+    return offlineOk(patient);
+  }
+  if (pathname === '/api/visits') {
+    if (method === 'POST') {
+      const row = { ...(body || {}), id: makeOfflineId('visit'), created_at: now, updated_at: now };
+      let selected = [body?.od_lens_id, body?.os_lens_id].filter(Boolean);
+      if (!selected.length && body?.lens_id) {
+        selected = Array(Math.max(1, parseInt(body?.lens_count) || 1)).fill(body.lens_id);
+      }
+      const counts = selected.reduce((acc, id) => {
+        acc[id] = (acc[id] || 0) + 1;
+        return acc;
+      }, {});
+      for (const [id, needed] of Object.entries(counts)) {
+        const lens = db.lenses.find(l => l.id === id);
+        if (!lens) continue;
+        const qty = parseInt(lens.quantity) || 0;
+        if (qty < needed) {
+          const error = new Error(`Insufficient lens stock (have ${qty}, need ${needed})`);
+          error.status = 409;
+          throw error;
+        }
+        lens.quantity = qty - needed;
+        lens.updated_at = now;
+      }
+      db.visits.unshift(row); offlineSaveDb(db); return offlineOk(row);
+    }
+    return offlineOk(db.visits);
+  }
+  if (pathname.startsWith('/api/visits/')) {
+    const id = pathname.split('/')[3];
+    if (pathname.endsWith('/print')) {
+      const visit = db.visits.find(v => v.id === id) || {};
+      const patient = db.patients.find(p => p.id === visit.patient_id) || {};
+      return offlineOk({ visit, patient, clinic: { name: NOOR.clinicName || 'Noor OMS Offline' }, settings: db.settings });
+    }
+    if (method === 'PUT') db.visits = db.visits.map(v => v.id === id ? { ...v, ...(body || {}), updated_at: now } : v);
+    if (method === 'DELETE') db.visits = db.visits.filter(v => v.id !== id);
+    offlineSaveDb(db);
+    return offlineOk(db.visits.find(v => v.id === id) || {});
+  }
+  if (pathname === '/api/followups') {
+    const rows = db.visits.filter(v => v.next_visit_date).map(v => {
+      const p = db.patients.find(x => x.id === v.patient_id) || {};
+      return { ...v, patient_name: p.full_name, phone: p.phone, days_until: daysDiff(v.next_visit_date) };
+    });
+    return offlineOk(rows);
+  }
+  if (pathname === '/api/reports/summary') return offlineOk(offlineReportSummary(db));
+  if (pathname === '/api/reports/export/excel' || pathname === '/api/reports/export/patients') return offlineOk([]);
+  if (pathname === '/api/retail-sales') {
+    if (method === 'POST') {
+      db.retail_sales.unshift({ ...(body || {}), id: makeOfflineId('sale'), created_at: now });
+      offlineSaveDb(db);
+    }
+    return offlineOk(db.retail_sales);
+  }
+  if (pathname === '/api/operating-expenses') {
+    if (method === 'POST') {
+      db.operating_expenses.unshift({ ...(body || {}), id: makeOfflineId('expense'), created_at: now });
+      offlineSaveDb(db);
+    }
+    return offlineOk(db.operating_expenses);
+  }
+  return offlineOk([]);
+}
 
 // ══════════════════════════════════════════════════════════
 // TRANSLATIONS
@@ -189,6 +570,7 @@ const NOOR = {
   lang: localStorage.getItem('noor_lang') || 'ar',
   user: null, role: null, clinicId: null,
   csrfToken: null,
+  offlineMode: false,
   clinicName: '',
   currentSection: 'dashboard',
   // editing IDs
@@ -200,6 +582,9 @@ const NOOR = {
   patientFormDirty: false,
   savingPatient: false,
   modalScrollY: 0,
+  _selectedLensId: null,
+  _selectedLensIds: { od: null, os: null },
+  _matchLensById: new Map(),
   pendingRxShare: null,
   duplicatePatientResolver: null,
   sessionWarningTimer: null,

@@ -180,6 +180,16 @@ async function runLensWizard() {
 }
 
 async function renderLenses() {
+  const cached = getCachedApiData('/api/lenses');
+  if (cached?.data) {
+    NOOR.lenses = cached.data || [];
+    filterLenses();
+  } else {
+    const tbody = document.getElementById('lenses-tbody');
+    const empty = document.getElementById('lenses-empty');
+    if (tbody) tbody.innerHTML = skeletonRows(9, 7);
+    if (empty) empty.style.display = 'none';
+  }
   try {
     await ensureLensCatalog();
     const data = await get('/api/lenses');
