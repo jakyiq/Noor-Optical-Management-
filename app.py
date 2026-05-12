@@ -860,7 +860,7 @@ def list_patients():
     q   = request.args.get("q", "").strip()
     gender = request.args.get("gender", "")
     page   = max(1, int(request.args.get("page", 1)))
-    limit  = min(100, int(request.args.get("limit", 50)))
+    limit  = min(500, int(request.args.get("limit", 50)))
     offset = (page - 1) * limit
 
     query = db.table("patients").select("*").eq("clinic_id", cid)
@@ -1622,6 +1622,19 @@ def reports_summary():
     outstanding = sum(r.get("remaining",    0) or 0 for r in rows)
     visit_cost  = sum(_float_val(r.get("lens_cost")) + _float_val(r.get("frame_cost")) for r in rows)
     patient_ids = list({r["patient_id"] for r in rows})
+    patients_map = {}
+    if patient_ids:
+        try:
+            pres = db.table("patients").select("id,full_name,phone") \
+                .eq("clinic_id", cid).in_("id", patient_ids).execute()
+            patients_map = {p["id"]: p for p in (pres.data or [])}
+        except Exception:
+            patients_map = {}
+
+    for r in rows:
+        p = patients_map.get(r.get("patient_id"), {})
+        r["patient_name"] = p.get("full_name")
+        r["patient_phone"] = p.get("phone")
 
     for r in rows:
         lens_amount = _float_val(r.get("lens_price"))
@@ -1902,6 +1915,7 @@ def update_settings():
         "recept_view_financials","recept_edit_financials",
         "recept_access_inventory","recept_export_reports","recept_view_audit",
         "followup_months_default","wa_template_1","wa_template_2","wa_template_3",
+        "wa_pdf_send_message","wa_pdf_message",
         "print_header_text","print_certification_text","print_warning_text",
         "print_qr_url","print_show_financials","default_checkup_fee",
         "print_doctor_name","print_doctor_credentials",

@@ -136,6 +136,8 @@ CREATE TABLE IF NOT EXISTS clinic_settings (
   wa_template_1            TEXT DEFAULT 'عزيزي {patient_name}، يسعدنا تذكيرك بموعدك القادم في {clinic_name} بتاريخ {next_visit}.',
   wa_template_2            TEXT DEFAULT 'مرحباً {patient_name}! حان وقت فحص نظرك الدوري في {clinic_name}.',
   wa_template_3            TEXT DEFAULT '{patient_name}، تذكير بموعد المتابعة {next_visit}. عيادة {clinic_name}.',
+  wa_pdf_send_message      BOOLEAN NOT NULL DEFAULT TRUE,
+  wa_pdf_message           TEXT,
   -- Print defaults
   print_header_text        TEXT,
   print_certification_text TEXT,
@@ -169,6 +171,8 @@ ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_logo_height INTEGER N
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_logo_data TEXT;
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_qr_data TEXT;
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS print_associates TEXT;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS wa_pdf_send_message BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS wa_pdf_message TEXT;
 ALTER TABLE clinic_settings ADD COLUMN IF NOT EXISTS language TEXT NOT NULL DEFAULT 'ar';
 
 -- ─────────────────────────────────────────────

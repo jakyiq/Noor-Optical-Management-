@@ -2914,7 +2914,7 @@ const NOOR = {
   sessionWarningTimer: null,
   sessionExpiryTimer: null,
   // cached data (refreshed from API on each section visit)
-  patients: [], lenses: [], frames: [], visits: [],
+  patients: [], patientById: new Map(), lenses: [], frames: [], visits: [],
   users: [], auditLog: [], clinics: [],
   reportHiddenItems: new Set(),
   reportChartItems: [],
@@ -3283,7 +3283,11 @@ function fmtNum(n){ return Number(n||0).toLocaleString(); }
 function fmtIQD(n){ return fmtNum(n)+' IQD'; }
 function daysDiff(s){ return Math.round((new Date(s)-new Date())/(86400000)); }
 function todayStr(){ return new Date().toISOString().split('T')[0]; }
-function getPatient(id){ return NOOR.patients.find(p=>p.id===id); }
+function setPatients(rows) {
+  NOOR.patients = rows || [];
+  NOOR.patientById = new Map(NOOR.patients.map(p => [p.id, p]));
+}
+function getPatient(id){ return NOOR.patientById.get(id) || null; }
 function esc(v){
   if (v === null || v === undefined || v === '') return '—';
   return String(v).replace(/[&<>"']/g, ch => ({
@@ -3297,6 +3301,99 @@ function escAttr(v){
   return String(v).replace(/[&<>"'`]/g, ch => ({
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;', '`':'&#96;'
   }[ch]));
+}
+
+function normalizeIraqPhone(phone) {
+  let digits = String(phone || '').replace(/\D/g, '');
+  if (digits.startsWith('00964')) digits = digits.slice(5);
+  else if (digits.startsWith('964')) digits = digits.slice(3);
+  else if (digits.startsWith('0')) digits = digits.slice(1);
+  return digits ? '964' + digits : '';
+}
+
+function fillTemplate(template, values) {
+  return String(template || '').replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '');
+}
+
+function defaultRxWhatsAppMessage(values) {
+  return fillTemplate(
+    NOOR.lang === 'ar'
+      ? 'وصفتك من عيادة {clinic_name} بتاريخ {date}. نتمنى لك دوام الصحة والعافية، {patient_name}.'
+      : 'Your prescription from {clinic_name} dated {date}. Wishing you good health, {patient_name}.',
+    values
+  );
+}
+
+function buildRxPdfFile(payload, filename) {
+  const jsPDFCtor = window.jspdf?.jsPDF;
+  if (!jsPDFCtor || typeof File === 'undefined') return null;
+  const v = payload.visit || {};
+  const p = payload.patient || {};
+  const cl = payload.clinic || {};
+  const st = payload.settings || {};
+  const doc = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+  const clinicName = cl.name || NOOR.clinicName || 'Noor Optical';
+  const patientName = p.full_name || filename.replace(/_/g, ' ');
+  const visitDate = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
+  const fmtVal = x => (x === null || x === undefined || x === '') ? '-' : String(x);
+  const line = (label, value, x, y) => {
+    doc.setFont('helvetica', 'bold');
+    doc.text(String(label), x, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(value || '-'), x + 30, y);
+  };
+
+  doc.setTextColor(107, 26, 42);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text(clinicName, 74, 13, { align: 'center' });
+  doc.setTextColor(30, 25, 20);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  if (st.print_header_text) doc.text(String(st.print_header_text), 74, 19, { align: 'center' });
+  doc.setDrawColor(196, 154, 60);
+  doc.line(10, 24, 138, 24);
+
+  doc.setFontSize(9);
+  line('Patient', patientName, 12, 33);
+  line('Date', visitDate, 84, 33);
+  line('Age', fmtVal(p.age), 12, 41);
+  line('Phone', fmtVal(p.phone), 84, 41);
+  doc.autoTable({
+    startY: 50,
+    head: [['Eye', 'SPH', 'CYL', 'AXIS', 'ADD', 'VA', 'BCVA']],
+    body: [
+      ['OD', fmtVal(v.od_sphere), fmtVal(v.od_cylinder), fmtVal(v.od_axis), fmtVal(v.od_addition), fmtVal(v.od_va), fmtVal(v.od_bcva)],
+      ['OS', fmtVal(v.os_sphere), fmtVal(v.os_cylinder), fmtVal(v.os_axis), fmtVal(v.os_addition), fmtVal(v.os_va), fmtVal(v.os_bcva)],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [107, 26, 42], textColor: 255 },
+    styles: { fontSize: 8, cellPadding: 2 },
+    margin: { left: 10, right: 10 },
+  });
+
+  let y = doc.lastAutoTable.finalY + 9;
+  line('IPD', fmtVal(v.ipd), 12, y);
+  y += 8;
+  line('Lens', [v.lens_type, v.lens_material, v.lens_coating].filter(Boolean).map(x => String(x).replace(/_/g, ' ')).join(' / ') || '-', 12, y);
+  y += 8;
+  line('Frame', [v.frame_brand, v.frame_type, v.frame_material].filter(Boolean).map(x => String(x).replace(/_/g, ' ')).join(' / ') || '-', 12, y);
+  if (v.next_visit_date) {
+    y += 8;
+    line('Next visit', fmtDate(v.next_visit_date), 12, y);
+  }
+  if (st.print_warning_text) {
+    y += 12;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Notes', 12, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(doc.splitTextToSize(String(st.print_warning_text), 120), 12, y + 6);
+  }
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  doc.text([st.print_doctor_name, st.print_doctor_credentials].filter(Boolean).join(' - '), 74, 198, { align: 'center' });
+
+  return new File([doc.output('blob')], filename + '.pdf', { type: 'application/pdf' });
 }
 
 function toast(msg, type='success', duration=3500) {
@@ -3403,7 +3500,7 @@ async function renderDashboard() {
       const missing = recentPids.filter(pid => !patientsForDash[pid]);
       if (missing.length && !NOOR._patientsCachedAt) {
         const pr = await get('/api/patients?limit=200');
-        NOOR.patients = pr.data || [];
+        setPatients(pr.data || []);
         NOOR._patientsCachedAt = Date.now();
         NOOR.patients.forEach(p => { patientsForDash[p.id] = p; });
       } else if (missing.length) {
@@ -3446,7 +3543,7 @@ function renderChart(chart7) {
 async function renderPatients() {
   try {
     const data = await get('/api/patients?limit=200');
-    NOOR.patients = data.data || [];
+    setPatients(data.data || []);
     NOOR._patientsCachedAt = Date.now();
     document.getElementById('patients-total').textContent = data.total || NOOR.patients.length;
     filterPatients();
@@ -4432,12 +4529,8 @@ function sendWA(pid, nd, patientName, phone) {
     .replace('{date}', fmtDate(new Date()))
     .replace('{next_visit}', fmtDate(nd))
     .replace('{clinic_name}', NOOR.clinicName);
-  // Iraq country code +964: strip non-digits, remove leading 0/964/00964, prepend 964
-  let digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('00964'))     digits = digits.slice(5);
-  else if (digits.startsWith('964'))  digits = digits.slice(3);
-  else if (digits.startsWith('0'))    digits = digits.slice(1);
-  const waPhone = '964' + digits;
+  const waPhone = normalizeIraqPhone(phone);
+  if (!waPhone) { toast('Invalid phone number','error'); return; }
   window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
@@ -4746,7 +4839,7 @@ async function loadReports() {
     renderExpensesList(s.expenses || []);
     const tbody = document.getElementById('reports-tbody');
     tbody.innerHTML = (s.visits||[]).map(v => {
-      const p = getPatient(v.patient_id);
+      const p = getPatient(v.patient_id) || { full_name: v.patient_name, phone: v.patient_phone };
       const cachedId = cacheRxSlip(v);
       return `<tr>
         <td class="td-name">${esc(p?.full_name)}</td>
@@ -5203,7 +5296,7 @@ function printRxSlip() {
 // ══════════════════════════════════════════════════════════
 // WHATSAPP RX PDF SEND  — pure jsPDF text, no html2canvas
 // ══════════════════════════════════════════════════════════
-async function sendRxWhatsApp(vid, phone, patientName) {
+async function sendRxWhatsAppLegacy(vid, phone, patientName) {
   if (!phone) { toast('No phone number for this patient', 'error'); return; }
   toast(NOOR.lang === 'ar' ? 'جارٍ تحضير الوصفة…' : 'Preparing Rx…', 'success');
 
@@ -5299,6 +5392,72 @@ async function sendRxWhatsApp(vid, phone, patientName) {
   }
 }
 
+async function sendRxWhatsApp(vid, phone, patientName) {
+  if (!phone) { toast('No phone number for this patient', 'error'); return; }
+  toast(NOOR.lang === 'ar' ? 'جارٍ تحضير الوصفة...' : 'Preparing Rx...', 'success');
+
+  try {
+    const res = await get(`/api/visits/${vid}/print`);
+    const payload = res.data || {};
+    const v = payload.visit || {};
+    const p = payload.patient || {};
+    const cl = payload.clinic || { name: NOOR.clinicName };
+    const st = payload.settings || NOOR.settings || {};
+    const waPhone = normalizeIraqPhone(phone);
+    if (!waPhone) { toast('Invalid phone number', 'error'); return; }
+
+    const visitDate = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
+    const nextVisit = v.next_visit_date ? fmtDate(v.next_visit_date) : '';
+    const clinicName = cl.name || NOOR.clinicName || 'Noor Optical';
+    const patient = p.full_name || patientName || '';
+    const filename = ((patient || 'Patient').trim().replace(/\s+/g, '_') || 'Patient') + '_' + (v.visit_date || todayStr());
+    const values = {
+      patient_name: patient,
+      clinic_name: clinicName,
+      date: visitDate,
+      next_visit: nextVisit,
+      doctor_name: st.print_doctor_name || '',
+    };
+    const waMsg = st.wa_pdf_send_message === false
+      ? ''
+      : (st.wa_pdf_message ? fillTemplate(st.wa_pdf_message, values) : defaultRxWhatsAppMessage(values));
+
+    _renderRxSlip(payload);
+    const printFile = _buildRxPrintBlob();
+    const pdfFile = buildRxPdfFile(payload, filename);
+
+    if (pdfFile && navigator.canShare?.({ files: [pdfFile] }) && navigator.share) {
+      await navigator.share({ files: [pdfFile], text: waMsg, title: filename });
+      setTimeout(() => URL.revokeObjectURL(printFile.blobURL), 30000);
+      toast(NOOR.lang === 'ar' ? 'تم فتح المشاركة لإرسال ملف PDF' : 'Share sheet opened with the PDF attached', 'success');
+      return;
+    }
+
+    if (pdfFile) {
+      const pdfURL = URL.createObjectURL(pdfFile);
+      const a = document.createElement('a');
+      a.href = pdfURL;
+      a.download = pdfFile.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(pdfURL), 30000);
+    } else {
+      const pw = window.open(printFile.blobURL, '_blank', 'width=650,height=850');
+      if (!pw) {
+        const a = document.createElement('a');
+        a.href = printFile.blobURL;
+        a.download = printFile.docTitle + '.html';
+        a.click();
+      }
+    }
+
+    window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`, '_blank');
+    setTimeout(() => URL.revokeObjectURL(printFile.blobURL), 30000);
+    toast(NOOR.lang === 'ar' ? 'تم تجهيز ملف PDF وفتح واتساب' : 'PDF prepared and WhatsApp opened', 'success');
+  } catch(e) {
+    toast('Error: ' + e.message, 'error');
+  }
+}
+
 async function renderSettings() {
   try {
     const data = await get('/api/settings');
@@ -5337,7 +5496,7 @@ async function renderSettings() {
     document.getElementById('wa-tpl-2').value = st.wa_template_2||'';
     document.getElementById('wa-tpl-3').value = st.wa_template_3||'';
     // PDF message settings
-    const pdfSend = !!st.wa_pdf_send_message;
+    const pdfSend = st.wa_pdf_send_message !== false;
     document.getElementById('wa-pdf-send-message').checked = pdfSend;
     document.getElementById('wa-pdf-msg-wrap').style.opacity = pdfSend ? '1' : '.4';
     document.getElementById('wa-pdf-message').value = st.wa_pdf_message||'';
