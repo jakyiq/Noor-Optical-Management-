@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ENUMS  (must come before any table that uses them)
 -- ─────────────────────────────────────────────
 DO $$ BEGIN
-  CREATE TYPE license_plan AS ENUM ('trial','monthly','quarterly','yearly','lifetime');
+  CREATE TYPE license_plan AS ENUM ('trial','monthly','quarterly','yearly','lifetime','custom');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -63,6 +63,14 @@ CREATE TABLE IF NOT EXISTS clinics (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ─────────────────────────────────────────────
+-- MIGRATION GUARDS: ADD COLUMN IF NOT EXISTS
+-- These are intentional no-ops on a fresh DB but safely add columns to
+-- existing databases that were created before these columns were introduced.
+-- NOTE: ADD COLUMN IF NOT EXISTS is silently skipped when a column already
+-- exists, regardless of type/default changes. If you change a column type,
+-- use a separate ALTER TABLE ... ALTER COLUMN statement.
+-- ─────────────────────────────────────────────
 ALTER TABLE clinics ADD COLUMN IF NOT EXISTS owner_email TEXT;
 ALTER TABLE clinics ADD COLUMN IF NOT EXISTS owner_auth_user_id UUID;
 ALTER TABLE clinics ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE;
@@ -275,7 +283,8 @@ CREATE TABLE IF NOT EXISTS visits (
   visit_date      DATE NOT NULL DEFAULT CURRENT_DATE,
   created_by      UUID REFERENCES users(id) ON DELETE SET NULL,
   notes           TEXT,
-  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()   -- required for local-first conflict detection
 );
 
 CREATE INDEX IF NOT EXISTS idx_visits_clinic  ON visits(clinic_id);
@@ -346,13 +355,14 @@ CREATE INDEX IF NOT EXISTS idx_audit_user   ON audit_log(user_id);
 -- BACKUPS
 -- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS backup_log (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  clinic_id   UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
-  created_by  UUID REFERENCES users(id) ON DELETE SET NULL,
-  kind        TEXT NOT NULL DEFAULT 'manual',
-  row_counts  JSONB,
-  backup_data JSONB,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id    UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  created_by   UUID REFERENCES users(id) ON DELETE SET NULL,
+  kind         TEXT NOT NULL DEFAULT 'manual',
+  row_counts   JSONB,
+  backup_data  JSONB,        -- inline backup payload (small / legacy)
+  storage_path TEXT,         -- path in object storage (large backups via upload)
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_backup_log_clinic ON backup_log(clinic_id, created_at DESC);

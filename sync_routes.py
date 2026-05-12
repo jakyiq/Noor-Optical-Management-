@@ -105,7 +105,10 @@ def sync_item():
     if operation == 'delete':
         if not entity_id:
             return err('entity_id is required for delete.', 400)
-        _verify_ownership(entity_type, entity_id, clinic_id)
+        try:
+            _verify_ownership(entity_type, entity_id, clinic_id)
+        except PermissionError as exc:
+            return err(str(exc), 403)
         db.table(entity_type).delete().eq('id', entity_id).execute()
         _write_audit(clinic_id, user_id, 'delete', entity_type, entity_id)
         return ok({'deleted': True, 'entity_id': entity_id})
@@ -198,7 +201,7 @@ def sync_status():
 
 def _verify_ownership(entity_type, entity_id, clinic_id):
     """
-    Raise ValueError if the requested row doesn't belong to this clinic.
+    Raise PermissionError if the requested row doesn't belong to this clinic.
     Guards against cross-clinic deletes.
     """
     clinic_field = SYNCABLE_TABLES.get(entity_type, 'clinic_id')

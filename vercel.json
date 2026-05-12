@@ -12,6 +12,10 @@
     {
       "src": "sw.js",
       "use": "@vercel/static"
+    },
+    {
+      "src": "localFirst.js",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -22,6 +26,10 @@
     {
       "src": "/sw.js",
       "dest": "sw.js"
+    },
+    {
+      "src": "/localFirst.js",
+      "dest": "localFirst.js"
     },
     {
       "src": "/(.*)",

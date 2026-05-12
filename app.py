@@ -81,7 +81,14 @@ db: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 # HELPERS
 # ─────────────────────────────────────────────
 def now_iso():
-    return datetime.utcnow().isoformat()
+    return datetime.utcnow().isoformat() + "Z"
+
+def _parse_iso(ts):
+    """Parse an ISO-8601 datetime string robustly across Python versions.
+    Handles both 'Z' suffix (our format) and '+00:00' offset."""
+    if not ts:
+        return None
+    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
 
 def today_str():
     return date.today().isoformat()
@@ -199,7 +206,10 @@ def _license_state(clinic_id):
 def _csrf_protect():
     if request.method not in WRITE_METHODS:
         return None
-    if request.endpoint in {"login", "signup", "reset_password"}:
+    # Strip blueprint prefix (e.g. "sync.sync_item" → "sync_item") so the
+    # exemption list works for both plain routes and blueprint-registered routes.
+    endpoint = (request.endpoint or "").split(".")[-1]
+    if endpoint in {"login", "signup", "reset_password"}:
         return None
     if "user_id" not in session:
         return None
@@ -259,14 +269,18 @@ def _auth(roles=None, setting=None, export=False, allow_readonly_write=False):
                 return err("Unauthorized", 401)
 
             expires_at = session.get("expires_at")
-            if expires_at and datetime.fromisoformat(expires_at) < datetime.utcnow():
+            parsed_expiry = _parse_iso(expires_at)
+            if parsed_expiry and parsed_expiry.replace(tzinfo=None) < datetime.utcnow():
                 session.clear()
                 return err("Session expired", 401)
 
             role = session.get("role")
             clinic_id = session.get("clinic_id")
 
-            if session.get("must_change_password") and request.endpoint != "change_password":
+            # Strip blueprint prefix (e.g. "sync.sync_item" → "sync_item") so
+            # blueprint routes aren't blocked when the user is on the change-password page.
+            _endpoint = (request.endpoint or '').split('.')[-1]
+            if session.get("must_change_password") and _endpoint != "change_password":
                 return err("Password change required", 403)
 
             # Super admin bypasses license and permission checks
@@ -389,7 +403,7 @@ def login():
     session.permanent = True
     session["user_id"]   = user["id"]
     session["role"]      = role
-    session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat()
+    session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat() + "Z"
     session["must_change_password"] = bool(user.get("must_change_password", False))
     csrf_token = _csrf_token()
 
@@ -441,7 +455,7 @@ def login():
         "clinic_id":            clinic_id,
         "must_change_password": user.get("must_change_password", False),
         "grace_warning":        grace_warning,
-        "expires_at":           f"{session.get('expires_at')}Z" if session.get("expires_at") else None,
+        "expires_at":           session.get("expires_at") or None,
         "csrf_token":           csrf_token,
         "license":              license_summary,
     })
@@ -674,7 +688,8 @@ def me():
         return err("Unauthorized", 401)
 
     expires_at = session.get("expires_at")
-    if expires_at and datetime.fromisoformat(expires_at) < datetime.utcnow():
+    parsed_expiry = _parse_iso(expires_at)
+    if parsed_expiry and parsed_expiry.replace(tzinfo=None) < datetime.utcnow():
         session.clear()
         return err("Session expired", 401)
 
@@ -693,7 +708,7 @@ def me():
         license_summary = _safe_license_summary(license_state)
 
     # Refresh session expiry
-    session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat()
+    session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat() + "Z"
 
     # Re-fetch full_name from DB so it's always accurate on session restore
     user_row = db.table("users").select("full_name,username").eq("id", session["user_id"]).single().execute()
@@ -708,7 +723,7 @@ def me():
         "username":             username,
         "must_change_password": bool(session.get("must_change_password", False)),
         "grace_warning":        grace_warning,
-        "expires_at":           f"{session.get('expires_at')}Z" if session.get("expires_at") else None,
+        "expires_at":           session.get("expires_at") or None,
         "csrf_token":           _csrf_token(),
         "license":              license_summary,
     })
@@ -868,7 +883,8 @@ def list_patients():
 
     patient_ids = [r["id"] for r in rows]
     if patient_ids:
-        visits = db.table("visits").select("patient_id,remaining").eq("clinic_id", cid).execute()
+        visits = db.table("visits").select("patient_id,remaining") \
+            .eq("clinic_id", cid).in_("patient_id", patient_ids).execute()
         remaining_by_patient = {}
         for visit in (visits.data or []):
             pid = visit.get("patient_id")
@@ -894,11 +910,17 @@ def create_patient():
     if not full_name:
         return err("full_name is required")
 
-    existing = db.table("patients").select("id,full_name,phone").eq("clinic_id", cid).execute()
-    for patient in (existing.data or []):
-        same_phone = phone and (patient.get("phone") or "").strip() == phone
-        same_name = (patient.get("full_name") or "").strip().lower() == full_name.lower()
-        if same_phone or same_name:
+    # Check for duplicates using targeted server-side queries — avoids a
+    # full-table scan that would break on large clinics or exceed Supabase's
+    # default 1 000-row response limit.
+    name_match = db.table("patients").select("id") \
+        .eq("clinic_id", cid).ilike("full_name", full_name).limit(1).execute()
+    if name_match.data:
+        return err("A patient with the same name or phone already exists", 409)
+    if phone:
+        phone_match = db.table("patients").select("id") \
+            .eq("clinic_id", cid).eq("phone", phone).limit(1).execute()
+        if phone_match.data:
             return err("A patient with the same name or phone already exists", 409)
 
     row = {
@@ -1106,7 +1128,10 @@ def create_visit():
         "lens_id":       body.get("lens_id") or None,
     }
 
-    # ── Inventory deduction (transactional guard) ──
+    # ── Inventory deduction (optimistic-lock guard) ──────────────────────────
+    # Each UPDATE conditions on the quantity we just read.  If a concurrent
+    # request already decremented it, the WHERE clause won't match and .data
+    # will be empty — we treat that as a stock conflict and abort.
     lens_id  = body.get("lens_id")
     frame_id = body.get("frame_id")
     lens_count = int(body.get("lens_count", 2))
@@ -1114,18 +1139,27 @@ def create_visit():
     if lens_id:
         l = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).eq("id", lens_id).single().execute()
         if l.data:
-            new_qty = max(0, l.data["quantity"] - lens_count)
-            # Stock guard: can't use 2 of a qty-1 lens
-            if l.data["quantity"] < lens_count:
-                return err(f"Insufficient lens stock (have {l.data['quantity']}, need {lens_count})", 409)
-            db.table("lenses").update({"quantity": new_qty}).eq("clinic_id", cid).eq("id", lens_id).execute()
+            current_qty = l.data["quantity"]
+            if current_qty < lens_count:
+                return err(f"Insufficient lens stock (have {current_qty}, need {lens_count})", 409)
+            new_qty = current_qty - lens_count
+            updated = db.table("lenses").update({"quantity": new_qty}) \
+                .eq("clinic_id", cid).eq("id", lens_id) \
+                .eq("quantity", current_qty).execute()   # optimistic lock
+            if not updated.data:
+                return err("Lens stock changed while saving. Please try again.", 409)
 
     if frame_id:
         f = db.table("frames").select("quantity").eq("clinic_id", cid).eq("id", frame_id).single().execute()
         if f.data:
-            if f.data["quantity"] < 1:
+            current_qty = f.data["quantity"]
+            if current_qty < 1:
                 return err("Frame out of stock", 409)
-            db.table("frames").update({"quantity": f.data["quantity"] - 1}).eq("clinic_id", cid).eq("id", frame_id).execute()
+            updated = db.table("frames").update({"quantity": current_qty - 1}) \
+                .eq("clinic_id", cid).eq("id", frame_id) \
+                .eq("quantity", current_qty).execute()   # optimistic lock
+            if not updated.data:
+                return err("Frame stock changed while saving. Please try again.", 409)
 
     res = db.table("visits").insert(row).execute()
     visit = res.data[0]
@@ -2112,10 +2146,7 @@ def restore_backup():
             continue
 
         # Strip any rows that don't belong to this clinic
-        if table == "clinic_settings":
-            safe_rows = [r for r in rows if r.get("clinic_id") == cid]
-        else:
-            safe_rows = [r for r in rows if r.get("clinic_id") == cid]
+        safe_rows = [r for r in rows if r.get("clinic_id") == cid]
 
         if not safe_rows:
             restored[table] = 0
@@ -2539,7 +2570,7 @@ def admin_update_license(target_clinic_id):
 
     KNOWN_PLANS = {"trial", "monthly", "quarterly", "yearly", "lifetime", "custom"}
     if plan and plan not in KNOWN_PLANS:
-        return err(f"Unknown plan '{{plan}}'.", 400)
+        return err(f"Unknown plan '{plan}'.", 400)
 
     plan_days = {"trial": 7, "monthly": 30, "quarterly": 90, "yearly": 365}
 
@@ -2604,14 +2635,7 @@ def admin_backup_clinic(cid):
         "clinic": clinic.data,
     }
     for table in ["patients", "visits", "frames", "lenses", "retail_sales", "operating_expenses", "users", "clinic_settings", "licenses"]:
-        query = db.table(table).select("*")
-        if table == "clinic_settings":
-            query = query.eq("clinic_id", cid)
-        elif table == "licenses":
-            query = query.eq("clinic_id", cid)
-        else:
-            query = query.eq("clinic_id", cid)
-        payload[table] = query.execute().data or []
+        payload[table] = db.table(table).select("*").eq("clinic_id", cid).execute().data or []
 
     row_counts = {k: len(v) for k, v in payload.items() if isinstance(v, list)}
 

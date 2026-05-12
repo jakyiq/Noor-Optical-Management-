@@ -11,6 +11,8 @@
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<!-- Bug fix #19: Load the local-first layer so NoorLF is available before any writes -->
+<script src="/localFirst.js"></script>
 <style>
 :root {
   --cream:#faf6f0;--cream-dark:#f0ead8;--cream-border:#e8dcc8;
@@ -1581,6 +1583,12 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <div class="user-name" id="user-name">Admin</div>
           <div class="user-role" id="user-role">Doctor</div>
         </div>
+        <!-- Bug fix #19: sync pending badge — shown/hidden automatically by NoorLF.bindBadge() -->
+        <span
+          id="sync-pending-badge"
+          title=""
+          style="display:none;background:var(--warning,#d4820a);color:#fff;font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:99px;min-width:18px;text-align:center;margin-inline-start:4px;vertical-align:middle"
+        ></span>
         <button class="logout-btn" onclick="doLogout()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>
@@ -1700,7 +1708,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             </div>
           </div>
           <div class="section-filters">
-            <input type="search" class="filter-input" id="patients-search" placeholder="بحث بالاسم أو الهاتف..." style="flex:1;min-width:200px" oninput="filterPatients()">
+            <input type="search" class="filter-input" id="patients-search" placeholder="بحث بالاسم أو الهاتف..." style="flex:1;min-width:200px" oninput="clearTimeout(window._pFilterT);window._pFilterT=setTimeout(filterPatients,180)">
             <select class="filter-select" id="patients-gender-filter" onchange="filterPatients()">
               <option value="" data-i18n="allGenders">الجنس (الكل)</option>
               <option value="male" data-i18n="male">ذكر</option>
@@ -1814,8 +1822,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <option value="glass">Glass</option>
             <option value="contact">Contact</option>
           </select>
-          <input type="number" class="filter-input" id="lens-sph-filter" step=".25" placeholder="SPH" oninput="filterLenses()" style="min-width:80px;flex:1 1 90px;max-width:130px">
-          <input type="number" class="filter-input" id="lens-cyl-filter" step=".25" placeholder="CYL" oninput="filterLenses()" style="min-width:80px;flex:1 1 90px;max-width:130px">
+          <input type="number" class="filter-input" id="lens-sph-filter" step=".25" placeholder="SPH" oninput="clearTimeout(window._lFilterT);window._lFilterT=setTimeout(filterLenses,180)" style="min-width:80px;flex:1 1 90px;max-width:130px">
+          <input type="number" class="filter-input" id="lens-cyl-filter" step=".25" placeholder="CYL" oninput="clearTimeout(window._lFilterT);window._lFilterT=setTimeout(filterLenses,180)" style="min-width:80px;flex:1 1 90px;max-width:130px">
           <select class="filter-select" id="lens-stock-filter" onchange="filterLenses()">
             <option value="">All stock</option>
             <option value="low">Low stock</option>
@@ -1857,7 +1865,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
           <div class="low-stock-items" id="frames-low-items"></div>
         </div>
         <div class="section-filters">
-          <input type="search" class="filter-input" id="frames-search" placeholder="Search brand, color, material..." style="flex:1;min-width:220px" oninput="filterFrames()">
+          <input type="search" class="filter-input" id="frames-search" placeholder="Search brand, color, material..." style="flex:1;min-width:220px" oninput="clearTimeout(window._fFilterT);window._fFilterT=setTimeout(filterFrames,180)">
           <select class="filter-select" id="frames-type-filter" onchange="filterFrames()">
             <option value="">All types</option>
             <option value="full_rim">Full Rim</option>
@@ -1905,8 +1913,8 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
             <div class="page-header-title" data-i18n="reports">التقارير</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <input type="date" class="filter-input" id="report-from" onchange="loadReports()">
-            <input type="date" class="filter-input" id="report-to" onchange="loadReports()">
+            <input type="date" class="filter-input" id="report-from" onchange="clearTimeout(window._reportTimer);window._reportTimer=setTimeout(loadReports,300)">
+            <input type="date" class="filter-input" id="report-to" onchange="clearTimeout(window._reportTimer);window._reportTimer=setTimeout(loadReports,300)">
             <button class="btn btn-outline btn-sm" onclick="exportExcel()">Excel</button>
             <button class="btn btn-outline btn-sm" onclick="exportPDF()">PDF</button>
           </div>
@@ -3282,7 +3290,14 @@ function esc(v){
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[ch]));
 }
-function escAttr(v){ return esc(v).replace(/`/g, '&#96;'); }
+function escAttr(v){
+  if (v === null || v === undefined || v === '') return '';
+  // For inline onclick="..." attributes we need raw attribute-safe encoding.
+  // Do NOT call esc() first — that would double-encode & to &amp;amp; etc.
+  return String(v).replace(/[&<>"'`]/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;', '`':'&#96;'
+  }[ch]));
+}
 
 function toast(msg, type='success', duration=3500) {
   const tc = document.getElementById('toast-container');
@@ -3329,10 +3344,14 @@ function markPatientFormClean() {
   NOOR.patientFormSnapshot = patientFormState();
   NOOR.patientFormDirty = false;
 }
+let _patientDirtyTimer;
 function updatePatientFormDirty() {
   const modal = document.getElementById('modal-patient');
   if (!modal?.classList.contains('show')) return;
-  NOOR.patientFormDirty = patientFormState() !== NOOR.patientFormSnapshot;
+  clearTimeout(_patientDirtyTimer);
+  _patientDirtyTimer = setTimeout(() => {
+    NOOR.patientFormDirty = patientFormState() !== NOOR.patientFormSnapshot;
+  }, 150);
 }
 function confirmUnsavedPatientForm() {
   return confirm(NOOR.lang === 'ar'
@@ -3382,9 +3401,13 @@ async function renderDashboard() {
         if (cached) patientsForDash[pid] = cached;
       });
       const missing = recentPids.filter(pid => !patientsForDash[pid]);
-      if (missing.length) {
+      if (missing.length && !NOOR._patientsCachedAt) {
         const pr = await get('/api/patients?limit=200');
         NOOR.patients = pr.data || [];
+        NOOR._patientsCachedAt = Date.now();
+        NOOR.patients.forEach(p => { patientsForDash[p.id] = p; });
+      } else if (missing.length) {
+        // Cache exists but these patients are still missing — fill from cache best-effort
         NOOR.patients.forEach(p => { patientsForDash[p.id] = p; });
       }
     } catch(_) {}
@@ -3424,6 +3447,7 @@ async function renderPatients() {
   try {
     const data = await get('/api/patients?limit=200');
     NOOR.patients = data.data || [];
+    NOOR._patientsCachedAt = Date.now();
     document.getElementById('patients-total').textContent = data.total || NOOR.patients.length;
     filterPatients();
   } catch(e) { toast(e.message, 'error'); }
@@ -3779,7 +3803,10 @@ function _clampRxInput(id) {
   else if (v < -20) { el.value = -20; }
 }
 
+let _rxChangeTimer;
 async function onRxChange() {
+  clearTimeout(_rxChangeTimer);
+  _rxChangeTimer = setTimeout(async () => {
   const os = parseFloat(document.getElementById('rx-od-sph').value)||0;
   const oc = parseFloat(document.getElementById('rx-od-cyl').value)||0;
   const ls = parseFloat(document.getElementById('rx-os-sph').value)||0;
@@ -3796,6 +3823,7 @@ async function onRxChange() {
       </div>`
     ).join('');
   } catch(_) {}
+  }, 300);
 }
 
 function selectMatchLens(el, id) {
@@ -4094,6 +4122,10 @@ async function savePatient() {
         lens_price:      NOOR.patientModalMode === 'old_rx' ? 0 : lp,
         checkup_fee:     NOOR.patientModalMode === 'old_rx' ? 0 : cf,
         amount_paid:     NOOR.patientModalMode === 'old_rx' ? 0 : pd,
+        // Bug fix #21: compute and send total_amount / remaining so debt displays are correct
+        // (schema stores these as plain columns, not computed)
+        total_amount:    NOOR.patientModalMode === 'old_rx' ? 0 : (fp + lp + cf),
+        remaining:       NOOR.patientModalMode === 'old_rx' ? 0 : Math.max(0, (fp + lp + cf) - pd),
         notes:           document.getElementById('f-visit-notes').value,
       };
       if (NOOR.patientModalMode === 'edit' && NOOR.editingVisitId) await put(`/api/visits/${NOOR.editingVisitId}`, visitPayload);
@@ -4272,8 +4304,7 @@ function onTopupInput() {
     errEl.textContent = isAr ? 'يجب أن يكون المبلغ أكبر من صفر' : 'Amount must be greater than zero';
     submitBtn.disabled = true;
   } else if (val > outstanding) {
-    errEl.textContent = isAr ? `لا يمكن تجاوز المبلغ المتبقي (${fmtIQD(outstanding)})` : `Cannot exceed outstanding amount (${fmtIQD(outstanding)})`;
-    // Clamp the value
+    // Clamp silently to the max and clear error
     inp.value = outstanding;
     errEl.textContent = '';
     submitBtn.disabled = false;
@@ -4893,12 +4924,18 @@ async function exportPDF() {
   try {
     const from = document.getElementById('report-from')?.value||'';
     const to   = document.getElementById('report-to')?.value||'';
-    const data = await get(`/api/reports/export/excel?from=${from}&to=${to}`);
+    // Bug fix #17: use the PDF endpoint, not the Excel endpoint
+    const data = await get(`/api/reports/export/pdf?from=${from}&to=${to}`);
     const rows = data.data || [];
     const dir = NOOR.lang === 'ar' ? 'rtl' : 'ltr';
     const bodyRows = rows.map(r => `<tr><td>${esc(r.Date)}</td><td>${esc(r.Patient)}</td><td>${esc(r.Phone)}</td><td>${esc(r['Lens Type'])}</td><td>${esc(r.Total)}</td><td>${esc(r.Paid)}</td><td>${esc(r.Remaining)}</td></tr>`).join('');
     const html = `<!doctype html><html lang="${NOOR.lang}" dir="${dir}"><head><meta charset="utf-8"><title>Noor Report</title><style>body{font-family:Arial,Tahoma,sans-serif;padding:24px;color:#1a1410}h1{font-size:22px;margin:0 0 6px;color:#6b1a2a}.meta{color:#666;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{border:1px solid #ddd;padding:7px;text-align:start}th{background:#faf6f0;color:#6b1a2a}@media print{@page{size:A4;margin:12mm}}</style></head><body><h1>Noor Optical Clinic - Report</h1><div class="meta">${esc(from)} - ${esc(to)}</div><table><thead><tr><th>Date</th><th>Patient</th><th>Phone</th><th>Lens</th><th>Total</th><th>Paid</th><th>Remaining</th></tr></thead><tbody>${bodyRows}</tbody></table></body></html>`;
+    // Bug fix #18: guard against popup blockers returning null from window.open
     const win = window.open('', '_blank');
+    if (!win) {
+      toast(NOOR.lang === 'ar' ? 'تعذّر فتح نافذة الطباعة — يرجى السماح بالنوافذ المنبثقة.' : 'Popup blocked — please allow popups for this site to print.', 'warning', 5000);
+      return;
+    }
     win.document.write(html);
     win.document.close();
     win.focus();
@@ -5307,7 +5344,7 @@ async function renderSettings() {
     document.getElementById('set-followup-months').value = st.followup_months_default||3;
     NOOR.waTemplates = { wa_template_1: st.wa_template_1||'', wa_template_2: st.wa_template_2||'', wa_template_3: st.wa_template_3||'' };
     renderPermissionsToggles();
-    await renderUsersTable();
+    renderUsersTable(); // non-blocking — runs in parallel with the rest of settings render
   } catch(e) { toast(e.message,'error'); }
 }
 
@@ -5646,7 +5683,7 @@ function _renderAdminClinicsTable(clinics) {
       <td class="td-actions-cell" style="display:flex;gap:5px;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="openManageSubscription('${escAttr(c.id)}','${escAttr(c.name)}','${escAttr(lic.plan||'')}','${escAttr(lic.expires_at||'')}')">Subscription</button>
         <button class="btn btn-outline btn-sm" onclick="impersonateClinic('${escAttr(c.id)}')">Impersonate</button>
-        <button class="btn btn-outline btn-sm" onclick="toggleClinicBan('${escAttr(c.id)}', ${banned?'false':'true'})">${banned?'Unban':'Ban'}</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleClinicBan('${escAttr(c.id)}', ${!banned})">${banned?'Unban':'Ban'}</button>
         <button class="btn btn-outline btn-sm" onclick="backupClinic('${escAttr(c.id)}')">Backup</button>
         <button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteClinic('${escAttr(c.id)}')">Delete</button>
       </td>
@@ -5826,8 +5863,19 @@ function onGlobalSearch(q) {
 function goToPatient(pid) {
   document.getElementById('search-results').classList.remove('show');
   document.getElementById('global-search').value = '';
-  navigate('patients');
-  setTimeout(() => openPatientDetail(pid), 50);
+  if (NOOR.currentSection !== 'patients') {
+    // Switch section without triggering renderPatients (we only need the detail view)
+    closeMoreMenu();
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.bnav-item').forEach(b => b.classList.toggle('active', b.dataset.section === 'patients'));
+    document.getElementById('section-patients')?.classList.add('active');
+    document.querySelector('.nav-item[data-section="patients"]')?.classList.add('active');
+    NOOR.currentSection = 'patients';
+    document.getElementById('topbar-title').textContent = t('patients');
+    if (isMobile()) closeSidebar();
+  }
+  openPatientDetail(pid);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -5883,7 +5931,11 @@ function handleResize() {
   }
 }
 
-window.addEventListener('resize', handleResize);
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(handleResize, 120);
+});
 
 document.addEventListener('click', e => {
   if (!e.target.closest('.search-wrap'))
@@ -6329,16 +6381,56 @@ function _showResetPasswordModal(accessToken, refreshToken) {
           <div id="reset-link-error" style="color:var(--danger);font-size:.83rem;min-height:18px"></div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-burgundy" id="reset-link-btn"
-            onclick="submitNewPasswordFromLink('${accessToken}','${refreshToken || ''}')">
+          <!-- Bug fix #16: handler attached via addEventListener below to avoid XSS via token interpolation in onclick -->
+          <button class="btn btn-burgundy" id="reset-link-btn">
             ${isAr ? 'حفظ كلمة المرور' : 'Save Password'}
           </button>
         </div>
       </div>`;
     document.body.appendChild(modal);
   }
+  // Store tokens in a closure — never interpolate untrusted values into HTML/attribute strings
+  const btn = modal.querySelector('#reset-link-btn');
+  // Remove any previously attached handler to avoid duplicate listeners on re-open
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+  newBtn.addEventListener('click', () => submitNewPasswordFromLink(accessToken, refreshToken));
+
   modal.classList.add('show');
   setTimeout(() => document.getElementById('reset-link-pw')?.focus(), 100);
+}
+
+// ── Service Worker registration (Bug fix #22) ──────────────────────────────
+// Registers sw.js to enable the PWA offline shell cache and Background Sync.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then(reg => {
+    // Register Background Sync tag so the SW can trigger a flush on reconnect
+    reg.sync?.register('noor-lf-flush').catch(() => {
+      // Background Sync not supported — the heartbeat handles it instead
+    });
+  }).catch(err => console.warn('[Noor] SW registration failed:', err));
+
+  // Listen for SW → page messages (e.g. NF_FLUSH when back online)
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data?.type === 'NF_FLUSH') NoorLF?.flush?.();
+  });
+}
+
+// ── LocalFirst layer init (Bug fix #19) ────────────────────────────────────
+// NoorLF is provided by /localFirst.js (loaded in <head>).
+// Wire up the pending-items badge and a bilingual conflict dialog.
+if (typeof NoorLF !== 'undefined') {
+  NoorLF.init().then(() => {
+    NoorLF.bindBadge(document.getElementById('sync-pending-badge'));
+  });
+
+  NoorLF.onConflict = function(entityType, localRecord, serverRecord, resolve) {
+    const isAr = NOOR.lang === 'ar';
+    const msg = isAr
+      ? `تعارض في بيانات ${entityType}:\nالخادم يحتوي على إصدار أحدث.\nهل تريد الاحتفاظ بنسخة الخادم؟`
+      : `Conflict in ${entityType}:\nThe server has a newer version.\nKeep the server version?`;
+    resolve(confirm(msg) ? 'server' : 'local');
+  };
 }
 
 checkSession();  // restores session on page reload without showing login screen

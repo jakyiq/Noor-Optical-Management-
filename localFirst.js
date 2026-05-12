@@ -6,7 +6,7 @@
  * Architecture overview:
  *   1. Every write goes to StorageAdapter (IndexedDB) FIRST with status:'pending'
  *   2. Heartbeat() runs every 15 s and whenever the browser goes back online
- *   3. Heartbeat flushes pending items → POST /api/sync/flush
+ *   3. Heartbeat flushes pending items → POST /api/sync/item
  *   4. Flask endpoint does a timestamp comparison; if Supabase wins, it returns
  *      the server record so the UI can prompt the user
  *   5. Tauri swap: replace `BrowserStorageAdapter` with `TauriStorageAdapter`
@@ -87,8 +87,13 @@ class BrowserStorageAdapter {
     const tx  = db.transaction(LF_STORE, 'readwrite');
     const req = tx.objectStore(LF_STORE).add(item);
     return new Promise((resolve, reject) => {
-      req.onsuccess = () => resolve(req.result);   // local_id
-      tx.onerror   = (e) => reject(e.target.error);
+      // Resolve on tx.oncomplete — not req.onsuccess — to guarantee the write
+      // has been durably committed before we hand back the local_id.
+      let local_id;
+      req.onsuccess  = () => { local_id = req.result; };
+      tx.oncomplete  = () => resolve(local_id);
+      tx.onerror     = (e) => reject(e.target.error);
+      tx.onabort     = (e) => reject(e.target.error);
     });
   }
 
@@ -111,14 +116,17 @@ class BrowserStorageAdapter {
     const store = tx.objectStore(LF_STORE);
     return new Promise((resolve, reject) => {
       const getReq = store.get(local_id);
+      let updated;
       getReq.onsuccess = () => {
-        const item    = getReq.result;
+        const item = getReq.result;
         if (!item) return reject(new Error(`local_id ${local_id} not found`));
-        const updated = { ...item, ...patch };
-        const putReq  = store.put(updated);
-        putReq.onsuccess = () => resolve(updated);
+        updated = { ...item, ...patch };
+        store.put(updated);
       };
-      tx.onerror = (e) => reject(e.target.error);
+      // Resolve on tx.oncomplete to guarantee the write is durable.
+      tx.oncomplete = () => resolve(updated);
+      tx.onerror    = (e) => reject(e.target.error);
+      tx.onabort    = (e) => reject(e.target.error);
     });
   }
 
@@ -126,10 +134,12 @@ class BrowserStorageAdapter {
   async remove(local_id) {
     const db  = await this.open();
     const tx  = db.transaction(LF_STORE, 'readwrite');
-    const req = tx.objectStore(LF_STORE).delete(local_id);
+    tx.objectStore(LF_STORE).delete(local_id);
     return new Promise((resolve, reject) => {
-      req.onsuccess = () => resolve();
+      // Resolve on tx.oncomplete to guarantee the delete is durable.
+      tx.oncomplete = () => resolve();
       tx.onerror    = (e) => reject(e.target.error);
+      tx.onabort    = (e) => reject(e.target.error);
     });
   }
 
@@ -221,7 +231,8 @@ class TauriStorageAdapter {
   }
 
   async clear() {
-    this._cache = [];
+    this._cache  = [];
+    this._nextId = 1;
     await this._save();
   }
 }
@@ -255,6 +266,11 @@ function _showConflictDialog(entityType, localRecord, serverRecord) {
 let _heartbeatTimer = null;
 let _syncInProgress = false;
 
+// Named handlers so addEventListener/removeEventListener deduplicates them
+// if _startHeartbeat is called more than once (e.g. after a stop/restart).
+function _onOnline()  { NoorLF._emit('online');  _flush(); }
+function _onOffline() { NoorLF._emit('offline'); }
+
 /**
  * Flush all pending items in the queue to the server.
  * Called by the heartbeat and by the online event listener.
@@ -265,7 +281,7 @@ async function _flush() {
 
   try {
     const pending = await NoorLF.storage.getByStatus('pending');
-    if (!pending.length) return;
+    if (!pending.length) return;  // _syncInProgress reset in finally below
 
     for (const item of pending) {
       await _syncItem(item);
@@ -273,7 +289,7 @@ async function _flush() {
   } catch (err) {
     console.warn('[NoorLF] flush error', err);
   } finally {
-    _syncInProgress = false;
+    _syncInProgress = false;  // always reset, even on early return
   }
 }
 
@@ -298,6 +314,7 @@ async function _syncItem(item) {
         operation:   item.operation,
         payload:     item.payload,
         last_modified: item.last_modified,
+        force:       item.force || false,   // Bug fix: send force flag so server skips conflict check
       }),
     });
 
@@ -320,9 +337,15 @@ async function _syncItem(item) {
         await NoorLF.storage.remove(item.local_id);
         NoorLF._emit('conflict_resolved', { winner: 'server', item, server_record: body.server_record });
       } else {
-        // Force-push local version → re-queue with force flag
-        await NoorLF.storage.update(item.local_id, { force: true, retry_count: (item.retry_count || 0) + 1 });
-        await _syncItem({ ...item, force: true });
+        // Force-push local version once.  Do NOT recurse — mark as pending
+        // with the force flag and let the next heartbeat cycle send it.
+        // Recursing here would bypass MAX_RETRY and could hang the tab.
+        await NoorLF.storage.update(item.local_id, {
+          force:       true,
+          status:      'pending',
+          retry_count: (item.retry_count || 0) + 1,
+        });
+        NoorLF._emit('conflict_resolved', { winner: 'local', item });
       }
       return;
     }
@@ -366,12 +389,14 @@ function _startHeartbeat() {
     if (navigator.onLine) _flush();
   }, HEARTBEAT_MS);
 
-  window.addEventListener('online',  () => { NoorLF._emit('online');  _flush(); });
-  window.addEventListener('offline', () => { NoorLF._emit('offline'); });
+  window.addEventListener('online',  _onOnline);
+  window.addEventListener('offline', _onOffline);
 }
 
 function _stopHeartbeat() {
   if (_heartbeatTimer) { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+  window.removeEventListener('online',  _onOnline);
+  window.removeEventListener('offline', _onOffline);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
