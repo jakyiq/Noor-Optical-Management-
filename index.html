@@ -535,7 +535,8 @@ tbody tr:hover{background:var(--cream)}
 .badge-burgundy{background:var(--burgundy-pale);color:var(--burgundy)}
 
 /* MODAL */
-.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:hidden;touch-action:none;overscroll-behavior:none}
+.modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(26,20,16,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;touch-action:none;overscroll-behavior:none}
+@media(pointer:fine){.modal-overlay{overflow-y:auto}}
 .modal-overlay.show{display:flex}
 .modal{background:var(--surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);width:min(700px,100%);max-height:calc(100dvh - 80px);position:relative;animation:modalIn .22s ease;display:flex;flex-direction:column;overflow:hidden}
 @keyframes modalIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
@@ -544,7 +545,8 @@ tbody tr:hover{background:var(--cream)}
 html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .modal-close{width:32px;height:32px;background:var(--cream);border:1px solid var(--cream-border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink-mid);transition:all .15s}
 .modal-close:hover{background:var(--danger);color:white;border-color:var(--danger)}
-.modal-body{padding:24px 28px;overflow-y:auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.modal-body{padding:24px 28px;overflow-y:auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
+@media(pointer:fine){.modal-body{overflow-y:auto}}
 .modal-footer{padding:16px 28px 24px;display:flex;gap:10px;justify-content:flex-end}
 .tabs{display:flex;gap:0;border-bottom:1px solid var(--cream-border);margin-bottom:24px;overflow-x:auto}
 .tab-btn{padding:10px 20px;background:none;border:none;border-bottom:2px solid transparent;font-family:inherit;font-size:.85rem;font-weight:600;color:var(--ink-light);cursor:pointer;white-space:nowrap;transition:all .15s;margin-bottom:-1px}
@@ -4194,23 +4196,67 @@ let _rxChangeTimer;
 async function onRxChange() {
   clearTimeout(_rxChangeTimer);
   _rxChangeTimer = setTimeout(async () => {
-  const os = parseFloat(document.getElementById('rx-od-sph').value)||0;
-  const oc = parseFloat(document.getElementById('rx-od-cyl').value)||0;
-  const ls = parseFloat(document.getElementById('rx-os-sph').value)||0;
-  const lc = parseFloat(document.getElementById('rx-os-cyl').value)||0;
-  const cont = document.getElementById('inv-match-items');
-  if (!os && !ls) { cont.innerHTML=`<span class="inv-match-empty">${t('enterRxFirst')}</span>`; return; }
-  try {
-    const data = await get(`/api/lenses/match?od_sph=${os}&od_cyl=${oc}&os_sph=${ls}&os_cyl=${lc}`);
-    const matches = data.data || [];
-    if (!matches.length) { cont.innerHTML='<span class="inv-match-empty">No matching lenses</span>'; return; }
-    cont.innerHTML = matches.map(l =>
-      `<div class="inv-match-chip" data-id="${escAttr(l.id)}" onclick="selectMatchLens(this,'${escAttr(l.id)}')">
-        SPH ${l.sphere>0?'+':''}${esc(l.sphere)} CYL ${esc(l.cylinder||0)} · ${esc((l.lens_type||'').replace(/_/g,' '))} · Qty: ${esc(l.quantity)}
-      </div>`
-    ).join('');
-  } catch(_) {}
+    const odSphRaw = document.getElementById('rx-od-sph').value;
+    const osSphRaw = document.getElementById('rx-os-sph').value;
+    const odSph = odSphRaw !== '' ? parseFloat(odSphRaw) : null;
+    const osSph = osSphRaw !== '' ? parseFloat(osSphRaw) : null;
+    const odCyl = parseFloat(document.getElementById('rx-od-cyl').value) || 0;
+    const osCyl = parseFloat(document.getElementById('rx-os-cyl').value) || 0;
+    const cont  = document.getElementById('inv-match-items');
+
+    if (odSph === null && osSph === null) {
+      cont.innerHTML = `<span class="inv-match-empty">${t('enterRxFirst')}</span>`;
+      return;
+    }
+
+    // Build query only for eyes that have values entered
+    const params = new URLSearchParams();
+    if (odSph !== null) { params.set('od_sph', odSph); params.set('od_cyl', odCyl); }
+    if (osSph !== null) { params.set('os_sph', osSph); params.set('os_cyl', osCyl); }
+
+    try {
+      const data   = await get(`/api/lenses/match?${params}`);
+      const result = data.data || {};
+
+      // Legacy flat array (old backend) — fall back gracefully
+      if (Array.isArray(result)) {
+        if (!result.length) { cont.innerHTML = '<span class="inv-match-empty">No matching lenses</span>'; return; }
+        cont.innerHTML = result.map(l => _lensChipHtml(l, 'both')).join('');
+        return;
+      }
+
+      const odList = result.od || [];
+      const osList = result.os || [];
+      const single = result.single;
+
+      // Single-eye mode: one list, no labels needed
+      if (single) {
+        const list = odList.length ? odList : osList;
+        if (!list.length) { cont.innerHTML = '<span class="inv-match-empty">No matching lenses</span>'; return; }
+        cont.innerHTML = list.map(l => _lensChipHtml(l, 'both')).join('');
+        return;
+      }
+
+      // Both eyes: render OD group + OS group independently
+      let html = '';
+      if (odList.length) {
+        html += `<div style="font-size:.72rem;font-weight:700;color:var(--ink-mid);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">OD (R)</div>`;
+        html += odList.map(l => _lensChipHtml(l, 'od')).join('');
+      }
+      if (osList.length) {
+        html += `<div style="font-size:.72rem;font-weight:700;color:var(--ink-mid);text-transform:uppercase;letter-spacing:.07em;margin:${odList.length ? '12px' : '0'} 0 6px">OS (L)</div>`;
+        html += osList.map(l => _lensChipHtml(l, 'os')).join('');
+      }
+      if (!html) { cont.innerHTML = '<span class="inv-match-empty">No matching lenses</span>'; return; }
+      cont.innerHTML = html;
+    } catch(_) {}
   }, 300);
+}
+
+function _lensChipHtml(l, eye) {
+  const sphStr = (l.sphere > 0 ? '+' : '') + esc(l.sphere);
+  const label  = `SPH ${sphStr} CYL ${esc(l.cylinder || 0)} · ${esc((l.lens_type || '').replace(/_/g, ' '))} · Qty: ${esc(l.quantity)}`;
+  return `<div class="inv-match-chip" data-id="${escAttr(l.id)}" data-eye="${escAttr(eye)}" onclick="selectMatchLens(this,'${escAttr(l.id)}')">${label}</div>`;
 }
 
 function selectMatchLens(el, id) {
@@ -4429,7 +4475,28 @@ function resolveDuplicatePatient(shouldProceed) {
   if (resolve) resolve(!!shouldProceed);
 }
 
+function _findLocalDuplicates(payload, excludeId) {
+  const name  = (payload.full_name || '').trim().toLowerCase();
+  const phone = (payload.phone || '').replace(/\D/g, '');
+  return (NOOR.patients || []).filter(p => {
+    if (excludeId && p.id === excludeId) return false;
+    const pName  = (p.full_name || '').trim().toLowerCase();
+    const pPhone = (p.phone || '').replace(/\D/g, '');
+    const nameMatch  = name  && pName  && pName  === name;
+    const phoneMatch = phone && pPhone && pPhone === phone;
+    return nameMatch || phoneMatch;
+  });
+}
+
 async function savePatientProfile(pid, payload, isNewPatient) {
+  // ── Client-side duplicate pre-check (instant, no round-trip) ──────────────
+  const localDups = _findLocalDuplicates(payload, isNewPatient ? null : pid);
+  if (localDups.length) {
+    const proceed = await confirmDuplicatePatient(localDups);
+    if (!proceed) { const e = new Error('cancelled'); e.silent = true; throw e; }
+    payload = { ...payload, allow_duplicate: true };
+  }
+
   try {
     if (isNewPatient) {
       const res = await post('/api/patients', payload);

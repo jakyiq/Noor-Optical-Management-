@@ -1773,30 +1773,56 @@ def restock_lens(lid):
 @app.route("/api/lenses/match", methods=["GET"])
 @_auth()
 def match_lenses():
-    """Return inventory lenses within ±0.25 of OD and OS powers."""
-    cid = session["clinic_id"]
+    """
+    Return inventory lenses matching OD and OS powers independently.
+
+    Query params: od_sph, od_cyl, os_sph, os_cyl (all optional floats).
+
+    Response shape:
+        { od: [...], os: [...], single: bool }
+
+    When only one eye has values, `single` is True.
+    When both eyes have values, each list is filtered independently so that
+    a lens matching only OD appears only in `od`, and vice versa.
+    """
+    cid  = session["clinic_id"]
     args = request.args
 
-    res = db.table("lenses").select("*").eq("clinic_id", cid).gt("quantity", 0).execute()
+    res  = db.table("lenses").select("*").eq("clinic_id", cid).gt("quantity", 0).execute()
     rows = res.data or []
 
-    results = []
-    for r in rows:
-        match = False
-        for eye in ["od", "os"]:
-            sph = args.get(f"{eye}_sph")
-            cyl = args.get(f"{eye}_cyl")
-            if sph is not None:
-                if abs((r.get("sphere") or 0) - float(sph)) <= 0.25:
-                    cyl_ok = True
-                    if cyl is not None:
-                        cyl_ok = abs((r.get("cylinder") or 0) - float(cyl)) <= 0.25
-                    if cyl_ok:
-                        match = True
-        if match:
-            results.append(r)
+    def _eye_matches(row_list, sph_str, cyl_str):
+        if sph_str is None:
+            return []
+        try:
+            sph = float(sph_str)
+        except (ValueError, TypeError):
+            return []
+        matched = []
+        for r in row_list:
+            if abs((r.get("sphere") or 0) - sph) <= 0.25:
+                if cyl_str is not None:
+                    try:
+                        cyl = float(cyl_str)
+                    except (ValueError, TypeError):
+                        cyl = 0.0
+                    if abs((r.get("cylinder") or 0) - cyl) > 0.25:
+                        continue
+                matched.append(r)
+        return matched
 
-    return ok(results)
+    od_matches = _eye_matches(rows, args.get("od_sph"), args.get("od_cyl"))
+    os_matches = _eye_matches(rows, args.get("os_sph"), args.get("os_cyl"))
+
+    od_provided = args.get("od_sph") is not None
+    os_provided = args.get("os_sph") is not None
+    single_eye  = bool(od_provided) ^ bool(os_provided)
+
+    return ok({
+        "od":     od_matches,
+        "os":     os_matches,
+        "single": single_eye,
+    })
 
 
 # ─────────────────────────────────────────────────────────────
