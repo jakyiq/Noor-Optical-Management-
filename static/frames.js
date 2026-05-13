@@ -1,4 +1,18 @@
 /* frames.js - extracted from index.html. Plain script, globals intentionally preserved. */
+
+// ── Collapsible low-stock banner (shared by frames & lenses) ──
+function toggleLowStockBanner(bannerId) {
+  const banner = document.getElementById(bannerId);
+  if (!banner) return;
+  const body = banner.querySelector('.low-stock-body');
+  const btn  = banner.querySelector('.low-stock-toggle');
+  if (!body) return;
+  const isExpanded = !body.hidden;
+  body.hidden = isExpanded;
+  banner.classList.toggle('expanded', !isExpanded);
+  if (btn) btn.setAttribute('aria-expanded', String(!isExpanded));
+}
+
 async function renderFrames() {
   const cached = getCachedApiData('/api/frames');
   if (cached?.data) {
