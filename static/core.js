@@ -719,6 +719,29 @@ function canShareRxPdf(file) {
 function openRxSharePrompt(file, text, title, waPhone) {
   NOOR.pendingRxShare = { file, text, title, waPhone };
   const isAr = NOOR.lang === 'ar';
+
+  // On mobile, try to open the share sheet immediately without showing the modal.
+  // This skips the extra tap and lets the user pick WhatsApp directly.
+  if (file && navigator.share && navigator.canShare?.({ files: [file] })) {
+    navigator.share({
+      files: [file],
+      text: text || '',
+      title: title || file.name,
+    }).then(() => {
+      NOOR.pendingRxShare = null;
+    }).catch(e => {
+      if (e?.name === 'AbortError') return; // user cancelled — no error needed
+      // Share failed after the modal was skipped; fall back to the manual modal
+      _openRxShareModal(isAr);
+    });
+    return; // don't open the modal
+  }
+
+  // Fallback: browser can't share files directly — show the modal with instructions
+  _openRxShareModal(isAr);
+}
+
+function _openRxShareModal(isAr) {
   const msg = document.getElementById('rx-share-text');
   if (msg) msg.textContent = isAr
     ? 'ملف وصفة A5 جاهز. اضغط مشاركة PDF ثم اختر واتساب لإرسال الملف.'

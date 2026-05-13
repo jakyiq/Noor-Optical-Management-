@@ -637,10 +637,15 @@ async function sendRxWhatsApp(vid, phone, patientName) {
     const printFile = _buildRxPrintBlob();
     const pdfFile = await buildRxPdfFile(payload, filename);
 
+    // Always open a direct WhatsApp chat with the patient first.
+    // wa.me requires the full international number (964XXXXXXXXXX) — already handled by normalizeIraqPhone.
+    window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`, '_blank');
+
+    // Then handle the PDF: share sheet on capable browsers, download otherwise.
     if (canShareRxPdf(pdfFile)) {
       setTimeout(() => URL.revokeObjectURL(printFile.blobURL), 30000);
       openRxSharePrompt(pdfFile, waMsg, filename, waPhone);
-      toast(NOOR.lang === 'ar' ? 'ملف PDF جاهز للمشاركة' : 'PDF is ready to share', 'success');
+      toast(NOOR.lang === 'ar' ? 'تم فتح واتساب — ملف PDF جاهز للمشاركة' : 'WhatsApp opened — PDF ready to share', 'success');
       return;
     }
 
@@ -661,12 +666,11 @@ async function sendRxWhatsApp(vid, phone, patientName) {
       }
     }
 
-    window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(waMsg)}`, '_blank');
     setTimeout(() => URL.revokeObjectURL(printFile.blobURL), 30000);
     toast(
       NOOR.lang === 'ar'
-        ? 'تم تنزيل ملف PDF وفتح واتساب. إرفاق الملف تلقائياً يحتاج متصفحاً يدعم مشاركة الملفات.'
-        : 'PDF downloaded and WhatsApp opened. Auto-attachment needs browser file sharing support.',
+        ? 'تم فتح واتساب وتنزيل ملف PDF. أرفق الملف يدوياً في المحادثة.'
+        : 'WhatsApp opened and PDF downloaded. Attach the file manually in the chat.',
       'success',
       6000
     );
