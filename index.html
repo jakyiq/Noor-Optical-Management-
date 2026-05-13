@@ -15,6 +15,41 @@
 <!-- Bug fix #19: Load the local-first layer so NoorLF is available before any writes -->
 <script src="/localFirst.js"></script>
 <link rel="stylesheet" href="/static/style.css">
+<style>
+/* ── Collapsible low-stock banner ── */
+.low-stock-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+.low-stock-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.low-stock-chevron {
+  flex-shrink: 0;
+  opacity: .7;
+  transition: transform .22s ease;
+}
+.low-stock-banner.expanded .low-stock-chevron {
+  transform: rotate(180deg);
+}
+.low-stock-body {
+  margin-top: 10px;
+}
+.low-stock-body[hidden] {
+  display: none;
+}
+</style>
 </head>
 <body>
 
@@ -580,8 +615,13 @@
           </div>
         </div>
         <div class="low-stock-banner" id="lenses-low-banner">
-          <div class="low-stock-title" data-i18n="lowStockAlert">تنبيه: مخزون منخفض</div>
-          <div class="low-stock-items" id="lenses-low-items"></div>
+          <button class="low-stock-toggle" onclick="toggleLowStockBanner('lenses-low-banner')" aria-expanded="false">
+            <div class="low-stock-title" data-i18n="lowStockAlert">تنبيه: مخزون منخفض</div>
+            <svg class="low-stock-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
+          </button>
+          <div class="low-stock-body" id="lenses-low-body" hidden>
+            <div class="low-stock-items" id="lenses-low-items"></div>
+          </div>
         </div>
         <div class="section-filters">
           <select class="filter-select" id="lens-type-filter" onchange="filterLenses()">
@@ -649,8 +689,13 @@
           </div>
         </div>
         <div class="low-stock-banner" id="frames-low-banner">
-          <div class="low-stock-title" data-i18n="lowStockAlert">تنبيه: مخزون منخفض</div>
-          <div class="low-stock-items" id="frames-low-items"></div>
+          <button class="low-stock-toggle" onclick="toggleLowStockBanner('frames-low-banner')" aria-expanded="false">
+            <div class="low-stock-title" data-i18n="lowStockAlert">تنبيه: مخزون منخفض</div>
+            <svg class="low-stock-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
+          </button>
+          <div class="low-stock-body" id="frames-low-body" hidden>
+            <div class="low-stock-items" id="frames-low-items"></div>
+          </div>
         </div>
         <div class="section-filters">
           <input type="search" class="filter-input" id="frames-search" placeholder="Search brand, color, material..." style="flex:1;min-width:220px" oninput="clearTimeout(window._fFilterT);window._fFilterT=setTimeout(filterFrames,180)">
