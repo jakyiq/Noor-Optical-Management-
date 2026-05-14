@@ -1282,6 +1282,8 @@ def create_visit():
         "created_by":    uid,
         # Inventory reference
         "lens_id":       legacy_lens_id or (selected_lens_ids[0] if selected_lens_ids else None),
+        "od_lens_id":    od_lens_id,
+        "os_lens_id":    os_lens_id,
     }
 
     # ── Inventory deduction (optimistic-lock guard) ──────────────────────────
@@ -1372,17 +1374,21 @@ def update_visit(vid):
         return err("Visit not found", 404)
 
     allowed = [
+        "visit_date",
         "od_sphere","od_cylinder","od_axis","od_addition","od_va","od_bcva",
         "os_sphere","os_cylinder","os_axis","os_addition","os_va","os_bcva",
         "ipd","lens_type","lens_material","lens_coating","lens_count",
-        "frame_brand","frame_type","frame_material",
+        "lens_id","od_lens_id","os_lens_id",
+        "frame_id","frame_brand","frame_type","frame_material",
         "did_checkup","next_visit_date","followup_months",
         "frame_cost","frame_price","lens_cost","lens_price","checkup_fee",
-        "amount_paid","notes",
+        "total_amount","amount_paid","remaining","notes",
     ]
     updates = {k: v for k, v in body.items() if k in allowed}
 
-    # Recalculate totals if any price changed
+    # Always recalculate totals from price components to keep data consistent.
+    # If the client already sent total_amount/remaining we ignore those and
+    # recompute server-side so the values are always trustworthy.
     price_fields = {"frame_price","lens_price","checkup_fee","amount_paid"}
     if price_fields & set(updates.keys()):
         fp   = float(updates.get("frame_price",  old.data.get("frame_price",  0)) or 0)
@@ -1391,12 +1397,31 @@ def update_visit(vid):
         paid = float(updates.get("amount_paid",  old.data.get("amount_paid",  0)) or 0)
         updates["total_amount"] = fp + lp + cf
         updates["remaining"]    = max(0, updates["total_amount"] - paid)
+    elif "total_amount" in updates or "remaining" in updates:
+        # Remove client-sent totals if no price component was also sent —
+        # prevents accidental overwrites without a full price recalculation.
+        updates.pop("total_amount", None)
+        updates.pop("remaining", None)
 
     # ── Enum-safe sanitisation ──────────────────────────────────
     VALID_FRAME_TYPES = {
         "full_rim", "half_rim", "rimless", "wrap", "butterfly",
         "aviator", "round", "cat_eye",
     }
+
+    # visit_date: must be a valid ISO date string or we drop it
+    if "visit_date" in updates:
+        raw_vd = (updates["visit_date"] or "").strip()
+        try:
+            date.fromisoformat(raw_vd)
+            updates["visit_date"] = raw_vd
+        except (ValueError, AttributeError):
+            updates.pop("visit_date", None)
+
+    # id fields: pass through as-is or None
+    for id_field in ("lens_id", "od_lens_id", "os_lens_id", "frame_id"):
+        if id_field in updates:
+            updates[id_field] = updates[id_field] or None
 
     if "lens_type" in updates:
         v = (updates["lens_type"] or "").strip()
@@ -1655,16 +1680,6 @@ def bulk_generate_lenses():
     return ok({"generated": generated_count, "inserted": inserted, "updated": updated, "skipped": skipped})
 
 
-@app.route("/api/lenses", methods=["DELETE"])
-@_auth(roles=["doctor", "super_admin"])
-def delete_all_lenses():
-    cid = session["clinic_id"]
-    uid = session["user_id"]
-    db.table("lenses").delete().eq("clinic_id", cid).execute()
-    _write_audit(cid, uid, "delete", "lens", "all", old_value={"note": "all lenses cleared"})
-    return ok()
-
-
 @app.route("/api/lenses", methods=["GET"])
 @_auth(setting="recept_access_inventory")
 def list_lenses():
@@ -1764,6 +1779,16 @@ def delete_lens(lid):
         return err("Lens not found", 404)
     db.table("lenses").delete().eq("clinic_id", cid).eq("id", lid).execute()
     _write_audit(cid, uid, "delete", "lens", lid, old_value=old.data)
+    return ok()
+
+
+@app.route("/api/lenses", methods=["DELETE"])
+@_auth(roles=["doctor", "super_admin"])
+def delete_all_lenses():
+    cid = session["clinic_id"]
+    uid = session["user_id"]
+    db.table("lenses").delete().eq("clinic_id", cid).execute()
+    _write_audit(cid, uid, "delete", "lens", "all", old_value={"note": "all lenses cleared"})
     return ok()
 
 
