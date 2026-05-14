@@ -85,51 +85,17 @@ function rxPart(v, eye) {
 function renderPatientSummary(p, visits) {
   const latest = visits[0] || {};
   const outstanding = visits.reduce((sum, v) => sum + (parseFloat(v.remaining) || 0), 0);
+  const latestRx = latest.id ? `OD ${rxPart(latest,'od')} | OS ${rxPart(latest,'os')}` : '—';
+  const latestLens = latest.id ? [latest.lens_type, latest.lens_material, latest.lens_coating].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
+  const latestFrame = latest.id ? [latest.frame_brand, latest.frame_type].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
   const nextVisit = visits.find(v => v.next_visit_date)?.next_visit_date;
-  const isAr = NOOR.lang === 'ar';
-
-  // Build a compact Rx/lens/frame info strip for the latest visit (replaces two redundant cards)
-  let rxStrip = '';
-  if (latest.id) {
-    const odSph  = latest.od_sphere  != null ? (latest.od_sphere  > 0 ? '+' : '') + latest.od_sphere  : '—';
-    const odCyl  = latest.od_cylinder != null ? (latest.od_cylinder > 0 ? '+' : '') + latest.od_cylinder : '—';
-    const odAx   = latest.od_axis  != null ? latest.od_axis  : '—';
-    const osSph  = latest.os_sphere  != null ? (latest.os_sphere  > 0 ? '+' : '') + latest.os_sphere  : '—';
-    const osCyl  = latest.os_cylinder != null ? (latest.os_cylinder > 0 ? '+' : '') + latest.os_cylinder : '—';
-    const osAx   = latest.os_axis  != null ? latest.os_axis  : '—';
-    const lens   = [latest.lens_type, latest.lens_material, latest.lens_coating].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—';
-    const frame  = [latest.frame_brand, latest.frame_type].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—';
-    const ipd    = latest.ipd != null ? `IPD: ${latest.ipd}` : '';
-    rxStrip = `
-      <div class="patient-rx-strip">
-        <div class="patient-rx-strip-row">
-          <span class="rx-strip-eye">OD</span>
-          <span class="rx-strip-val">SPH <strong>${esc(odSph)}</strong></span>
-          <span class="rx-strip-val">CYL <strong>${esc(odCyl)}</strong></span>
-          <span class="rx-strip-val">AX <strong>${esc(odAx)}</strong></span>
-          ${latest.od_va ? `<span class="rx-strip-val">VA <strong>${esc(latest.od_va)}</strong></span>` : ''}
-        </div>
-        <div class="patient-rx-strip-row">
-          <span class="rx-strip-eye">OS</span>
-          <span class="rx-strip-val">SPH <strong>${esc(osSph)}</strong></span>
-          <span class="rx-strip-val">CYL <strong>${esc(osCyl)}</strong></span>
-          <span class="rx-strip-val">AX <strong>${esc(osAx)}</strong></span>
-          ${latest.os_va ? `<span class="rx-strip-val">VA <strong>${esc(latest.os_va)}</strong></span>` : ''}
-        </div>
-        <div class="patient-rx-strip-meta">
-          ${ipd ? `<span>${esc(ipd)}</span>` : ''}
-          <span>${isAr ? 'عدسة' : 'Lens'}: <strong>${esc(lens)}</strong></span>
-          ${frame !== '—' ? `<span>${isAr ? 'إطار' : 'Frame'}: <strong>${esc(frame)}</strong></span>` : ''}
-        </div>
-      </div>`;
-  }
-
   document.getElementById('patient-summary').innerHTML = `
     <div class="patient-summary-grid">
       <div class="patient-summary-card"><div class="patient-summary-label">${t('outstandingDebt')}</div><div class="patient-summary-value ${outstanding>0?'danger':''}">${fmtIQD(outstanding)}</div><div class="patient-summary-sub">${visits.length} ${t('visits')}</div></div>
       <div class="patient-summary-card"><div class="patient-summary-label">${t('latestVisit')}</div><div class="patient-summary-value">${latest.visit_date?fmtDate(latest.visit_date):'—'}</div><div class="patient-summary-sub">${nextVisit?`${t('nextVisit')}: ${fmtDate(nextVisit)}`:''}</div></div>
+      <div class="patient-summary-card"><div class="patient-summary-label">RX</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestRx)}</div><div class="patient-summary-sub">IPD: ${esc(latest.ipd||'—')}</div></div>
+      <div class="patient-summary-card"><div class="patient-summary-label">${t('lensType')} / ${t('frame')}</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestLens)}</div><div class="patient-summary-sub">${esc(latestFrame)}</div></div>
     </div>
-    ${rxStrip}
     <div class="patient-detail-actions">
       ${outstanding>0?`<button class="btn btn-gold" onclick="topUpPatientRemaining()">${t('topUpRemaining')}: ${fmtIQD(outstanding)}</button>`:''}
       ${latest.id?`<button class="btn btn-outline" onclick="showRxSlip('${escAttr(latest.id)}')">${t('printA5')}</button>`:''}
@@ -214,24 +180,19 @@ function openAddPatient() {
 
 async function openEditPatient() {
   if (!NOOR.editingPatientId) return;
-  // Edit patient profile only — never touches visits or financials
-  NOOR.patientModalMode = 'edit_profile_only';
+  NOOR.patientModalMode = 'edit';
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm();
-  // Go straight to the info tab — that's all we're editing
-  switchPatientTab('info');
-  // Hide the visit-date field so it's clear this isn't a visit form
-  document.getElementById('visit-date-group').style.display = 'none';
-  document.getElementById('modal-patient-title').textContent =
-    NOOR.lang === 'ar' ? 'تعديل بيانات المراجع' : 'Edit Patient Info';
-  // Hide tabs that are not relevant for a profile-only edit
-  ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-  });
+  switchPatientTab('rx');
+  document.getElementById('visit-date-group').style.display = 'block';
+  document.getElementById('modal-patient-title').textContent = t('edit');
   try {
     const data = await get(`/api/patients/${NOOR.editingPatientId}`);
-    fillPatientForm(data.data || {});
+    const patient = data.data || {};
+    fillPatientForm(patient);
+    const latest = (patient.visits || [])[0];
+    NOOR.editingVisitId = latest?.id || null;
+    if (latest) fillVisitForm(latest);
     openModal('modal-patient');
   } catch(e) { toast(e.message,'error'); }
 }
@@ -385,8 +346,7 @@ async function savePatient() {
   // Validate Sphere / Cylinder: -20 to +20, no 3-digit numbers
   const sphCylIds = ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'];
   const isAr = NOOR.lang === 'ar';
-  for (const id of sphCylIds) {
-    const raw = document.getElementById(id)?.value;
+  for (const id of sphCylIds) {    const raw = document.getElementById(id)?.value;
     if (raw === '' || raw === null || raw === undefined) continue;
     const val = parseFloat(raw);
     if (isNaN(val)) continue;
@@ -419,31 +379,10 @@ async function savePatient() {
     }
   }
 
-
-  // ── Profile-only edit (Edit button on patient detail header) ───────────────
-  if (NOOR.patientModalMode === 'edit_profile_only') {
-    NOOR.savingPatient = true;
-    const saveBtn2 = document.getElementById('patient-save-btn');
-    if (saveBtn2) saveBtn2.disabled = true;
-    const _restoreTabs = () => ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
-      const el = document.getElementById(id); if (el) el.style.display = '';
-    });
-    try {
-      await put(`/api/patients/${NOOR.editingPatientId}`, patientProfilePayload());
-      markPatientFormClean();
-      _restoreTabs();
-      closeModal('modal-patient');
-      toast(t('successSaved'));
-      await renderPatients();
-      await openPatientDetail(NOOR.editingPatientId);
-    } catch(e) {
-      if (!e.silent) toast(e.message, 'error');
-    } finally {
-      NOOR.savingPatient = false;
-      if (saveBtn2) saveBtn2.disabled = false;
-    }
-    return;
-  }
+  // Validate eye-count vs actual RX data entered
+  const rxIds2 = ['rx-od-sph','rx-od-cyl','rx-od-axis','rx-od-add','rx-od-va','rx-od-bcva','rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva'];
+  const anyRxFilled = rxIds2.some(id => (document.getElementById(id)?.value || '') !== '');
+  if (anyRxFilled && !_validateEyeCount()) return;
 
   const isNewPatient = !NOOR.editingPatientId;
   let pid = NOOR.editingPatientId;

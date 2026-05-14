@@ -445,17 +445,17 @@ function _buildRxPrintBlob() {
   const printCSS = `
     :root{--burgundy:${sc.primary};--burgundy-pale:${sc.paper};--cream:${sc.paper};--cream-dark:${sc.paper};--cream-border:${sc.border};--cream-bg:${sc.paper};--ink:${sc.text};--ink-mid:${sc.text};--ink-light:#8a8a7a;--ink-dark:${sc.text};--surface:${sc.bg};--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{background:white;font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;width:100%;height:auto;}
+    html,body{background:white;font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;width:148mm;height:210mm;overflow:hidden;}
     .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9.4pt;line-height:1.5;}
     .rx-slip-label{font-size:6.8pt;text-transform:uppercase;letter-spacing:.08em;color:${sc.text}99}
     .rx-slip-val{font-weight:600;font-size:9.4pt}
     table{border-collapse:collapse;width:100%;font-size:8.85pt}
     th,td{border:1px solid ${sc.border};padding:3px 5px}
     thead tr{background:${sc.primary};color:#fff}
-    @page{size:A5 portrait;margin:8mm 9mm}
+    @page{size:148mm 210mm;margin:8mm 9mm}
     @media print{
       *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-      html,body{background:white!important;overflow:hidden!important;width:100%!important;}
+      html,body{background:white!important;overflow:hidden!important;width:148mm!important;height:210mm!important;}
     }
   `;
 
@@ -481,11 +481,11 @@ function _buildRxPrintBlob() {
 function printRxSlip() {
   const { blobURL, docTitle } = _buildRxPrintBlob();
 
-  // On desktop, open a sized popup; on mobile open a full new tab
+  // A5 at 96 dpi ≈ 559 × 794 px; add ~80px for browser chrome
   var isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   var pw = isMobileDevice
     ? window.open(blobURL, '_blank')
-    : window.open(blobURL, '_blank', 'width=650,height=850');
+    : window.open(blobURL, '_blank', 'width=620,height=870,toolbar=0,scrollbars=0,status=0');
 
   if (!pw) {
     // Fallback if popup blocked: download the HTML file directly
@@ -578,7 +578,7 @@ async function sendRxWhatsAppLegacy(vid, phone, patientName) {
       }
     } else {
       // On desktop: open the print popup (same as printRxSlip)
-      const pw = window.open(blobURL, '_blank', 'width=650,height=850');
+      const pw = window.open(blobURL, '_blank', 'width=620,height=870,toolbar=0,scrollbars=0,status=0');
       if (!pw) {
         const a = document.createElement('a');
         a.href = blobURL; a.download = docTitle + '.html'; a.click();
