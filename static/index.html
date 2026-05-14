@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نور — Noor Optical Clinic</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- Bug fix #19: Load the local-first layer so NoorLF is available before any writes -->
+<script src="/localFirst.js"></script>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+/* ── Collapsible low-stock banner ── */
+.low-stock-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+.low-stock-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.low-stock-chevron {
+  flex-shrink: 0;
+  opacity: .7;
+  transition: transform .22s ease;
+}
+.low-stock-banner.expanded .low-stock-chevron {
+  transform: rotate(180deg);
+}
+.low-stock-body {
+  margin-top: 10px;
+}
+.low-stock-body[hidden] {
+  display: none;
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════
+     AUTH SCREEN (Login · Sign Up · Reset)
+     ════════════════════════════════════════ -->
+<div id="login-screen">
+
+  <!-- Left: Brand panel -->
+  <div class="login-panel-left">
+    <div class="login-panel-left-bg" aria-hidden="true">
+      <svg viewBox="0 0 600 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <pattern id="lp-dots" width="28" height="28" patternUnits="userSpaceOnUse">
+            <circle cx="1.5" cy="1.5" r="1.5" fill="rgba(255,255,255,.07)"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#lp-dots)"/>
+        <circle cx="300" cy="820" r="320" fill="none" stroke="rgba(196,154,60,.18)" stroke-width="1"/>
+        <circle cx="300" cy="820" r="220" fill="none" stroke="rgba(196,154,60,.12)" stroke-width="1"/>
+        <circle cx="300" cy="820" r="120" fill="none" stroke="rgba(196,154,60,.1)" stroke-width="1"/>
+        <circle cx="560" cy="80" r="180" fill="rgba(255,255,255,.025)" stroke="none"/>
+        <line x1="0" y1="460" x2="600" y2="460" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="lp-brand">
+      <div class="lp-brand-icon">
+        <svg viewBox="0 0 36 36" aria-hidden="true">
+          <path d="M5 19.5c1.9-4.1 6.1-7 13-7s11.1 2.9 13 7c-1.9 4.1-6.1 7-13 7s-11.1-2.9-13-7Z"/>
+          <circle cx="18" cy="19.5" r="4.2"/>
+          <path d="M8 28.5h7M8 32h12M25 6v8M21 10h8"/>
+        </svg>
+      </div>
+      <div>
+        <div class="lp-brand-name">نظام نور لإدارة البصريات</div>
+        <div class="lp-brand-tag">Noor OMS</div>
+      </div>
+    </div>
+    <div class="lp-hero">
+      <div class="lp-hero-title" id="lp-hero-title">إدارة عيادتك البصرية بكل سهولة</div>
+      <div class="lp-gold-bar"></div>
+      <div class="lp-hero-sub" id="lp-hero-sub">نظام متكامل لإدارة المراجعين، الوصفات، المخزون والتقارير المالية — في مكان واحد.</div>
+      <div class="lp-features" style="margin-top:28px">
+        <div class="lp-feature">
+          <div class="lp-feature-dot"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+          <span class="lp-feature-text" data-i18n-lp="featurePatients">إدارة المراجعين والوصفات</span>
+        </div>
+        <div class="lp-feature">
+          <div class="lp-feature-dot"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg></div>
+          <span class="lp-feature-text" data-i18n-lp="featureInventory">مخزون الإطارات والعدسات</span>
+        </div>
+        <div class="lp-feature">
+          <div class="lp-feature-dot"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16l3-5 3 3 4-7"/></svg></div>
+          <span class="lp-feature-text" data-i18n-lp="featureReports">تقارير مالية وإحصاءات دقيقة</span>
+        </div>
+      </div>
+    </div>
+    <div class="lp-footer">© 2025 Noor Optical SaaS</div>
+  </div>
+
+  <!-- Right: Form panel -->
+  <div class="login-panel-right">
+    <div class="login-form-wrap">
+
+      <!-- Auth Tabs -->
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" id="tab-signin" role="tab" aria-selected="true" type="button" onclick="switchAuthPane('signin')" data-i18n-tab="signin">تسجيل الدخول</button>
+        <button class="auth-tab" id="tab-signup" role="tab" aria-selected="false" type="button" onclick="switchAuthPane('signup')" data-i18n-tab="signup">حساب جديد</button>
+      </div>
+
+      <!-- ── Pane: Sign In ── -->
+      <div class="auth-pane active" id="pane-signin" role="tabpanel">
+        <div class="auth-pane-title" id="signin-title">أهلاً بعودتك</div>
+        <div class="auth-pane-sub" id="signin-sub">سجّل دخولك للمتابعة إلى لوحة التحكم</div>
+
+        <div class="auth-message error" id="signin-error" role="alert">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="signin-error-text"></span>
+        </div>
+
+        <div class="auth-field">
+          <label id="lbl-username" for="login-username">البريد الإلكتروني أو اسم المستخدم</label>
+          <input type="text" id="login-username" autocomplete="username" placeholder="clinic@email.com" inputmode="email">
+        </div>
+        <div class="auth-field">
+          <label id="lbl-password" for="login-password">كلمة المرور</label>
+          <div class="auth-input-wrap">
+            <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" style="padding-inline-end:44px">
+            <button class="pw-toggle" type="button" onclick="togglePwVisibility('login-password',this)" aria-label="Show/hide password" tabindex="-1">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="pw-eye-signin"><path d="M1 12S5 5 12 5s11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="auth-forgot" type="button" onclick="switchAuthPane('reset')" id="lbl-forgot">نسيت كلمة المرور؟</button>
+        <button class="auth-submit" id="login-btn" type="button" onclick="doLogin()">
+          <span class="auth-submit-inner">
+            <span class="auth-submit-spinner"></span>
+            <span class="auth-submit-text" id="login-btn-text">تسجيل الدخول</span>
+          </span>
+        </button>
+        <div class="auth-lang">
+          <button class="auth-lang-btn active" type="button" id="login-lang-ar" onclick="setLang('ar')">العربية</button>
+          <button class="auth-lang-btn" type="button" id="login-lang-en" onclick="setLang('en')">English</button>
+        </div>
+      </div>
+
+      <!-- ── Pane: Sign Up / Trial ── -->
+      <div class="auth-pane" id="pane-signup" role="tabpanel">
+        <div class="trial-badge">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <span id="trial-badge-text">تجربة مجانية 7 أيام</span>
+        </div>
+        <div class="auth-pane-title" id="signup-title">أنشئ حساب عيادتك</div>
+        <div class="auth-pane-sub" id="signup-sub">ابدأ تجربتك المجانية — لا حاجة لبطاقة ائتمان</div>
+
+        <div class="auth-message error" id="signup-error" role="alert">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="signup-error-text"></span>
+        </div>
+        <div class="auth-message success" id="signup-success" role="status">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+          <span id="signup-success-text"></span>
+        </div>
+
+        <div class="auth-field">
+          <label id="lbl-signup-clinic" for="signup-clinic">اسم العيادة</label>
+          <input type="text" id="signup-clinic" autocomplete="organization" placeholder="عيادة النور البصرية">
+        </div>
+        <div class="auth-field">
+          <label id="lbl-signup-owner" for="signup-owner">اسم المالك</label>
+          <input type="text" id="signup-owner" autocomplete="name" placeholder="د. أحمد الخالدي">
+        </div>
+        <div class="auth-field-row">
+          <div class="auth-field" style="margin-bottom:0">
+            <label id="lbl-signup-email" for="signup-email">البريد الإلكتروني</label>
+            <input type="email" id="signup-email" autocomplete="email" placeholder="doctor@clinic.com" inputmode="email">
+          </div>
+          <div class="auth-field" style="margin-bottom:0">
+            <label id="lbl-signup-phone" for="signup-phone">رقم الهاتف</label>
+            <input type="tel" id="signup-phone" autocomplete="tel" placeholder="07xxxxxxxxx" inputmode="tel">
+          </div>
+        </div>
+        <div class="auth-field" style="margin-top:18px">
+          <label id="lbl-signup-password" for="signup-password">كلمة المرور</label>
+          <div class="auth-input-wrap">
+            <input type="password" id="signup-password" autocomplete="new-password" placeholder="6 أحرف على الأقل" style="padding-inline-end:44px">
+            <button class="pw-toggle" type="button" onclick="togglePwVisibility('signup-password',this)" aria-label="Show/hide password" tabindex="-1">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12S5 5 12 5s11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button class="auth-submit" id="signup-btn" type="button" onclick="doSignup()" style="margin-top:20px">
+          <span class="auth-submit-inner">
+            <span class="auth-submit-spinner"></span>
+            <span class="auth-submit-text" id="signup-btn-text">إنشاء الحساب وبدء التجربة</span>
+          </span>
+        </button>
+        <div class="auth-lang">
+          <button class="auth-lang-btn active" type="button" id="signup-lang-ar" onclick="setLang('ar')">العربية</button>
+          <button class="auth-lang-btn" type="button" id="signup-lang-en" onclick="setLang('en')">English</button>
+        </div>
+      </div>
+
+      <!-- ── Pane: Reset Password ── -->
+      <div class="auth-pane" id="pane-reset" role="tabpanel">
+        <button class="auth-back" type="button" onclick="switchAuthPane('signin')">
+          <svg viewBox="0 0 24 24" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
+          <span id="lbl-back">العودة لتسجيل الدخول</span>
+        </button>
+        <div class="auth-pane-title" id="reset-title">إعادة تعيين كلمة المرور</div>
+        <div class="auth-pane-sub" id="reset-sub">أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين</div>
+
+        <div class="auth-message error" id="reset-error" role="alert">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="reset-error-text"></span>
+        </div>
+        <div class="auth-message success" id="reset-success" role="status">
+          <svg class="auth-message-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20,6 9,17 4,12"/></svg>
+          <span id="reset-success-text"></span>
+        </div>
+
+        <div class="auth-field">
+          <label id="lbl-reset-email" for="reset-email">البريد الإلكتروني</label>
+          <input type="email" id="reset-email" autocomplete="email" placeholder="clinic@email.com" inputmode="email">
+        </div>
+        <button class="auth-submit" id="reset-btn" type="button" onclick="doResetPassword()">
+          <span class="auth-submit-inner">
+            <span class="auth-submit-spinner"></span>
+            <span class="auth-submit-text" id="reset-btn-text">إرسال رابط الاسترداد</span>
+          </span>
+        </button>
+      </div>
+
+    </div><!-- /login-form-wrap -->
+  </div><!-- /login-panel-right -->
+</div><!-- /#login-screen -->
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <nav class="bottom-nav" id="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="bnav-item bnav-more-btn" type="button" onclick="toggleMoreMenu()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+        <span class="bnav-label">المزيد</span>
+      </button>
+      <button class="bnav-item active" data-section="dashboard" onclick="navigate('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="bnav-label" data-i18n="dashboard">الرئيسية</span>
+      </button>
+      <button class="bnav-item bnav-extra" data-section="patients" onclick="navigate('patients')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        <span class="bnav-label" data-i18n="patients">المراجعين</span>
+      </button>
+      <button class="bnav-item" data-section="followups" onclick="navigate('followups')" id="bnav-followups">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span class="bnav-label" data-i18n="followups">المتابعات</span>
+        <span class="bnav-badge" id="bnav-followup-badge" style="display:none">0</span>
+      </button>
+      <button class="bnav-item bnav-primary-action" data-section="patients" onclick="navigate('patients')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4z"/></svg>
+        <span class="bnav-label">وصفة</span>
+      </button>
+      <button class="bnav-item bnav-extra" data-section="lenses" onclick="navigate('lenses')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+        <span class="bnav-label" data-i18n="lenses">العدسات</span>
+      </button>
+      <button class="bnav-item bnav-extra" data-section="reports" onclick="navigate('reports')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        <span class="bnav-label" data-i18n="reports">التقارير</span>
+      </button>
+      <button class="bnav-item bnav-extra" data-section="frames" onclick="navigate('frames')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg>
+        <span class="bnav-label" data-i18n="frames">Frames</span>
+      </button>
+      <button class="bnav-item bnav-extra" data-section="settings" onclick="navigate('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06a2 2 0 01-2.83 2.83l-.06-.06A1.7 1.7 0 0015 19.4a1.7 1.7 0 00-1 .6 1.7 1.7 0 00-.4 1.1V21a2 2 0 01-4 0v-.09A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.88.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-.6-1 1.7 1.7 0 00-1.1-.4H3a2 2 0 010-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.34-1.88l-.06-.06a2 2 0 012.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-.6 1.7 1.7 0 00.4-1.1V3a2 2 0 014 0v.09A1.7 1.7 0 0015 4.6a1.7 1.7 0 001.88-.34l.06-.06a2 2 0 012.83 2.83l-.06.06A1.7 1.7 0 0019.4 9c.2.38.5.72.88.93.26.15.56.23.86.23H21a2 2 0 010 4h-.09a1.7 1.7 0 00-1.51.84z"/></svg>
+        <span class="bnav-label" data-i18n="settings">Settings</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="more-menu-overlay" id="more-menu-overlay" onclick="closeMoreMenu()"></div>
+  <div class="more-menu-sheet" id="more-menu-sheet" aria-hidden="true">
+    <button class="more-tile" type="button" onclick="navigateFromMore('lenses')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+      <span data-i18n="lenses">Lenses</span>
+    </button>
+    <button class="more-tile" type="button" onclick="openLensWizard()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18"/><path d="M3 12h18"/><path d="M5 5l14 14"/><path d="M19 5L5 19"/></svg>
+      <span>Setup Wizard</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16l3-5 3 3 4-7"/></svg>
+      <span data-i18n="reports">Reports</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('frames')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg>
+      <span data-i18n="frames">Frames</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('audit')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span data-i18n="auditLog">Audit Log</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.34 1.88l.06.06a2 2 0 01-2.83 2.83l-.06-.06A1.7 1.7 0 0015 19.4a1.7 1.7 0 00-1 .6 1.7 1.7 0 00-.4 1.1V21a2 2 0 01-4 0v-.09A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.88.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-.6-1 1.7 1.7 0 00-1.1-.4H3a2 2 0 010-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.34-1.88l-.06-.06a2 2 0 012.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-.6 1.7 1.7 0 00.4-1.1V3a2 2 0 014 0v.09A1.7 1.7 0 0015 4.6a1.7 1.7 0 001.88-.34l.06-.06a2 2 0 012.83 2.83l-.06.06A1.7 1.7 0 0019.4 9c.2.38.5.72.88.93.26.15.56.23.86.23H21a2 2 0 010 4h-.09a1.7 1.7 0 00-1.51.84z"/></svg>
+      <span data-i18n="settings">Settings</span>
+    </button>
+    <button class="more-tile" type="button" onclick="navigateFromMore('superadmin')" id="more-superadmin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="7" width="12" height="13" rx="2"/><path d="M9 7V5a3 3 0 016 0v2"/><path d="M9 14h6"/><path d="M12 11v6"/></svg>
+      <span>Admin</span>
+    </button>
+  </div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="white" stroke-width="1.5"/><circle cx="12" cy="12" r="4" fill="white"/></svg></div>
+        <div><div class="brand-name">Noor OMS</div><div class="brand-tagline">Optical Management System</div></div>
+      </div>
+    </div>
+    <div class="sidebar-clinic">
+      <div class="clinic-name-label" data-i18n="clinic">العيادة</div>
+      <div class="clinic-name-val" id="sidebar-clinic-name">عيادة نور البصرية</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label" data-i18n="navMain">الرئيسية</div>
+      <div class="nav-item active" data-section="dashboard" onclick="navigate('dashboard')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="nav-label" data-i18n="dashboard">لوحة التحكم</span>
+        <span class="nav-tooltip">Dashboard</span>
+      </div>
+      <div class="nav-item" data-section="patients" onclick="navigate('patients')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span class="nav-label" data-i18n="patients">المراجعين</span>
+        <span class="nav-tooltip">Patients</span>
+      </div>
+      <div class="nav-item" data-section="followups" onclick="navigate('followups')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg>
+        <span class="nav-label" data-i18n="followups">المتابعات</span>
+        <span class="nav-tooltip">Follow-ups</span>
+        <span class="nav-badge" id="followup-badge" style="display:none">0</span>
+      </div>
+      <div class="nav-section-label" data-i18n="navInventory">المخزون</div>
+      <div class="nav-item" data-section="lenses" onclick="navigate('lenses')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+        <span class="nav-label" data-i18n="lenses">العدسات</span>
+        <span class="nav-tooltip">Lenses</span>
+      </div>
+      <div class="nav-item" data-section="frames" onclick="navigate('frames')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg>
+        <span class="nav-label" data-i18n="frames">الإطارات</span>
+        <span class="nav-tooltip">Frames</span>
+      </div>
+      <div class="nav-section-label" data-i18n="navReports">التقارير والإعدادات</div>
+      <div class="nav-item" data-section="reports" onclick="navigate('reports')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span class="nav-label" data-i18n="reports">التقارير</span>
+        <span class="nav-tooltip">Reports</span>
+      </div>
+      <div class="nav-item" data-section="settings" onclick="navigate('settings')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span class="nav-label" data-i18n="settings">الإعدادات</span>
+        <span class="nav-tooltip">Settings</span>
+      </div>
+      <div class="nav-item" data-section="audit" onclick="navigate('audit')">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span class="nav-label" data-i18n="auditLog">سجل التدقيق</span>
+        <span class="nav-tooltip">Audit Log</span>
+      </div>
+      <div class="nav-item" data-section="superadmin" id="nav-superadmin" onclick="navigate('superadmin')" style="display:none">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        <span class="nav-label">Super Admin</span>
+        <span class="nav-tooltip">Super Admin</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="lang-toggle">
+        <span class="lang-label" data-i18n="language">اللغة</span>
+        <div class="lang-btns">
+          <button class="lang-btn active" id="sb-lang-ar" onclick="setLang('ar')">ع</button>
+          <button class="lang-btn" id="sb-lang-en" onclick="setLang('en')">EN</button>
+        </div>
+      </div>
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <div class="user-meta">
+          <div class="user-name" id="user-name">Admin</div>
+          <div class="user-role" id="user-role">Doctor</div>
+        </div>
+        <!-- Bug fix #19: sync pending badge — shown/hidden automatically by NoorLF.bindBadge() -->
+        <span
+          id="sync-pending-badge"
+          title=""
+          style="display:none;background:var(--warning,#d4820a);color:#fff;font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:99px;min-width:18px;text-align:center;margin-inline-start:4px;vertical-align:middle"
+        ></span>
+        <button class="logout-btn" onclick="doLogout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+    <button class="sidebar-collapse-btn" onclick="toggleCollapse()" id="collapse-btn">
+      <svg class="collapse-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
+      <span class="collapse-btn-label">طيّ القائمة</span>
+    </button>
+  </aside>
+
+  <div class="main-content" id="main-content">
+    <div class="license-banner" id="license-banner">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="license-banner-text"></span>
+    </div>
+    <header class="topbar">
+      <button class="icon-btn" id="sidebar-toggle" onclick="toggleSidebar()" style="display:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title" id="topbar-title">لوحة التحكم</div>
+      <div class="search-wrap" style="display:none">
+        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="global-search" placeholder="بحث عن مراجع..." oninput="onGlobalSearch(this.value)">
+        <div class="search-results" id="search-results"></div>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot" id="notif-dot" style="display:none"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- DASHBOARD -->
+      <section class="section active" id="section-dashboard">
+        <div class="dash-hero">
+          <div class="dash-hero-bg">
+            <svg viewBox="0 0 900 200" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+              <circle cx="800" cy="100" r="150" fill="none" stroke="white" stroke-width="1"/>
+              <circle cx="800" cy="100" r="80" fill="none" stroke="white" stroke-width=".5"/>
+              <line x1="0" y1="100" x2="900" y2="100" stroke="white" stroke-width=".3"/>
+              <rect x="680" y="-20" width="160" height="160" fill="none" stroke="#c49a3c" stroke-width=".6" transform="rotate(45 760 60)"/>
+            </svg>
+          </div>
+          <div class="dash-hero-content">
+            <div class="dash-greeting" id="dash-greeting"></div>
+            <div class="dash-date" id="dash-date"></div>
+            <div class="dash-date-sub" id="dash-date-sub"></div>
+            <div class="dash-gold-line"></div>
+            <div style="font-size:.82rem;color:rgba(255,255,255,.6)" id="dash-clinic-line"></div>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card" onclick="navigate('patients')">
+            <div class="stat-card-icon burgundy"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+            <div class="stat-card-label" data-i18n="todayPatients">مراجعين اليوم</div>
+            <div class="stat-card-value" id="stat-today-patients">—</div>
+            <div class="stat-card-sub" data-i18n="visits">زيارة</div>
+          </div>
+          <div class="stat-card" onclick="navigate('reports')">
+            <div class="stat-card-icon gold"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+            <div class="stat-card-label" data-i18n="todayEarnings">إيرادات اليوم</div>
+            <div class="stat-card-value" id="stat-today-earnings">—</div>
+            <div class="stat-card-sub">IQD</div>
+          </div>
+          <div class="stat-card" onclick="navigate('patients')">
+            <div class="stat-card-icon danger"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+            <div class="stat-card-label" data-i18n="outstandingDebt">الديون المعلقة</div>
+            <div class="stat-card-value" id="stat-debt">—</div>
+            <div class="stat-card-sub">IQD</div>
+          </div>
+          <div class="stat-card" onclick="navigate('lenses')">
+            <div class="stat-card-icon warning"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+            <div class="stat-card-label" data-i18n="lowStock">مخزون منخفض</div>
+            <div class="stat-card-value" id="stat-low-stock">—</div>
+            <div class="stat-card-sub" data-i18n="items">صنف</div>
+            <div class="stat-card-pulse" id="stat-low-stock-pulse"></div>
+          </div>
+          <div class="stat-card" onclick="navigate('reports')">
+            <div class="stat-card-icon success"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg></div>
+            <div class="stat-card-label" data-i18n="monthlyRevenue">إيرادات الشهر</div>
+            <div class="stat-card-value" id="stat-monthly">—</div>
+            <div class="stat-card-sub">IQD</div>
+          </div>
+        </div>
+        <div class="dash-grid">
+          <div class="dash-card">
+            <div class="dash-card-title" data-i18n="last7days">الإيرادات — آخر 7 أيام</div>
+            <div class="chart-wrap"><div class="chart-bars" id="chart-bars"></div></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title" data-i18n="recentPatients">آخر المراجعين</div>
+            <div id="dash-recent-patients"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PATIENTS -->
+      <section class="section" id="section-patients">
+        <div id="patients-list-view">
+          <div class="page-header">
+            <div class="page-header-left">
+              <div class="page-header-eyebrow" data-i18n="management">إدارة</div>
+              <div class="page-header-title" data-i18n="patients">المراجعين</div>
+              <div class="page-header-sub"><span data-i18n="total">الإجمالي</span>: <span id="patients-total" style="font-family:'Figtree','DM Sans',sans-serif;font-weight:700">0</span></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-outline btn-sm" onclick="exportExcel()">Excel</button>
+              <button class="btn btn-outline btn-sm" onclick="exportPDF()">PDF</button>
+              <button class="btn btn-burgundy" onclick="openAddPatient()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span data-i18n="addPatient">إضافة مراجع</span>
+              </button>
+            </div>
+          </div>
+          <div class="section-filters">
+            <input type="search" class="filter-input" id="patients-search" placeholder="بحث بالاسم أو الهاتف..." style="flex:1;min-width:200px" oninput="clearTimeout(window._pFilterT);window._pFilterT=setTimeout(filterPatients,180)">
+            <select class="filter-select" id="patients-gender-filter" onchange="filterPatients()">
+              <option value="" data-i18n="allGenders">الجنس (الكل)</option>
+              <option value="male" data-i18n="male">ذكر</option>
+              <option value="female" data-i18n="female">أنثى</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th data-i18n="name">الاسم</th><th data-i18n="phone">الهاتف</th><th data-i18n="age">العمر</th>
+                <th data-i18n="lastVisit">آخر زيارة</th><th data-i18n="remaining">المتبقي</th><th data-i18n="actions">إجراءات</th>
+              </tr></thead>
+              <tbody id="patients-tbody"></tbody>
+            </table>
+            <div class="empty-state" id="patients-empty" style="display:none">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <h3 data-i18n="noPatients">لا يوجد مراجعين</h3><p data-i18n="addFirstPatient">أضف مراجعك الأول للبدء</p>
+            </div>
+          </div>
+        </div>
+        <div id="patients-detail-view" style="display:none">
+          <div class="breadcrumb"><a onclick="navigate('patients')" data-i18n="patients">المراجعين</a><span class="breadcrumb-sep">›</span><span id="patient-detail-name">—</span></div>
+          <div class="page-header">
+            <div class="page-header-left">
+              <div class="page-header-eyebrow" data-i18n="patientRecord">ملف المراجع</div>
+              <div class="page-header-title" id="patient-detail-name2">—</div>
+              <div class="page-header-sub" id="patient-detail-info"></div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-outline" onclick="openEditPatient()"><span data-i18n="edit">تعديل</span></button>
+              <button class="btn btn-outline" onclick="openOldPrescription()"><span data-i18n="addOldPrescription">Add old Rx</span></button>
+              <button class="btn btn-burgundy" onclick="openNewVisit()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span data-i18n="newVisit">زيارة جديدة</span>
+              </button>
+            </div>
+          </div>
+          <div id="patient-summary"></div>
+          <div id="patient-visit-history"></div>
+        </div>
+      </section>
+
+      <!-- FOLLOW-UPS -->
+      <section class="section" id="section-followups">
+        <div class="page-header">
+          <div class="page-header-left">
+            <div class="page-header-eyebrow" data-i18n="reminders">تذكيرات</div>
+            <div class="page-header-title" data-i18n="followups">المتابعات</div>
+          </div>
+          <select class="filter-select" id="wa-template-sel">
+            <option value="1" data-i18n="template1">قالب 1</option>
+            <option value="2" data-i18n="template2">قالب 2</option>
+            <option value="3" data-i18n="template3">قالب 3</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="name">الاسم</th><th data-i18n="phone">الهاتف</th>
+              <th data-i18n="lastVisit">آخر زيارة</th><th data-i18n="nextVisit">الزيارة القادمة</th>
+              <th data-i18n="daysLeft">الأيام المتبقية</th><th data-i18n="whatsapp">واتساب</th>
+            </tr></thead>
+            <tbody id="followups-tbody"></tbody>
+          </table>
+          <div class="empty-state" id="followups-empty" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <h3 data-i18n="noFollowups">لا توجد متابعات قريبة</h3>
+            <p data-i18n="noFollowupsSub">ممتاز! لا يوجد مراجعين لمتابعتهم.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- LENSES -->
+      <section class="section" id="section-lenses">
+        <div class="page-header">
+          <div class="page-header-left">
+            <div class="page-header-eyebrow" data-i18n="inventory">المخزون</div>
+            <div class="page-header-title" data-i18n="lenses">العدسات</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-outline" onclick="openLensWizard()">Setup Wizard</button>
+            <button class="btn btn-burgundy" onclick="openAddLens()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="addLens">إضافة عدسة</span>
+            </button>
+          </div>
+        </div>
+        <div class="low-stock-banner" id="lenses-low-banner">
+          <button class="low-stock-toggle" onclick="toggleLowStockBanner('lenses-low-banner')" aria-expanded="false">
+            <div class="low-stock-title" data-i18n="lowStockAlert">تنبيه: مخزون منخفض</div>
+            <svg class="low-stock-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
+          </button>
+          <div class="low-stock-body" id="lenses-low-body" hidden>
+            <div class="low-stock-items" id="lenses-low-items"></div>
+          </div>
+        </div>
+        <div class="section-filters">
+          <select class="filter-select" id="lens-type-filter" onchange="filterLenses()">
+            <option value="" data-i18n="allTypes">كل الأنواع</option>
+            <option value="single_vision">Single Vision</option>
+            <option value="bifocal">Bifocal</option>
+            <option value="trifocal">Trifocal</option>
+            <option value="progressive">Progressive</option>
+            <option value="reading">Reading</option>
+            <option value="plano">Plano</option>
+            <option value="prism">Prism</option>
+            <option value="occupational">Occupational</option>
+          </select>
+          <select class="filter-select" id="lens-material-filter" onchange="filterLenses()">
+            <option value="" data-i18n="allMaterials">كل المواد</option>
+            <option value="plastic">Plastic (CR-39)</option>
+            <option value="polycarbonate">Polycarbonate</option>
+            <option value="high_index_16">High-Index 1.6</option>
+            <option value="high_index_167">High-Index 1.67</option>
+            <option value="high_index_174">High-Index 1.74</option>
+            <option value="trivex">Trivex</option>
+            <option value="glass">Glass</option>
+            <option value="contact">Contact</option>
+          </select>
+          <input type="number" class="filter-input" id="lens-sph-filter" step=".25" placeholder="SPH" oninput="clearTimeout(window._lFilterT);window._lFilterT=setTimeout(filterLenses,180)" style="min-width:80px;flex:1 1 90px;max-width:130px">
+          <input type="number" class="filter-input" id="lens-cyl-filter" step=".25" placeholder="CYL" oninput="clearTimeout(window._lFilterT);window._lFilterT=setTimeout(filterLenses,180)" style="min-width:80px;flex:1 1 90px;max-width:130px">
+          <select class="filter-select" id="lens-stock-filter" onchange="filterLenses()">
+            <option value="">All stock</option>
+            <option value="low">Low stock</option>
+            <option value="out">Out</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="type">النوع</th><th data-i18n="material">المادة</th><th data-i18n="coating">الطلاء</th>
+              <th>SPH</th><th>CYL</th><th data-i18n="qty">الكمية</th>
+              <th data-i18n="status">الحالة</th><th data-i18n="sellPrice">سعر البيع</th><th data-i18n="actions">إجراءات</th>
+            </tr></thead>
+            <tbody id="lenses-tbody"></tbody>
+          </table>
+          <div class="empty-state" id="lenses-empty" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+            <h3 data-i18n="noLenses">لا توجد عدسات</h3><p data-i18n="noLensesSub">أضف عدسة يدوياً أو استخدم المعالج</p>
+          </div>
+          <div class="table-footer-actions" id="lenses-load-wrap" style="display:none">
+            <span class="muted" id="lenses-render-count"></span>
+            <button class="btn btn-outline btn-sm" type="button" onclick="loadMoreLenses()">Load more</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- FRAMES -->
+      <section class="section" id="section-frames">
+        <div class="page-header">
+          <div class="page-header-left">
+            <div class="page-header-eyebrow" data-i18n="inventory">المخزون</div>
+            <div class="page-header-title" data-i18n="frames">الإطارات</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-burgundy" onclick="openAddFrame()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span data-i18n="addFrame">إضافة إطار</span>
+            </button>
+          </div>
+        </div>
+        <div class="low-stock-banner" id="frames-low-banner">
+          <button class="low-stock-toggle" onclick="toggleLowStockBanner('frames-low-banner')" aria-expanded="false">
+            <div class="low-stock-title" data-i18n="lowStockAlert">تنبيه: مخزون منخفض</div>
+            <svg class="low-stock-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6,9 12,15 18,9"/></svg>
+          </button>
+          <div class="low-stock-body" id="frames-low-body" hidden>
+            <div class="low-stock-items" id="frames-low-items"></div>
+          </div>
+        </div>
+        <div class="section-filters">
+          <input type="search" class="filter-input" id="frames-search" placeholder="Search brand, color, material..." style="flex:1;min-width:220px" oninput="clearTimeout(window._fFilterT);window._fFilterT=setTimeout(filterFrames,180)">
+          <select class="filter-select" id="frames-type-filter" onchange="filterFrames()">
+            <option value="">All types</option>
+            <option value="full_rim">Full Rim</option>
+            <option value="half_rim">Half Rim</option>
+            <option value="rimless">Rimless</option>
+            <option value="wrap">Wrap / Sport</option>
+            <option value="butterfly">Butterfly</option>
+            <option value="aviator">Aviator</option>
+            <option value="round">Round</option>
+            <option value="cat_eye">Cat Eye</option>
+          </select>
+          <select class="filter-select" id="frames-material-filter" onchange="filterFrames()">
+            <option value="">All materials</option>
+            <option value="acetate">Acetate</option>
+            <option value="metal">Metal</option>
+            <option value="titanium">Titanium</option>
+            <option value="tr90">TR90</option>
+            <option value="wood">Wood</option>
+            <option value="carbon_fiber">Carbon Fiber</option>
+            <option value="nylon">Nylon</option>
+            <option value="stainless_steel">Stainless Steel</option>
+          </select>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="brand">العلامة</th><th data-i18n="type">النوع</th><th data-i18n="material">المادة</th>
+              <th data-i18n="color">اللون</th><th data-i18n="qty">الكمية</th><th data-i18n="status">الحالة</th>
+              <th data-i18n="costPrice">التكلفة</th><th data-i18n="sellPrice">سعر البيع</th><th data-i18n="actions">إجراءات</th>
+            </tr></thead>
+            <tbody id="frames-tbody"></tbody>
+          </table>
+          <div class="empty-state" id="frames-empty" style="display:none">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="8" width="9" height="8" rx="3"/><rect x="13" y="8" width="9" height="8" rx="3"/><line x1="11" y1="12" x2="13" y2="12"/></svg>
+            <h3 data-i18n="noFrames">لا توجد إطارات</h3><p data-i18n="noFramesSub">أضف إطاراتك للبدء</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- REPORTS -->
+      <section class="section" id="section-reports">
+        <div class="page-header">
+          <div class="page-header-left">
+            <div class="page-header-eyebrow" data-i18n="analytics">تحليلات</div>
+            <div class="page-header-title" data-i18n="reports">التقارير</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="date" class="filter-input" id="report-from" onchange="clearTimeout(window._reportTimer);window._reportTimer=setTimeout(loadReports,300)">
+            <input type="date" class="filter-input" id="report-to" onchange="clearTimeout(window._reportTimer);window._reportTimer=setTimeout(loadReports,300)">
+            <button class="btn btn-outline btn-sm" onclick="exportExcel()">Excel</button>
+            <button class="btn btn-outline btn-sm" onclick="exportPDF()">PDF</button>
+          </div>
+        </div>
+        <div class="report-stat-grid">
+          <div class="report-stat"><div class="report-stat-val" id="rep-revenue">—</div><div class="report-stat-label" data-i18n="totalRevenue">إجمالي الإيرادات (IQD)</div></div>
+          <div class="report-stat"><div class="report-stat-val" id="rep-outstanding">—</div><div class="report-stat-label" data-i18n="totalOutstanding">الديون المعلقة (IQD)</div></div>
+          <div class="report-stat"><div class="report-stat-val" id="rep-expenses">—</div><div class="report-stat-label" data-i18n="operatingCosts">Operational Costs</div></div>
+          <div class="report-stat"><div class="report-stat-val" id="rep-profit">—</div><div class="report-stat-label" data-i18n="grossProfit">Gross Profit</div></div>
+          <div class="report-stat"><div class="report-stat-val" id="rep-patients">—</div><div class="report-stat-label" data-i18n="patientsSeen">مراجعين تمت رؤيتهم</div></div>
+          <div class="report-stat"><div class="report-stat-val" id="rep-new-patients">—</div><div class="report-stat-label" data-i18n="newPatients">مراجعين جدد</div></div>
+        </div>
+        <div class="report-grid">
+          <div class="report-card">
+            <div class="report-card-title"><span data-i18n="salesMix">Sales / Cost Mix</span><span id="donut-active-count"></span></div>
+            <div class="donut-layout">
+              <div class="donut-wrap">
+                <svg viewBox="0 0 220 220" id="report-donut"></svg>
+                <div class="donut-center"><div><div class="donut-center-val" id="donut-total">0</div><div class="donut-center-label">IQD</div></div></div>
+              </div>
+              <div class="donut-legend" id="donut-legend"></div>
+            </div>
+          </div>
+          <div class="report-card">
+            <div class="report-card-title"><span data-i18n="retailSales">Retail Sales</span></div>
+            <div class="quick-form">
+              <select class="form-select" id="sale-item-type">
+                <option value="cleaning_solution">Cleaning solution</option>
+                <option value="cloth">Cloth</option>
+                <option value="sunglasses">Sunglasses</option>
+                <option value="reading_frames">Generic reading frames</option>
+                <option value="cover">Cover</option>
+                <option value="misc">Misc</option>
+              </select>
+              <input class="form-input" id="sale-item-name" placeholder="Item name">
+              <input class="form-input" id="sale-qty" type="number" min="1" value="1" placeholder="Qty">
+              <input class="form-input" id="sale-date" type="date">
+              <input class="form-input" id="sale-cost" type="number" min="0" placeholder="Cost">
+              <input class="form-input" id="sale-price" type="number" min="0" placeholder="Selling price">
+              <button class="btn btn-burgundy full" onclick="saveRetailSale()" data-i18n="addSale">Add Sale</button>
+            </div>
+            <div class="mini-report-list" id="retail-sales-list"></div>
+          </div>
+          <div class="report-card">
+            <div class="report-card-title"><span data-i18n="operatingCosts">Operational Costs</span></div>
+            <div class="quick-form">
+              <select class="form-select" id="expense-type">
+                <option value="rent">Rent</option>
+                <option value="salary">Salaries</option>
+                <option value="internet">Internet</option>
+                <option value="electricity">Electricity</option>
+                <option value="misc">Misc</option>
+              </select>
+              <select class="form-select" id="expense-frequency">
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="daily">Daily</option>
+                <option value="yearly">Yearly</option>
+                <option value="one_time">One-time</option>
+              </select>
+              <input class="form-input" id="expense-name" placeholder="Expense name">
+              <input class="form-input" id="expense-start" type="date">
+              <input class="form-input full" id="expense-amount" type="number" min="0" placeholder="Amount">
+              <button class="btn btn-burgundy full" onclick="saveOperatingExpense()" data-i18n="addExpense">Add Expense</button>
+            </div>
+            <div class="mini-report-list" id="expenses-list"></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="date">التاريخ</th><th data-i18n="name">المراجع</th><th>نوع العدسة</th>
+              <th data-i18n="total">الإجمالي</th><th data-i18n="paid">المدفوع</th><th data-i18n="remaining">المتبقي</th><th data-i18n="slip">الوصفة</th>
+            </tr></thead>
+            <tbody id="reports-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="section" id="section-settings">
+        <div class="page-header"><div class="page-header-title" data-i18n="settings">الإعدادات</div></div>
+        <div class="tabs" id="settings-tabs">
+          <button class="tab-btn active" onclick="switchSettingsTab('clinic')" data-i18n="clinicProfile">ملف العيادة</button>
+          <button class="tab-btn" onclick="switchSettingsTab('whatsapp')" data-i18n="whatsappTemplates">قوالب واتساب</button>
+          <button class="tab-btn" onclick="switchSettingsTab('permissions')" data-i18n="receptionistPermissions">صلاحيات الاستقبال</button>
+          <button class="tab-btn" onclick="switchSettingsTab('users')" data-i18n="userManagement">إدارة المستخدمين</button>
+          <button class="tab-btn" onclick="switchSettingsTab('followup-defaults')" data-i18n="followupDefaults">إعدادات المتابعة</button>
+          <button class="tab-btn" onclick="switchSettingsTab('print')">Print</button>
+          <button class="tab-btn" onclick="switchSettingsTab('appearance')">Appearance</button>
+          <button class="tab-btn" onclick="switchSettingsTab('backup')" data-i18n="backupRestore">النسخ الاحتياطي</button>
+        </div>
+        <div class="tab-panel active" id="settings-tab-clinic">
+          <div class="settings-section">
+            <div class="settings-section-header" data-i18n="clinicProfile">ملف العيادة</div>
+            <div class="settings-section-body">
+              <div class="form-grid">
+                <div class="form-group"><label class="form-label" data-i18n="clinicName">اسم العيادة</label><input type="text" class="form-input" id="set-clinic-name"></div>
+                <div class="form-group"><label class="form-label" data-i18n="phone">الهاتف</label><input type="tel" class="form-input" id="set-clinic-phone"></div>
+                <div class="form-group full"><label class="form-label" data-i18n="address">العنوان</label><input type="text" class="form-input" id="set-clinic-address"></div>
+                <div class="form-group full"><label class="form-label" data-i18n="logoUpload">الشعار (URL)</label><input type="text" class="form-input" id="set-clinic-logo" placeholder="https://..."></div>
+              </div>
+              <div style="margin-top:16px"><button class="btn btn-burgundy" onclick="saveClinicSettings()" data-i18n="save">حفظ</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-panel" id="settings-tab-whatsapp">
+          <div class="settings-section">
+            <div class="settings-section-header" data-i18n="whatsappTemplates">قوالب واتساب</div>
+            <div class="settings-section-body">
+              <p style="font-size:.82rem;color:var(--ink-light);margin-bottom:16px" data-i18n="waVarsHint">المتغيرات: {patient_name} {date} {next_visit} {clinic_name}</p>
+              <div class="form-group" style="margin-bottom:14px"><label class="form-label" data-i18n="template1">قالب 1</label><textarea class="form-textarea" id="wa-tpl-1" rows="4"></textarea></div>
+              <div class="form-group" style="margin-bottom:14px"><label class="form-label" data-i18n="template2">قالب 2</label><textarea class="form-textarea" id="wa-tpl-2" rows="4"></textarea></div>
+              <div class="form-group" style="margin-bottom:14px"><label class="form-label" data-i18n="template3">قالب 3</label><textarea class="form-textarea" id="wa-tpl-3" rows="4"></textarea></div>
+              <button class="btn btn-burgundy" onclick="saveWATemplates()" data-i18n="save">حفظ</button>
+            </div>
+          </div>
+          <!-- PDF Share Message -->
+          <div class="settings-section" style="margin-top:18px">
+            <div class="settings-section-header">رسالة مشاركة الوصفة (PDF)</div>
+            <div class="settings-section-body">
+              <p style="font-size:.82rem;color:var(--ink-light);margin-bottom:14px">
+                الرسالة التي تظهر عند مشاركة الوصفة عبر واتساب. اتركها فارغة أو أوقف تفعيل الخيار أدناه لإرسال الوصفة بدون أي رسالة.
+                <span style="display:block;margin-top:4px;font-size:.78rem">المتغيرات: {patient_name} {clinic_name} {date}</span>
+              </p>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                <label class="toggle-switch" style="margin:0"><input type="checkbox" id="wa-pdf-send-message" onchange="document.getElementById('wa-pdf-msg-wrap').style.opacity=this.checked?'1':'.4'"><span class="toggle-slider"></span></label>
+                <span style="font-size:.88rem">إرسال رسالة مع الوصفة</span>
+                <span style="font-size:.76rem;color:var(--ink-light)">(أوقف التفعيل لإرسال الوصفة فقط بدون رسالة)</span>
+              </div>
+              <div id="wa-pdf-msg-wrap" style="opacity:.4;transition:opacity .2s">
+                <div class="form-group" style="margin-bottom:16px">
+                  <label class="form-label">نص الرسالة</label>
+                  <textarea class="form-textarea" id="wa-pdf-message" rows="4" placeholder="مثال: وصفتك من عيادة {clinic_name} — {date}. نتمنى لك دوام الصحة والعافية، {patient_name}."></textarea>
+                </div>
+              </div>
+              <button class="btn btn-burgundy" onclick="saveWAPdfSettings()">حفظ</button>
+            </div>
+          </div>
+        </div>
+        <div class="tab-panel" id="settings-tab-permissions">
+          <div class="settings-section">
+            <div class="settings-section-header" data-i18n="receptionistPermissions">صلاحيات الاستقبال</div>
+            <div class="settings-section-body">
+              <div id="permissions-toggles"></div>
+              <div style="margin-top:16px"><button class="btn btn-burgundy" onclick="savePermissions()" data-i18n="save">حفظ</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-panel" id="settings-tab-users">
+          <div class="settings-section">
+            <div class="settings-section-header" style="display:flex;justify-content:space-between;align-items:center">
+              <span data-i18n="userManagement">إدارة المستخدمين</span>
+              <button class="btn btn-sm btn-burgundy" onclick="openAddUser()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span data-i18n="addUser">إضافة مستخدم</span>
+              </button>
+            </div>
+            <div class="settings-section-body" style="padding:0">
+              <table style="width:100%">
+                <thead><tr><th data-i18n="name">الاسم</th><th data-i18n="username">المستخدم</th><th data-i18n="role">الدور</th><th data-i18n="status">الحالة</th><th data-i18n="actions">إجراءات</th></tr></thead>
+                <tbody id="users-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="tab-panel" id="settings-tab-followup-defaults">
+          <div class="settings-section">
+            <div class="settings-section-header" data-i18n="followupDefaults">إعدادات المتابعة</div>
+            <div class="settings-section-body">
+              <div class="form-group" style="max-width:200px"><label class="form-label" data-i18n="defaultFollowupMonths">الأشهر الافتراضية</label><input type="number" class="form-input" id="set-followup-months" min="1" max="24" value="3"></div>
+              <div style="margin-top:16px"><button class="btn btn-burgundy" onclick="saveFollowupDefaults()" data-i18n="save">حفظ</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-panel" id="settings-tab-print">
+          <div class="settings-section">
+            <div class="settings-section-header">A5 Prescription Print</div>
+            <div class="settings-section-body">
+
+              <!-- ── RX PRINT COLOR SCHEME ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Prescription Color Scheme</div>
+              <div class="form-group" style="margin-bottom:8px">
+                <label class="form-label">Choose color scheme for printed Rx</label>
+                <div id="rx-scheme-swatches" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="burgundy" id="rx-s-burgundy" style="display:none">
+                    <div class="rx-swatch" style="background:#6b1a2a" title="Burgundy (Default)"></div>
+                    <span>Burgundy</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="charcoal" id="rx-s-charcoal" style="display:none">
+                    <div class="rx-swatch" style="background:#1c2230" title="Charcoal Blue"></div>
+                    <span>Charcoal</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="forest" id="rx-s-forest" style="display:none">
+                    <div class="rx-swatch" style="background:#1a4a2e" title="Forest Green"></div>
+                    <span>Forest</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="slate" id="rx-s-slate" style="display:none">
+                    <div class="rx-swatch" style="background:#2d3748" title="Slate"></div>
+                    <span>Slate</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="rose" id="rx-s-rose" style="display:none">
+                    <div class="rx-swatch" style="background:#9d174d" title="Rose"></div>
+                    <span>Rose</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="midnight" id="rx-s-midnight" style="display:none">
+                    <div class="rx-swatch" style="background:#0f172a" title="Midnight"></div>
+                    <span>Midnight</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="offwhite" id="rx-s-offwhite" style="display:none">
+                    <div class="rx-swatch" style="background:#a07850;border:2px solid #d8cfc0" title="Off-white"></div>
+                    <span>Off-white</span>
+                  </label>
+                  <label class="rx-swatch-option">
+                    <input type="radio" name="rx-scheme" value="onyx" id="rx-s-onyx" style="display:none">
+                    <div class="rx-swatch" style="background:#111111" title="Onyx / Black"></div>
+                    <span>Onyx</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- ── HEADER / CLINIC IDENTITY ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin-bottom:10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Clinic Header</div>
+              <div class="form-grid">
+                <div class="form-group full"><label class="form-label">Doctor / Optometrist Name</label><input type="text" class="form-input" id="set-print-doctor-name" placeholder="Dr. Ahmed Al-Rashid"></div>
+                <div class="form-group full"><label class="form-label">Credentials / Degree</label><input type="text" class="form-input" id="set-print-doctor-cred" placeholder="OD, M.Sc. Optometry"></div>
+                <div class="form-group full"><label class="form-label">Additional header line (tagline, licence no., etc.)</label><input type="text" class="form-input" id="set-print-header"></div>
+              </div>
+
+              <!-- ── LOGO ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Clinic Logo</div>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label class="form-label">Upload logo image</label>
+                  <input type="file" accept="image/*" id="set-print-logo-file" class="form-input" style="padding:6px" onchange="handlePrintLogoUpload(event)">
+                  <div id="set-print-logo-preview" style="margin-top:8px;display:none"><img id="set-print-logo-img" style="max-height:70px;max-width:200px;object-fit:contain;border:1px solid var(--cream-border);border-radius:4px;padding:4px"></div>
+                  <div style="font-size:.75rem;color:var(--ink-light);margin-top:4px">Stored locally in settings. PNG/SVG with transparent background works best.</div>
+                </div>
+                <div class="form-group"><label class="form-label">Logo alignment</label>
+                  <select class="form-input" id="set-print-logo-align">
+                    <option value="left">Left</option>
+                    <option value="center" selected>Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+                <div class="form-group"><label class="form-label">Logo width (px)</label><input type="number" class="form-input" id="set-print-logo-w" value="120" min="30" max="300"></div>
+                <div class="form-group"><label class="form-label">Logo height (px)</label><input type="number" class="form-input" id="set-print-logo-h" value="60" min="20" max="200"></div>
+              </div>
+
+              <!-- ── ASSOCIATES ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Associates / Branch Contacts</div>
+              <div id="associates-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+              <button class="btn btn-outline btn-sm" onclick="addAssociateRow()" type="button" style="margin-bottom:4px">＋ Add associate / address</button>
+              <div style="font-size:.74rem;color:var(--ink-light)">Each entry appears at the bottom of the slip (name, role, phone, address).</div>
+
+              <!-- ── BOTTOM CONTENT ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Notes, Warnings & QR</div>
+              <div class="form-grid">
+                <div class="form-group full"><label class="form-label">Usage instructions / warnings (shown in a bordered box)</label><textarea class="form-textarea" id="set-print-warning" rows="3" placeholder="e.g. Wear glasses as prescribed. Follow-up if vision changes."></textarea></div>
+                <div class="form-group full">
+                  <label class="form-label">QR code image (upload)</label>
+                  <input type="file" accept="image/*" id="set-print-qr-file" class="form-input" style="padding:6px" onchange="handlePrintQrUpload(event)">
+                  <div id="set-print-qr-preview" style="margin-top:8px;display:none"><img id="set-print-qr-img" style="max-height:80px;max-width:80px;object-fit:contain;border:1px solid var(--cream-border);border-radius:4px;padding:4px"></div>
+                </div>
+              </div>
+
+              <!-- ── FINANCIALS & FEE ── -->
+              <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin:18px 0 10px;border-bottom:1px solid var(--cream-border);padding-bottom:6px">Financials</div>
+              <div class="form-grid">
+                <div class="form-group"><label class="form-label">Default checkup fee</label><input type="number" class="form-input" id="set-default-checkup-fee"></div>
+                <div class="form-group" style="display:flex;align-items:flex-end"><label class="toggle-row"><span class="toggle-label">Show financials on print</span><span class="toggle-switch"><input type="checkbox" id="set-print-financials"><span class="toggle-slider"></span></span></label></div>
+              </div>
+
+              <div style="margin-top:20px;display:flex;gap:10px">
+                <button class="btn btn-burgundy" onclick="savePrintSettings()" data-i18n="save">حفظ</button>
+                <button class="btn btn-outline" onclick="clearPrintLogo()" type="button">Clear logo</button>
+                <button class="btn btn-outline" onclick="clearPrintQr()" type="button">Clear QR</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- APPEARANCE TAB -->
+        <div class="tab-panel" id="settings-tab-appearance">
+          <div class="settings-section">
+            <div class="settings-section-header">Site Color Theme</div>
+            <div class="settings-section-body">
+              <p style="font-size:.84rem;color:var(--ink-light);margin-bottom:14px">Choose a color theme for the app interface.</p>
+              <div class="site-theme-grid" id="site-theme-grid">
+                <div class="site-theme-option" data-theme="" onclick="applySiteTheme('')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#6b1a2a 50%,#faf6f0 50%)"></div>
+                  <span class="site-theme-label">Burgundy Cream</span>
+                </div>
+                <div class="site-theme-option" data-theme="offwhite" onclick="applySiteTheme('offwhite')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#3d3530 50%,#f4efe8 50%)"></div>
+                  <span class="site-theme-label">Off-white</span>
+                </div>
+                <div class="site-theme-option" data-theme="black" onclick="applySiteTheme('black')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#111 50%,#1a1a1a 50%)"></div>
+                  <span class="site-theme-label">Onyx / Black</span>
+                </div>
+                <div class="site-theme-option" data-theme="ocean" onclick="applySiteTheme('ocean')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#1a4a8b 50%,#eef4fb 50%)"></div>
+                  <span class="site-theme-label">Ocean Blue</span>
+                </div>
+                <div class="site-theme-option" data-theme="forest" onclick="applySiteTheme('forest')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#1a4a26 50%,#eef5ee 50%)"></div>
+                  <span class="site-theme-label">Forest</span>
+                </div>
+                <div class="site-theme-option" data-theme="amber" onclick="applySiteTheme('amber')">
+                  <div class="site-theme-dot" style="background:linear-gradient(135deg,#7a4800 50%,#fffbf0 50%)"></div>
+                  <span class="site-theme-label">Amber</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- BACKUP & RESTORE TAB -->
+        <div class="tab-panel" id="settings-tab-backup">
+
+          <!-- Create Backup -->
+          <div class="settings-section">
+            <div class="settings-section-header" id="backup-section-title">النسخ الاحتياطي</div>
+            <div class="settings-section-body">
+              <p style="font-size:.85rem;color:var(--ink-light);margin-bottom:16px;line-height:1.6" id="backup-desc-text">
+                يحتوي النسخ الاحتياطي على جميع بيانات العيادة: المراجعين، الزيارات، المخزون، المبيعات، التكاليف، والإعدادات.
+                يمكن استخدامه لاستعادة البيانات أو نقلها إلى نسخة سطح المكتب مستقبلاً.
+              </p>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                <button class="btn btn-burgundy" onclick="createBackup()" id="btn-create-backup">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-inline-end:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span id="btn-create-backup-label">تنزيل نسخة احتياطية</span>
+                </button>
+                <span id="backup-last-info" style="font-size:.8rem;color:var(--ink-light)"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Restore -->
+          <div class="settings-section" style="margin-top:16px">
+            <div class="settings-section-header" id="restore-section-title">استعادة من نسخة احتياطية</div>
+            <div class="settings-section-body">
+              <p style="font-size:.85rem;color:var(--ink-light);margin-bottom:14px;line-height:1.6" id="restore-desc-text">
+                اختر ملف نسخة احتياطية بصيغة JSON لاستعادة البيانات.
+                ستُدمج البيانات مع الموجودة (لن يتم حذف أي شيء).
+              </p>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+                <label class="btn btn-outline" style="cursor:pointer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-inline-end:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span id="btn-choose-file-label">اختر ملف</span>
+                  <input type="file" accept=".json,application/json" id="restore-file-input" style="display:none" onchange="onRestoreFileChosen(this)">
+                </label>
+                <span id="restore-file-name" style="font-size:.82rem;color:var(--ink-light)"></span>
+              </div>
+              <div id="restore-preview" style="display:none;margin-top:16px;padding:14px;background:var(--cream-bg);border:1px solid var(--cream-border);border-radius:8px;font-size:.82rem">
+                <div style="font-weight:600;margin-bottom:10px" id="restore-preview-title">معاينة النسخة الاحتياطية:</div>
+                <div id="restore-preview-body" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px"></div>
+                <div id="restore-meta" style="margin-top:10px;color:var(--ink-light);font-size:.78rem"></div>
+                <div style="margin-top:14px;display:flex;gap:10px">
+                  <button class="btn btn-burgundy" onclick="confirmRestore()" id="btn-confirm-restore">
+                    <span id="btn-confirm-restore-label">استعادة البيانات</span>
+                  </button>
+                  <button class="btn btn-outline" onclick="cancelRestore()" id="btn-cancel-restore">
+                    <span data-i18n="cancel">إلغاء</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Backup History -->
+          <div class="settings-section" style="margin-top:16px">
+            <div class="settings-section-header" id="backup-history-title">سجل النسخ الاحتياطية</div>
+            <div class="settings-section-body" style="padding:0">
+              <table style="width:100%;font-size:.83rem">
+                <thead>
+                  <tr>
+                    <th id="th-backup-date">التاريخ</th>
+                    <th id="th-backup-type">النوع</th>
+                    <th id="th-backup-records">السجلات</th>
+                    <th id="th-backup-actions">تنزيل</th>
+                  </tr>
+                </thead>
+                <tbody id="backup-history-tbody">
+                  <tr><td colspan="4" style="text-align:center;padding:20px;color:var(--ink-light)" id="backup-history-empty">جاري التحميل...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div><!-- /settings-tab-backup -->
+      </section>
+
+      <!-- AUDIT -->
+      <section class="section" id="section-audit">
+        <div class="page-header">
+          <div class="page-header-left">
+            <div class="page-header-eyebrow" data-i18n="security">الأمان</div>
+            <div class="page-header-title" data-i18n="auditLog">سجل التدقيق</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="date" class="filter-input" id="audit-from">
+            <input type="date" class="filter-input" id="audit-to">
+            <button class="btn btn-outline btn-sm" onclick="renderAuditLog()" data-i18n="filter">تصفية</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="timestamp">التوقيت</th><th data-i18n="user">المستخدم</th>
+              <th data-i18n="action">الإجراء</th><th data-i18n="entity">الكيان</th><th data-i18n="details">التفاصيل</th>
+            </tr></thead>
+            <tbody id="audit-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SUPER ADMIN -->
+      <section class="section" id="section-superadmin">
+        <div class="page-header">
+          <div class="page-header-left"><div class="page-header-eyebrow">SUPER ADMIN</div><div class="page-header-title">Clinic Management</div></div>
+          <button class="btn btn-burgundy" onclick="openAddClinic()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Clinic
+          </button>
+        </div>
+        <!-- Subscription quick-filter -->
+        <div class="section-filters" style="margin-bottom:14px">
+          <select class="filter-select" id="admin-plan-filter" onchange="filterAdminClinics()">
+            <option value="">All Plans</option>
+            <option value="trial">Trial</option>
+            <option value="monthly">Monthly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="yearly">Yearly</option>
+            <option value="lifetime">Lifetime</option>
+          </select>
+          <select class="filter-select" id="admin-status-filter" onchange="filterAdminClinics()">
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="expiring">Expiring Soon</option>
+            <option value="expired">Expired</option>
+            <option value="banned">Banned</option>
+          </select>
+          <input type="search" class="filter-input" id="admin-clinic-search" placeholder="Search clinic..." oninput="filterAdminClinics()" style="flex:1;min-width:180px">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Clinic</th><th>Owner</th><th>Plan</th><th>Expires</th><th>Days Left</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="admin-clinics-tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<div class="session-warning" id="session-warning">
+  <span id="session-warning-text">Session expires soon.</span>
+  <button type="button" onclick="renewSession()" id="session-renew-btn">Renew session</button>
+</div>
+
+<!-- ══════════ MODALS ══════════ -->
+
+<!-- Patient Modal -->
+<div class="modal-overlay" id="modal-patient">
+  <div class="modal" style="width:min(760px,100%)">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-patient-title">إضافة مراجع</div>
+      <button class="modal-close" onclick="closeModal('modal-patient')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchPatientTab('info')" id="ptab-info-btn" data-i18n="patientInfo">المعلومات</button>
+        <button class="tab-btn" onclick="switchPatientTab('rx')" id="ptab-rx-btn" data-i18n="prescription">الوصفة</button>
+        <button class="tab-btn" onclick="switchPatientTab('frame')" id="ptab-frame-btn" data-i18n="frame">الإطار</button>
+        <button class="tab-btn" onclick="switchPatientTab('financials')" id="ptab-fin-btn" data-i18n="financials">المالية</button>
+      </div>
+      <div class="tab-panel active" id="ptab-info">
+        <div class="form-grid">
+          <div class="form-group" id="visit-date-group" style="display:none"><label class="form-label" data-i18n="visitDate">Visit Date</label><input type="date" class="form-input" id="f-visit-date"></div>
+          <div class="form-group"><label class="form-label" data-i18n="fullName">الاسم الكامل *</label><input type="text" class="form-input" id="p-name"></div>
+          <div class="form-group"><label class="form-label" data-i18n="phone">الهاتف</label><input type="tel" class="form-input" id="p-phone"></div>
+          <div class="form-group"><label class="form-label" data-i18n="age">العمر</label><input type="number" class="form-input" id="p-age" min="1" max="120"></div>
+          <div class="form-group"><label class="form-label" data-i18n="gender">الجنس</label><select class="form-select" id="p-gender"><option value="male" data-i18n="male">ذكر</option><option value="female" data-i18n="female">أنثى</option></select></div>
+          <div class="form-group full"><label class="form-label" data-i18n="address">العنوان</label><input type="text" class="form-input" id="p-address"></div>
+          <div class="form-group full"><label class="form-label" data-i18n="notes">ملاحظات</label><textarea class="form-textarea" id="p-notes" rows="3"></textarea></div>
+        </div>
+      </div>
+      <div class="tab-panel" id="ptab-rx">
+        <div id="prev-rx-box" style="background:var(--cream);border:1px solid var(--cream-border);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;display:none">
+          <div style="font-size:.74rem;font-weight:700;color:var(--ink-mid);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px" data-i18n="previousRx">الوصفة السابقة</div>
+          <div id="prev-rx-display" style="font-family:'Figtree','DM Sans',sans-serif;font-size:.82rem;color:var(--ink-mid)"></div>
+          <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="importPrevRx()" data-i18n="importAsCurrent">استيراد كوصفة حالية</button>
+        </div>
+        <div class="rx-table-wrap">
+          <table class="rx-table">
+            <thead><tr><th>Eye</th><th>SPH</th><th>CYL</th><th>AXIS</th><th>ADD</th><th>VA</th><th>BCVA</th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="eye-label">OD (R)</td>
+                <td data-col="SPH">
+                  <div class="rx-sign-wrap">
+                    <input class="rx-input" id="rx-od-sph" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-od-sph')" onblur="applyPendingSign('rx-od-sph')">
+                    <button type="button" class="rx-sign-btn" id="rx-od-sph-sign" onclick="toggleRxSign('rx-od-sph')" tabindex="-1" title="Toggle sign"></button>
+                  </div>
+                </td>
+                <td data-col="CYL">
+                  <div class="rx-sign-wrap">
+                    <input class="rx-input" id="rx-od-cyl" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-od-cyl')" onblur="applyPendingSign('rx-od-cyl')">
+                    <button type="button" class="rx-sign-btn" id="rx-od-cyl-sign" onclick="toggleRxSign('rx-od-cyl')" tabindex="-1" title="Toggle sign"></button>
+                  </div>
+                </td>
+                <td data-col="AXIS"><input class="rx-input" id="rx-od-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
+                <td data-col="ADD"><input class="rx-input" id="rx-od-add" type="number" step=".25" placeholder="0.00"></td>
+                <td data-col="VA"><input class="rx-input" id="rx-od-va" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="BCVA"><input class="rx-input" id="rx-od-bcva" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+              </tr>
+              <tr>
+                <td class="eye-label">OS (L)</td>
+                <td data-col="SPH">
+                  <div class="rx-sign-wrap">
+                    <input class="rx-input" id="rx-os-sph" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-os-sph')" onblur="applyPendingSign('rx-os-sph')">
+                    <button type="button" class="rx-sign-btn" id="rx-os-sph-sign" onclick="toggleRxSign('rx-os-sph')" tabindex="-1" title="Toggle sign"></button>
+                  </div>
+                </td>
+                <td data-col="CYL">
+                  <div class="rx-sign-wrap">
+                    <input class="rx-input" id="rx-os-cyl" type="number" step=".25" min="-20" max="20" placeholder="0.00" oninput="onRxChange();_clampRxInput('rx-os-cyl')" onblur="applyPendingSign('rx-os-cyl')">
+                    <button type="button" class="rx-sign-btn" id="rx-os-cyl-sign" onclick="toggleRxSign('rx-os-cyl')" tabindex="-1" title="Toggle sign"></button>
+                  </div>
+                </td>
+                <td data-col="AXIS"><input class="rx-input" id="rx-os-axis" type="number" step="1" min="0" max="360" placeholder="0"></td>
+                <td data-col="ADD"><input class="rx-input" id="rx-os-add" type="number" step=".25" placeholder="0.00"></td>
+                <td data-col="VA"><input class="rx-input" id="rx-os-va" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+                <td data-col="BCVA"><input class="rx-input" id="rx-os-bcva" type="text" placeholder="6/6" inputmode="text" pattern="\d+/\d+" oninput="enforceFraction(this)" onblur="validateFraction(this)"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="form-grid" style="margin-bottom:16px">
+          <div class="form-group"><label class="form-label">IPD</label><input type="number" class="form-input" id="rx-ipd" step=".5" placeholder="62.0"></div>
+          <div class="form-group"><label class="form-label" data-i18n="lensType">نوع العدسة</label><select class="form-select" id="rx-lens-type" onchange="onLensTypeChange()"><option value="single_vision">Single Vision</option><option value="bifocal">Bifocal</option><option value="trifocal">Trifocal</option><option value="progressive">Progressive</option><option value="reading">Reading</option><option value="plano">Plano</option><option value="prism">Prism</option><option value="occupational">Occupational</option></select></div>
+          <div class="form-group"><label class="form-label" data-i18n="material">المادة</label><select class="form-select" id="rx-material" onchange="onRxChange()"><option value="plastic">Plastic (CR-39)</option><option value="polycarbonate">Polycarbonate</option><option value="high_index_16">High-Index 1.6</option><option value="high_index_167">High-Index 1.67</option><option value="high_index_174">High-Index 1.74</option><option value="trivex">Trivex</option><option value="glass">Glass</option><option value="contact">Contact</option></select></div>
+          <div class="form-group"><label class="form-label" data-i18n="lensCount">عدد العيون</label><select class="form-select" id="rx-lens-count" onchange="onRxChange()"><option value="2" data-i18n="bothEyes">كلا العينين</option><option value="1" data-i18n="oneEye">عين واحدة</option></select></div>
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label class="form-label" data-i18n="coating">الطلاء</label>
+          <div class="coating-chips" id="coating-chips">
+            <div class="coating-chip" data-val="clear" onclick="toggleCoating(this)">Clear</div>
+            <div class="coating-chip" data-val="blue_cut" onclick="toggleCoating(this)">Blue Cut</div>
+            <div class="coating-chip" data-val="green_cut" onclick="toggleCoating(this)">Green Cut</div>
+            <div class="coating-chip" data-val="photochromic" onclick="toggleCoating(this)">Photochromic</div>
+            <div class="coating-chip" data-val="photo_blue" onclick="toggleCoating(this)">Photo Blue</div>
+            <div class="coating-chip" data-val="polarized" onclick="toggleCoating(this)">Polarized</div>
+            <div class="coating-chip" data-val="anti_reflective" onclick="toggleCoating(this)">Anti-Reflective</div>
+            <div class="coating-chip" data-val="tinted" onclick="toggleCoating(this)">Tinted</div>
+            <div class="coating-chip" data-val="uv400" onclick="toggleCoating(this)">UV400</div>
+            <div class="coating-chip" data-val="mirror" onclick="toggleCoating(this)">Mirror</div>
+            <div class="coating-chip" data-val="anti_scratch" onclick="toggleCoating(this)">Anti-Scratch</div>
+            <div class="coating-chip" data-val="anti_fog" onclick="toggleCoating(this)">Anti-Fog</div>
+            <div class="coating-chip" data-val="oleophobic" onclick="toggleCoating(this)">Oleophobic</div>
+            <div class="coating-chip" data-val="combo_ar_bc" onclick="toggleCoating(this)">AR + Blue Cut</div>
+          </div>
+        </div>
+        <div class="inv-match-box">
+          <div class="inv-match-title" data-i18n="inventoryMatch">مطابقة المخزون</div>
+          <div class="inv-match-items" id="inv-match-items"><span class="inv-match-empty" data-i18n="enterRxFirst">أدخل قيم الوصفة أولاً</span></div>
+        </div>
+      </div>
+      <div class="tab-panel" id="ptab-frame">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label" data-i18n="frameBrand">علامة الإطار</label><input type="text" class="form-input" id="p-frame-brand"></div>
+          <div class="form-group"><label class="form-label" data-i18n="frameType">نوع الإطار</label><select class="form-select" id="p-frame-type"><option value="full_rim">Full Rim</option><option value="half_rim">Half Rim</option><option value="rimless">Rimless</option><option value="wrap">Wrap / Sport</option><option value="butterfly">Butterfly</option><option value="aviator">Aviator</option><option value="round">Round</option><option value="cat_eye">Cat Eye</option></select></div>
+          <div class="form-group"><label class="form-label" data-i18n="frameMaterial">مادة الإطار</label><select class="form-select" id="p-frame-material"><option value="acetate">Acetate</option><option value="metal">Metal</option><option value="titanium">Titanium</option><option value="tr90">TR90</option><option value="wood">Wood</option><option value="carbon_fiber">Carbon Fiber</option><option value="nylon">Nylon</option><option value="stainless_steel">Stainless Steel</option></select></div>
+          <div class="form-group"><label class="form-label" data-i18n="selectFromInventory">من المخزون</label><select class="form-select" id="p-frame-inv" onchange="onFrameInvSelect()"><option value="">اختر إطاراً...</option></select></div>
+        </div>
+      </div>
+      <div class="tab-panel" id="ptab-financials">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label" data-i18n="frameCost">تكلفة الإطار (IQD)</label><input type="number" class="form-input" id="f-frame-cost" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="framePrice">سعر الإطار (IQD)</label><input type="number" class="form-input" id="f-frame-price" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="lensCost">تكلفة العدسة (IQD)</label><input type="number" class="form-input" id="f-lens-cost" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="lensPrice">سعر العدسة (IQD)</label><input type="number" class="form-input" id="f-lens-price" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="checkupFee">رسوم الفحص (IQD)</label><input type="number" class="form-input" id="f-checkup-fee" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
+          <div class="form-group"><label class="form-label" data-i18n="amountPaid">المبلغ المدفوع (IQD)</label><input type="number" class="form-input" id="f-paid" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
+          <div class="form-group full"><label class="form-label" data-i18n="visitNotes">ملاحظات الزيارة</label><textarea class="form-textarea" id="f-visit-notes" rows="3"></textarea></div>
+        </div>
+        <div style="margin-top:12px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+          <label class="toggle-switch" style="margin:0"><input type="checkbox" id="f-checkup" onchange="onCheckupToggle()"><span class="toggle-slider"></span></label>
+          <span style="font-size:.88rem" data-i18n="didCheckup">تم إجراء الفحص</span>
+        </div>
+        <div id="followup-date-row" style="display:none;margin-bottom:16px" class="form-grid">
+          <div class="form-group"><label class="form-label" data-i18n="nextVisitDate">تاريخ الزيارة القادمة</label><input type="date" class="form-input" id="f-next-visit"></div>
+          <div class="form-group"><label class="form-label" data-i18n="followupMonths">أشهر المتابعة</label><input type="number" class="form-input" id="f-followup-months" min="1" max="24" value="3" oninput="updateNextVisitDate()"></div>
+        </div>
+        <div class="fin-summary">
+          <div class="fin-row"><span class="fin-row-label" data-i18n="framePrice">سعر الإطار</span><span class="fin-row-val" id="fs-frame">0 IQD</span></div>
+          <div class="fin-row"><span class="fin-row-label" data-i18n="lensPrice">سعر العدسة</span><span class="fin-row-val" id="fs-lens">0 IQD</span></div>
+          <div class="fin-row"><span class="fin-row-label" data-i18n="checkupFee">رسوم الفحص</span><span class="fin-row-val" id="fs-checkup">0 IQD</span></div>
+          <div class="fin-row total"><span class="fin-row-label" data-i18n="total">الإجمالي</span><span class="fin-row-val" id="fs-total">0 IQD</span></div>
+          <div class="fin-row"><span class="fin-row-label" data-i18n="paid">المدفوع</span><span class="fin-row-val" id="fs-paid">0 IQD</span></div>
+          <div class="fin-row remaining"><span class="fin-row-label" data-i18n="remaining">المتبقي</span><span class="fin-row-val" id="fs-remaining">0 IQD</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-patient')" data-i18n="cancel">إلغاء</button>
+      <button class="btn btn-burgundy" id="patient-save-btn" onclick="savePatient()" data-i18n="save">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lens Modal -->
+<div class="modal-overlay" id="modal-lens">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="modal-lens-title">إضافة عدسة</div><button class="modal-close" onclick="closeModal('modal-lens')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">النوع</label><select class="form-select" id="l-type"><option value="single_vision">Single Vision</option><option value="bifocal">Bifocal</option><option value="trifocal">Trifocal</option><option value="progressive">Progressive</option><option value="reading">Reading</option><option value="plano">Plano</option><option value="prism">Prism</option><option value="occupational">Occupational</option></select></div>
+        <div class="form-group"><label class="form-label">المادة</label><select class="form-select" id="l-material"><option value="plastic">Plastic (CR-39)</option><option value="polycarbonate">Polycarbonate</option><option value="high_index_16">High-Index 1.6</option><option value="high_index_167">High-Index 1.67</option><option value="high_index_174">High-Index 1.74</option><option value="trivex">Trivex</option><option value="glass">Glass</option><option value="contact">Contact</option></select></div>
+        <div class="form-group"><label class="form-label">SPH</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepSph('l-sph',-0.25)">−</button><input type="number" class="form-input qty-input" id="l-sph" step=".25"><button type="button" class="qty-btn" onclick="stepSph('l-sph',0.25)">+</button></div></div>
+        <div class="form-group"><label class="form-label">CYL</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepSph('l-cyl',-0.25)">−</button><input type="number" class="form-input qty-input" id="l-cyl" step=".25"><button type="button" class="qty-btn" onclick="stepSph('l-cyl',0.25)">+</button></div></div>
+        <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><input type="number" class="form-input" id="l-qty" min="0"></div>
+        <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><input type="number" class="form-input" id="l-min" min="0" value="2"></div>
+        <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="l-cost" min="0" step="1" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="l-sell" min="0" step="1" inputmode="numeric"></div>
+        <div class="form-group full"><label class="form-label" data-i18n="coating">الطلاء</label><select class="form-select" id="l-coating"><option value="clear">Clear</option><option value="blue_cut">Blue Cut</option><option value="green_cut">Green Cut</option><option value="photochromic">Photochromic</option><option value="photo_blue">Photochromic Blue</option><option value="polarized">Polarized</option><option value="anti_reflective">Anti-Reflective (AR)</option><option value="tinted">Tinted</option><option value="uv400">UV400</option><option value="mirror">Mirror</option><option value="anti_scratch">Anti-Scratch</option><option value="anti_fog">Anti-Fog</option><option value="oleophobic">Oleophobic</option><option value="combo_ar_bc">AR + Blue Cut Combo</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-lens')" data-i18n="cancel">إلغاء</button><button class="btn btn-burgundy" onclick="saveLens()" data-i18n="save">حفظ</button></div>
+  </div>
+</div>
+
+<!-- Frame Modal -->
+<div class="modal-overlay" id="modal-lens-wizard">
+  <div class="modal" style="width:min(900px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">Lens Setup Wizard</div>
+      <button class="modal-close" onclick="closeModal('modal-lens-wizard')">x</button>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <div class="settings-section-header">Clinic Lens Catalog</div>
+        <div class="settings-section-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+            <div class="form-group"><label class="form-label">Types</label><textarea class="form-textarea" id="wiz-cat-type" rows="6" placeholder="Single Vision"></textarea></div>
+            <div class="form-group"><label class="form-label">Materials</label><textarea class="form-textarea" id="wiz-cat-material" rows="6" placeholder="Plastic (CR-39)"></textarea></div>
+            <div class="form-group"><label class="form-label">Coatings</label><textarea class="form-textarea" id="wiz-cat-coating" rows="6" placeholder="Clear"></textarea></div>
+          </div>
+          <div style="font-size:.78rem;color:var(--ink-light);margin-top:8px">One item per line. Use "Label | value" only when you need a custom internal value. Save the catalog before generating inventory from new options.</div>
+          <button class="btn btn-outline btn-sm" style="margin-top:10px" onclick="saveLensWizardCatalog()">Save catalog</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-header">Generate Inventory</div>
+        <div class="settings-section-body">
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Types</label><select class="form-select" id="wiz-types" multiple size="5"></select></div>
+            <div class="form-group"><label class="form-label">Materials</label><select class="form-select" id="wiz-materials" multiple size="5"></select></div>
+            <div class="form-group"><label class="form-label">Coatings</label><select class="form-select" id="wiz-coatings" multiple size="5"></select></div>
+            <div class="form-group"><label class="form-label">Existing rows</label><select class="form-select" id="wiz-existing-mode"><option value="skip">Skip existing</option><option value="update">Update existing</option></select></div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">SPH start</label><input class="form-input" id="wiz-sph-start" type="number" step=".25" value="-2.00" oninput="updateLensWizardPreview()"></div>
+            <div class="form-group"><label class="form-label">SPH end</label><input class="form-input" id="wiz-sph-end" type="number" step=".25" value="2.00" oninput="updateLensWizardPreview()"></div>
+            <div class="form-group"><label class="form-label">SPH step</label><input class="form-input" id="wiz-sph-step" type="number" step=".25" value=".25" min=".25" oninput="updateLensWizardPreview()"></div>
+            <div class="form-group"><label class="form-label">CYL start</label><input class="form-input" id="wiz-cyl-start" type="number" step=".25" value="0.00" oninput="updateLensWizardPreview()"></div>
+            <div class="form-group"><label class="form-label">CYL end</label><input class="form-input" id="wiz-cyl-end" type="number" step=".25" value="-2.00" oninput="updateLensWizardPreview()"></div>
+            <div class="form-group"><label class="form-label">CYL step</label><input class="form-input" id="wiz-cyl-step" type="number" step=".25" value=".25" min=".25" oninput="updateLensWizardPreview()"></div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Default quantity</label><input class="form-input" id="wiz-qty" type="number" min="0" placeholder="0"></div>
+            <div class="form-group"><label class="form-label">Min stock</label><input class="form-input" id="wiz-min" type="number" min="0" value="2"></div>
+            <div class="form-group"><label class="form-label">Cost price</label><input class="form-input" id="wiz-cost" type="number" min="0" value="0"></div>
+            <div class="form-group"><label class="form-label">Sell price</label><input class="form-input" id="wiz-sell" type="number" min="0" value="0"></div>
+          </div>
+          <div class="low-stock-banner show" style="margin-top:12px">
+            <div class="low-stock-title">Preview</div>
+            <div class="low-stock-items" id="wiz-preview">0 lens rows will be generated.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:var(--radius-sm);padding:10px 14px;font-size:.78rem;color:#b91c1c;display:flex;align-items:flex-start;gap:8px">
+        <span style="flex-shrink:0;font-size:1rem">⚠️</span>
+        <span id="wiz-clear-warning"><strong>Clear All Lenses</strong> will permanently delete every lens in your inventory. This cannot be undone.</span>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="closeModal('modal-lens-wizard')">Cancel</button>
+        <button class="btn btn-outline" style="color:var(--danger);border-color:#fecaca" onclick="clearAllLenses()">🗑 Clear All Lenses</button>
+        <button class="btn btn-burgundy" id="wiz-save-btn" onclick="runLensWizard()">Generate</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Frame Modal -->
+<div class="modal-overlay" id="modal-frame">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="modal-frame-title">إضافة إطار</div><button class="modal-close" onclick="closeModal('modal-frame')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label" data-i18n="brand">العلامة</label><input type="text" class="form-input" id="fr-brand"></div>
+        <div class="form-group"><label class="form-label" data-i18n="type">النوع</label><select class="form-select" id="fr-type"><option value="full_rim">Full Rim</option><option value="half_rim">Half Rim</option><option value="rimless">Rimless</option><option value="wrap">Wrap / Sport</option><option value="butterfly">Butterfly</option><option value="aviator">Aviator</option><option value="round">Round</option><option value="cat_eye">Cat Eye</option></select></div>
+        <div class="form-group"><label class="form-label" data-i18n="material">المادة</label><select class="form-select" id="fr-material"><option value="acetate">Acetate</option><option value="metal">Metal</option><option value="titanium">Titanium</option><option value="tr90">TR90</option><option value="wood">Wood</option><option value="carbon_fiber">Carbon Fiber</option><option value="nylon">Nylon</option><option value="stainless_steel">Stainless Steel</option></select></div>
+        <div class="form-group"><label class="form-label" data-i18n="color">اللون</label><input type="text" class="form-input" id="fr-color"></div>
+        <div class="form-group"><label class="form-label" data-i18n="qty">الكمية</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepQty('fr-qty',-1)">−</button><input type="number" class="form-input qty-input" id="fr-qty" min="0" value="0"><button type="button" class="qty-btn" onclick="stepQty('fr-qty',1)">+</button></div></div>
+        <div class="form-group"><label class="form-label" data-i18n="minStock">الحد الأدنى</label><div class="qty-stepper"><button type="button" class="qty-btn" onclick="stepQty('fr-min',-1)">−</button><input type="number" class="form-input qty-input" id="fr-min" min="0" value="2"><button type="button" class="qty-btn" onclick="stepQty('fr-min',1)">+</button></div></div>
+        <div class="form-group"><label class="form-label" data-i18n="costPrice">التكلفة (IQD)</label><input type="number" class="form-input" id="fr-cost" min="0" step="1" inputmode="numeric"></div>
+        <div class="form-group"><label class="form-label" data-i18n="sellPrice">سعر البيع (IQD)</label><input type="number" class="form-input" id="fr-sell" min="0" step="1" inputmode="numeric"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-frame')" data-i18n="cancel">إلغاء</button><button class="btn btn-burgundy" onclick="saveFrame()" data-i18n="save">حفظ</button></div>
+  </div>
+</div>
+
+<!-- Restock Modal -->
+<div class="modal-overlay" id="modal-restock">
+  <div class="modal" style="width:min(380px,100%)">
+    <div class="modal-header"><div class="modal-title" data-i18n="restock">إعادة التخزين</div><button class="modal-close" onclick="closeModal('modal-restock')">✕</button></div>
+    <div class="modal-body"><div class="form-group"><label class="form-label" data-i18n="addQty">إضافة كمية</label><input type="number" class="form-input" id="restock-qty" min="1" value="10"></div></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-restock')" data-i18n="cancel">إلغاء</button><button class="btn btn-burgundy" onclick="confirmRestock()" data-i18n="save">حفظ</button></div>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal" style="width:min(440px,100%)">
+    <div class="modal-header"><div class="modal-title" data-i18n="addUser">إضافة مستخدم</div><button class="modal-close" onclick="closeModal('modal-user')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label" data-i18n="fullName">الاسم الكامل</label><input type="text" class="form-input" id="u-name"></div>
+        <div class="form-group"><label class="form-label" data-i18n="username">اسم المستخدم</label><input type="text" class="form-input" id="u-username"></div>
+        <div class="form-group"><label class="form-label" data-i18n="password">كلمة المرور</label><input type="password" class="form-input" id="u-password"></div>
+        <div class="form-group"><label class="form-label" data-i18n="role">الدور</label><select class="form-select" id="u-role"><option value="doctor">Doctor</option><option value="receptionist">Receptionist</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-user')" data-i18n="cancel">إلغاء</button><button class="btn btn-burgundy" onclick="saveUser()" data-i18n="save">حفظ</button></div>
+  </div>
+</div>
+
+<!-- Reset User Password Modal -->
+<div class="modal-overlay" id="modal-reset-user-password">
+  <div class="modal" style="width:min(400px,100%)">
+    <div class="modal-header">
+      <div class="modal-title" id="reset-user-pw-title">Reset Password</div>
+      <button class="modal-close" onclick="closeModal('modal-reset-user-password')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label" data-i18n="password">كلمة المرور الجديدة</label>
+        <input type="password" class="form-input" id="reset-user-pw" placeholder="Min 6 characters" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">تأكيد كلمة المرور</label>
+        <input type="password" class="form-input" id="reset-user-pw-confirm" placeholder="Repeat password" autocomplete="new-password">
+      </div>
+      <p style="font-size:.82rem;color:var(--ink-light);margin-top:4px">سيُطلب من المستخدم تغيير كلمة المرور عند تسجيل الدخول التالي. / The user will be prompted to change their password on next login.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-reset-user-password')" data-i18n="cancel">إلغاء</button>
+      <button class="btn btn-burgundy" onclick="saveResetUserPassword()">حفظ / Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clinic Modal -->
+<div class="modal-overlay" id="modal-clinic">
+  <div class="modal" style="width:min(500px,100%)">
+    <div class="modal-header"><div class="modal-title">Add New Clinic</div><button class="modal-close" onclick="closeModal('modal-clinic')">✕</button></div>
+    <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group"><label class="form-label">Clinic Name</label><input type="text" class="form-input" id="nc-name"></div>
+          <div class="form-group"><label class="form-label">Phone</label><input type="tel" class="form-input" id="nc-phone"></div>
+          <div class="form-group full"><label class="form-label">Owner Email</label><input type="email" class="form-input" id="nc-email"></div>
+          <div class="form-group"><label class="form-label">Doctor Username</label><input type="text" class="form-input" id="nc-user"></div>
+        <div class="form-group"><label class="form-label">Doctor Password</label><input type="password" class="form-input" id="nc-pass"></div>
+        <div class="form-group full"><label class="form-label">Plan</label><select class="form-select" id="nc-plan"><option value="trial">Trial (7 days)</option><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option><option value="lifetime">Lifetime</option></select></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('modal-clinic')">Cancel</button><button class="btn btn-burgundy" onclick="saveClinic()">Save</button></div>
+  </div>
+</div>
+
+<!-- Subscription Management Modal -->
+<div class="modal-overlay" id="modal-subscription">
+  <div class="modal" style="width:min(480px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">Manage Subscription — <span id="sub-clinic-name"></span></div>
+      <button class="modal-close" onclick="closeModal('modal-subscription')">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--cream);border:1px solid var(--cream-border);border-radius:10px;padding:14px;margin-bottom:18px">
+        <div style="font-size:.72rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Current Plan</div>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span id="sub-current-plan" style="font-size:1.1rem;font-weight:700;color:var(--burgundy)">&#8212;</span>
+          <span id="sub-expires-info" style="font-size:.82rem;color:var(--ink-light)"></span>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group full"><label class="form-label">New Plan</label>
+          <select class="form-select" id="sub-new-plan" onchange="onSubPlanChange()">
+            <option value="trial">Trial (7 days)</option>
+            <option value="monthly">Monthly (30 days)</option>
+            <option value="quarterly">Quarterly (90 days)</option>
+            <option value="yearly">Yearly (365 days)</option>
+            <option value="lifetime">Lifetime (no expiry)</option>
+            <option value="custom">Custom — set exact dates below</option>
+          </select>
+        </div>
+        <div class="form-group" id="sub-starts-row">
+          <label class="form-label">Start Date</label>
+          <input type="date" class="form-input" id="sub-starts-date">
+        </div>
+        <div class="form-group" id="sub-custom-date-row" style="display:none">
+          <label class="form-label">Expiry Date</label>
+          <input type="date" class="form-input" id="sub-custom-date">
+        </div>
+        <div class="form-group full"><label class="form-label">Notes (optional)</label>
+          <input type="text" class="form-input" id="sub-notes" placeholder="e.g. Paid via bank transfer">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-subscription')">Cancel</button>
+      <button class="btn btn-burgundy" onclick="saveSubscription()">Update Subscription</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="modal-change-password">
+  <div class="modal" style="width:min(400px,100%)">
+    <div class="modal-header"><div class="modal-title" data-i18n="changePassword">تغيير كلمة المرور</div></div>
+    <div class="modal-body">
+      <p style="margin-bottom:18px;font-size:.88rem;color:var(--ink-mid)" data-i18n="mustChangePassword">يجب تغيير كلمة المرور قبل الاستمرار.</p>
+      <div class="form-group" style="margin-bottom:12px"><label class="form-label" data-i18n="newPassword">كلمة المرور الجديدة</label><input type="password" class="form-input" id="new-pw"></div>
+      <div class="form-group"><label class="form-label" data-i18n="confirmPassword">تأكيد كلمة المرور</label><input type="password" class="form-input" id="new-pw-confirm"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-burgundy" onclick="saveNewPassword()" data-i18n="save">حفظ</button></div>
+  </div>
+</div>
+
+<!-- Rx Slip Modal -->
+<div class="modal-overlay" id="modal-rx-slip">
+  <div class="modal" style="width:min(540px,100%)">
+    <div class="modal-header"><div class="modal-title" data-i18n="prescriptionSlip">وصفة طبية</div><button class="modal-close" onclick="closeModal('modal-rx-slip')">✕</button></div>
+    <div class="modal-body"><div id="rx-slip-content"></div></div>
+    <div class="modal-footer no-print"><button class="btn btn-outline" onclick="printRxSlip()" data-i18n="printA5">Print A5</button><button class="btn btn-burgundy" onclick="closeModal('modal-rx-slip')" data-i18n="close">إغلاق</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-rx-share">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modal-header">
+      <div class="modal-title">Send RX PDF</div>
+      <button class="modal-close" onclick="closeModal('modal-rx-share')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.92rem;color:var(--ink-mid);line-height:1.7" id="rx-share-text">The polished A5 prescription PDF is ready. Tap Share PDF and choose WhatsApp.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-rx-share')" data-i18n="cancel">إلغاء</button>
+      <button class="btn btn-burgundy" type="button" onclick="sharePreparedRxPdf()">Share PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-duplicate-patient">
+  <div class="modal" style="width:min(440px,100%)">
+    <div class="modal-header">
+      <div class="modal-title" id="dup-patient-title">Duplicate Patient</div>
+      <button class="modal-close" onclick="resolveDuplicatePatient(false)">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.92rem;color:var(--ink-mid);line-height:1.7;margin-bottom:12px" id="dup-patient-message"></p>
+      <div id="dup-patient-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" type="button" onclick="resolveDuplicatePatient(false)" id="dup-cancel-btn">Cancel</button>
+      <button class="btn btn-burgundy" type="button" onclick="resolveDuplicatePatient(true)" id="dup-proceed-btn">Proceed</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/core.js"></script>
+<script src="/static/auth.js"></script>
+<script src="/static/nav.js"></script>
+<script src="/static/patients.js"></script>
+<script src="/static/visits.js"></script>
+<script src="/static/lenses.js"></script>
+<script src="/static/frames.js"></script>
+<script src="/static/followups.js"></script>
+<script src="/static/reports.js"></script>
+<script src="/static/settings.js"></script>
+<script src="/static/admin.js"></script>
+<script src="/static/backup.js"></script>
+<script src="/static/main.js"></script>
+
+<!-- Top-Up Modal -->
+<div class="modal-overlay" id="modal-topup">
+  <div class="modal" style="width:min(420px,100%)">
+    <div class="modal-header">
+      <div class="modal-title" id="topup-modal-title">تسديد المتبقي</div>
+      <button class="modal-close" onclick="closeModal('modal-topup')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--cream);border:1px solid var(--cream-border);border-radius:10px;padding:16px;margin-bottom:20px">
+        <div style="font-size:.78rem;color:var(--ink-light);margin-bottom:4px" id="topup-outstanding-label">المبلغ المتبقي</div>
+        <div style="font-size:1.6rem;font-weight:800;color:var(--danger);font-family:'Figtree','DM Sans',sans-serif;letter-spacing:-.5px" id="topup-outstanding-val">0 IQD</div>
+        <div style="font-size:.75rem;color:var(--ink-light);margin-top:6px" id="topup-visits-summary"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:8px">
+        <label class="form-label" id="topup-amount-label">المبلغ المدفوع (IQD)</label>
+        <input type="number" class="form-input" id="topup-amount-input" min="1" step="1000"
+               oninput="onTopupInput()" style="font-size:1.1rem;font-weight:600;text-align:start">
+        <div style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap" id="topup-quick-btns"></div>
+      </div>
+      <div id="topup-error" style="color:var(--danger);font-size:.82rem;min-height:18px;margin-bottom:4px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-topup')" id="topup-cancel-btn">إلغاء</button>
+      <button class="btn btn-burgundy" onclick="submitTopUp()" id="topup-submit-btn">تأكيد التسديد</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
