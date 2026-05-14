@@ -1443,21 +1443,31 @@
         </div>
       </div>
     </div>
-    <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:10px">
-      <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:var(--radius-sm);padding:10px 14px;font-size:.78rem;color:#b91c1c;display:flex;align-items:flex-start;gap:8px">
-        <span style="flex-shrink:0;font-size:1rem">⚠️</span>
-        <span id="wiz-clear-warning"><strong>Clear All Lenses</strong> will permanently delete every lens in your inventory. This cannot be undone.</span>
-      </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn btn-outline" onclick="closeModal('modal-lens-wizard')">Cancel</button>
-        <button class="btn btn-outline" style="color:var(--danger);border-color:#fecaca" onclick="clearAllLenses()">🗑 Clear All Lenses</button>
-        <button class="btn btn-burgundy" id="wiz-save-btn" onclick="runLensWizard()">Generate</button>
-      </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" style="color:var(--danger);border-color:#fecaca;margin-inline-end:auto" onclick="openModal('modal-clear-lenses')">🗑 Clear All Lenses</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-lens-wizard')">Cancel</button>
+      <button class="btn btn-burgundy" id="wiz-save-btn" onclick="runLensWizard()">Generate</button>
     </div>
   </div>
 </div>
 
-<!-- Frame Modal -->
+<!-- Clear All Lenses Confirm Modal -->
+<div class="modal-overlay" id="modal-clear-lenses">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title">Clear All Lenses</div>
+      <button class="modal-close" onclick="closeModal('modal-clear-lenses')">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <p style="margin:0;font-size:.95rem">This will permanently delete <strong>every lens</strong> in your inventory. You won't be able to undo this.</p>
+      <p style="margin:0;font-size:.88rem;color:var(--ink-mid)">Use this before running the Setup Wizard with a fresh configuration.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-clear-lenses')">Cancel</button>
+      <button class="btn" style="background:var(--danger);color:#fff;border:none" onclick="clearAllLenses()">Yes, delete all</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-frame">
   <div class="modal">
     <div class="modal-header"><div class="modal-title" id="modal-frame-title">إضافة إطار</div><button class="modal-close" onclick="closeModal('modal-frame')">✕</button></div>
