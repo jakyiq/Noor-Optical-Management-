@@ -127,11 +127,11 @@ function renderVisitHistory(visits) {
             <table style="border-collapse:collapse;font-size:.82rem;font-family:'Figtree','DM Sans',sans-serif">
               <thead><tr>${['Eye','SPH','CYL','AXIS','ADD','VA'].map(h=>`<th style="padding:4px 8px;border:1px solid var(--cream-border);background:var(--cream);font-size:.65rem">${h}</th>`).join('')}</tr></thead>
               <tbody>
-                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OD</td>${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
-                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OS</td>${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x)}</td>`).join('')}</tr>
+                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OD</td>${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x ?? '—')}</td>`).join('')}</tr>
+                <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OS</td>${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x ?? '—')}</td>`).join('')}</tr>
               </tbody>
             </table>
-            <div style="font-size:.8rem;color:var(--ink-light);margin-top:8px">Lens: ${esc([v.lens_type,v.lens_material,v.lens_coating].filter(Boolean).join(' · ')) || '—'}<br>Frame: ${esc([v.frame_brand,v.frame_type,v.frame_material].filter(Boolean).join(' · ')) || '—'}</div>
+            <div style="font-size:.8rem;color:var(--ink-light);margin-top:8px">Lens: ${esc([v.lens_type,v.lens_material,v.lens_coating].filter(x => x != null && x !== '').map(x=>String(x).replace(/_/g,' ')).join(' · ')) || '—'}<br>Frame: ${esc([v.frame_brand,v.frame_type,v.frame_material].filter(x => x != null && x !== '').map(x=>String(x).replace(/_/g,' ')).join(' · ')) || '—'}</div>
           </div>
           <div>
             <div style="font-size:.72rem;font-weight:700;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t('financials')}</div>
@@ -346,7 +346,8 @@ async function savePatient() {
   // Validate Sphere / Cylinder: -20 to +20, no 3-digit numbers
   const sphCylIds = ['rx-od-sph','rx-od-cyl','rx-os-sph','rx-os-cyl'];
   const isAr = NOOR.lang === 'ar';
-  for (const id of sphCylIds) {    const raw = document.getElementById(id)?.value;
+  for (const id of sphCylIds) {
+    const raw = document.getElementById(id)?.value;
     if (raw === '' || raw === null || raw === undefined) continue;
     const val = parseFloat(raw);
     if (isNaN(val)) continue;
@@ -378,11 +379,6 @@ async function savePatient() {
       return;
     }
   }
-
-  // Validate eye-count vs actual RX data entered
-  const rxIds2 = ['rx-od-sph','rx-od-cyl','rx-od-axis','rx-od-add','rx-od-va','rx-od-bcva','rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva'];
-  const anyRxFilled = rxIds2.some(id => (document.getElementById(id)?.value || '') !== '');
-  if (anyRxFilled && !_validateEyeCount()) return;
 
   const isNewPatient = !NOOR.editingPatientId;
   let pid = NOOR.editingPatientId;
