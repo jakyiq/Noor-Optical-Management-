@@ -179,6 +179,23 @@ async function runLensWizard() {
   }
 }
 
+async function clearAllLenses() {
+  const confirmed = confirm(
+    NOOR.lang === 'ar'
+      ? 'هل أنت متأكد؟ سيتم حذف جميع العدسات نهائياً ولا يمكن التراجع عن هذا الإجراء.'
+      : 'Are you sure? ALL lenses will be permanently deleted. This cannot be undone.'
+  );
+  if (!confirmed) return;
+  try {
+    await del('/api/lenses');
+    closeModal('modal-lens-wizard');
+    toast(NOOR.lang === 'ar' ? 'تم حذف جميع العدسات' : 'All lenses deleted');
+    await renderLenses();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
 async function renderLenses() {
   const cached = getCachedApiData('/api/lenses');
   if (cached?.data) {
