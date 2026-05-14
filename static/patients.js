@@ -148,11 +148,26 @@ function renderVisitHistory(visits) {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
             ${NOOR.lang==='ar'?'تسديد':'Pay'}
           </button>` : ''}
-          <button class="btn btn-outline btn-sm" onclick="openEditVisit('${escAttr(v.id)}')">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            ${NOOR.lang==='ar'?'تعديل':'Edit'}
-          </button>
-          ${NOOR.role==='doctor' || NOOR.role==='super_admin' ? `<button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteVisit('${escAttr(v.id)}')">${t('delete')}</button>` : ''}
+          <div class="visit-action-menu" id="vam-${escAttr(v.id)}">
+            <button class="btn btn-outline btn-sm visit-action-trigger" onclick="toggleVisitMenu('${escAttr(v.id)}',event)" aria-haspopup="true" aria-expanded="false">
+              <span>${NOOR.lang==='ar'?'إجراءات':'Actions'}</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-inline-start:4px"><polyline points="6,9 12,15 18,9"/></svg>
+            </button>
+            <div class="visit-action-dropdown" id="vad-${escAttr(v.id)}">
+              <button class="visit-action-item" onclick="closeVisitMenus();openEditVisit('${escAttr(v.id)}')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                ${NOOR.lang==='ar'?'تعديل الزيارة':'Edit Visit'}
+              </button>
+              <button class="visit-action-item" onclick="closeVisitMenus();showRxSlip('${escAttr(v.id)}')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                ${NOOR.lang==='ar'?'طباعة الوصفة':'Print Rx'}
+              </button>
+              ${NOOR.role==='doctor' || NOOR.role==='super_admin' ? `<button class="visit-action-item visit-action-item--danger" onclick="closeVisitMenus();deleteVisit('${escAttr(v.id)}')">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                ${NOOR.lang==='ar'?'حذف':'Delete'}
+              </button>` : ''}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -300,7 +315,7 @@ async function savePatientProfile(pid, payload, isNewPatient) {
       const res = await post('/api/patients', payload);
       return res.data.id;
     }
-    if (NOOR.patientModalMode === 'edit') {
+    if (NOOR.patientModalMode === 'edit' || NOOR.patientModalMode === 'edit_general') {
       await put(`/api/patients/${pid}`, payload);
     }
     return pid;
@@ -315,7 +330,7 @@ async function savePatientProfile(pid, payload, isNewPatient) {
         const res = await post('/api/patients', retryPayload);
         return res.data.id;
       }
-      if (NOOR.patientModalMode === 'edit') {
+      if (NOOR.patientModalMode === 'edit' || NOOR.patientModalMode === 'edit_general') {
         await put(`/api/patients/${pid}`, retryPayload);
       }
       return pid;
@@ -378,6 +393,34 @@ async function savePatient() {
     }
   }
 
+  // Validate Rx eye completeness: if any SPH/CYL/AXIS entered for one eye, the
+  // other eye must also have at least SPH entered (can't have half an Rx).
+  // Only applies when not in edit_general or old_rx modes — old_rx can be one-eyed.
+  if (NOOR.patientModalMode !== 'edit_general') {
+    const odSph = document.getElementById('rx-od-sph')?.value ?? '';
+    const osSph = document.getElementById('rx-os-sph')?.value ?? '';
+    const odCyl = document.getElementById('rx-od-cyl')?.value ?? '';
+    const osCyl = document.getElementById('rx-os-cyl')?.value ?? '';
+    const odAxis = document.getElementById('rx-od-axis')?.value ?? '';
+    const osAxis = document.getElementById('rx-os-axis')?.value ?? '';
+    const odAdd = document.getElementById('rx-od-add')?.value ?? '';
+    const osAdd = document.getElementById('rx-os-add')?.value ?? '';
+    const hasOD = odSph !== '' || odCyl !== '' || odAxis !== '' || odAdd !== '';
+    const hasOS = osSph !== '' || osCyl !== '' || osAxis !== '' || osAdd !== '';
+    if (hasOD && !hasOS) {
+      toast(isAr ? 'يرجى إدخال قيم العين اليسرى (OS) أيضاً' : 'Please also enter values for the left eye (OS)', 'error');
+      switchPatientTab('rx');
+      document.getElementById('rx-os-sph').focus();
+      return;
+    }
+    if (hasOS && !hasOD) {
+      toast(isAr ? 'يرجى إدخال قيم العين اليمنى (OD) أيضاً' : 'Please also enter values for the right eye (OD)', 'error');
+      switchPatientTab('rx');
+      document.getElementById('rx-od-sph').focus();
+      return;
+    }
+  }
+
   const isNewPatient = !NOOR.editingPatientId;
   let pid = NOOR.editingPatientId;
   NOOR.savingPatient = true;
@@ -388,7 +431,8 @@ async function savePatient() {
     // 1. Create or update patient profile
     pid = await savePatientProfile(pid, patientProfilePayload(), isNewPatient);
 
-    // 2. Create visit if any data entered (skip entirely for edit_general mode)
+    // 2. Create or update visit — skip entirely for edit_general (profile-only edit)
+    if (NOOR.patientModalMode !== 'edit_general') {
     const lp = parseFloat(document.getElementById('f-lens-price').value)||0;
     const fp = parseFloat(document.getElementById('f-frame-price').value)||0;
     const cf = parseFloat(document.getElementById('f-checkup-fee').value)||0;
@@ -400,7 +444,7 @@ async function savePatient() {
     const hasCheckup = NOOR.patientModalMode !== 'old_rx' && (document.getElementById('f-checkup').checked || document.getElementById('f-next-visit').value !== '');
     const hasVisitNotes = (document.getElementById('f-visit-notes').value || '').trim() !== '';
 
-    if (NOOR.patientModalMode !== 'edit_general' && (total > 0 || hasRx || hasFrame || hasCheckup || hasVisitNotes)) {
+    if (total > 0 || hasRx || hasFrame || hasCheckup || hasVisitNotes) {
       const coatings = [...document.querySelectorAll('.coating-chip.selected')].map(c=>c.dataset.val).join(',');
       const visitPayload = {
         patient_id:      pid,
@@ -447,6 +491,7 @@ async function savePatient() {
       if (NOOR.patientModalMode === 'edit' && NOOR.editingVisitId) await put(`/api/visits/${NOOR.editingVisitId}`, visitPayload);
       else await post('/api/visits', visitPayload);
     }
+    } // end !edit_general
 
     markPatientFormClean();
     closeModal('modal-patient');
@@ -471,4 +516,31 @@ async function deletePatient(id) {
     toast(t('successDeleted'));
     await renderPatients();
   } catch(e) { toast(e.message,'error'); }
+}
+
+// ── Visit card action dropdown helpers ───────────────────────
+function toggleVisitMenu(visitId, e) {
+  e.stopPropagation();
+  const dropdown = document.getElementById('vad-' + visitId);
+  const trigger  = e.currentTarget;
+  const isOpen   = dropdown?.classList.contains('open');
+  closeVisitMenus();
+  if (!isOpen && dropdown) {
+    dropdown.classList.add('open');
+    trigger.setAttribute('aria-expanded', 'true');
+    // Close when clicking outside
+    setTimeout(() => {
+      document.addEventListener('click', _closeVisitMenuOnOutside, { once: true });
+    }, 0);
+  }
+}
+
+function _closeVisitMenuOnOutside() { closeVisitMenus(); }
+
+function closeVisitMenus() {
+  document.querySelectorAll('.visit-action-dropdown.open').forEach(d => {
+    d.classList.remove('open');
+    const trigger = d.closest('.visit-action-menu')?.querySelector('.visit-action-trigger');
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  });
 }

@@ -403,18 +403,24 @@ function onCheckupToggle() {
   const checked = document.getElementById('f-checkup').checked;
   document.getElementById('followup-date-row').style.display = checked ? 'grid' : 'none';
   if (checked) {
-    const defaultFee = parseFloat(NOOR.settings.default_checkup_fee) || 0;
-    if (!document.getElementById('f-checkup-fee').value && defaultFee > 0) {
+    // Always apply the default checkup fee when toggled on (overwrite 0 or empty)
+    const defaultFee = parseFloat(NOOR.settings?.default_checkup_fee) || 0;
+    const currentFee = parseFloat(document.getElementById('f-checkup-fee').value) || 0;
+    if (defaultFee > 0 && currentFee === 0) {
       document.getElementById('f-checkup-fee').value = defaultFee;
       calcTotal();
-      // Switch to financials tab so user sees the auto-filled amount
+      // Switch to financials so the user sees the amount was set
       switchPatientTab('financials');
     }
     updateNextVisitDate();
   } else {
-    // Clear checkup fee when unchecked
-    document.getElementById('f-checkup-fee').value = '';
-    calcTotal();
+    // Clear the fee when toggled off (if it matches the default, it was auto-set)
+    const defaultFee = parseFloat(NOOR.settings?.default_checkup_fee) || 0;
+    const currentFee = parseFloat(document.getElementById('f-checkup-fee').value) || 0;
+    if (defaultFee > 0 && currentFee === defaultFee) {
+      document.getElementById('f-checkup-fee').value = '';
+      calcTotal();
+    }
   }
 }
 
