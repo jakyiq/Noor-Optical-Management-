@@ -1655,6 +1655,16 @@ def bulk_generate_lenses():
     return ok({"generated": generated_count, "inserted": inserted, "updated": updated, "skipped": skipped})
 
 
+@app.route("/api/lenses", methods=["DELETE"])
+@_auth(roles=["doctor", "super_admin"])
+def delete_all_lenses():
+    cid = session["clinic_id"]
+    uid = session["user_id"]
+    db.table("lenses").delete().eq("clinic_id", cid).execute()
+    _write_audit(cid, uid, "delete", "lens", "all", old_value={"note": "all lenses cleared"})
+    return ok()
+
+
 @app.route("/api/lenses", methods=["GET"])
 @_auth(setting="recept_access_inventory")
 def list_lenses():
@@ -1754,16 +1764,6 @@ def delete_lens(lid):
         return err("Lens not found", 404)
     db.table("lenses").delete().eq("clinic_id", cid).eq("id", lid).execute()
     _write_audit(cid, uid, "delete", "lens", lid, old_value=old.data)
-    return ok()
-
-
-@app.route("/api/lenses", methods=["DELETE"])
-@_auth(roles=["doctor", "super_admin"])
-def delete_all_lenses():
-    cid = session["clinic_id"]
-    uid = session["user_id"]
-    db.table("lenses").delete().eq("clinic_id", cid).execute()
-    _write_audit(cid, uid, "delete", "lens", "all", old_value={"note": "all lenses cleared"})
     return ok()
 
 
