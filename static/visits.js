@@ -136,6 +136,11 @@ function clearPatientForm() {
   NOOR.editingVisitId = null;
   setNoFrame(false);
   calcTotal();
+  // Restore all tab buttons to visible (they may have been hidden by openEditVisit
+  // or openEditPatient for specific modes)
+  ['ptab-info-btn','ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = '';
+  });
 }
 
 function setNoFrame(noFrame) {
@@ -589,9 +594,16 @@ async function openEditVisit(visitId) {
   NOOR.editingVisitId = visitId;
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm();
+
+  // Hide the Info tab — only Rx/Frame/Financials are editable here.
+  // Patient profile is edited via the dedicated Edit Patient Info button.
+  const infoTabBtn = document.getElementById('ptab-info-btn');
+  if (infoTabBtn) infoTabBtn.style.display = 'none';
+
   switchPatientTab('rx');
 
-  // Fill patient info so name validation passes without forcing re-entry
+  // Silently fill patient info so name validation passes on save,
+  // but the user never sees or edits these fields here.
   document.getElementById('p-name').value    = detail.full_name || '';
   document.getElementById('p-phone').value   = detail.phone || '';
   document.getElementById('p-age').value     = detail.age || '';
