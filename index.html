@@ -1443,9 +1443,16 @@
         </div>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-lens-wizard')">Cancel</button>
-      <button class="btn btn-burgundy" id="wiz-save-btn" onclick="runLensWizard()">Generate</button>
+    <div class="modal-footer" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:var(--radius-sm);padding:10px 14px;font-size:.78rem;color:#b91c1c;display:flex;align-items:flex-start;gap:8px">
+        <span style="flex-shrink:0;font-size:1rem">⚠️</span>
+        <span id="wiz-clear-warning"><strong>Clear All Lenses</strong> will permanently delete every lens in your inventory. This cannot be undone.</span>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn btn-outline" onclick="closeModal('modal-lens-wizard')">Cancel</button>
+        <button class="btn btn-outline" style="color:var(--danger);border-color:#fecaca" onclick="clearAllLenses()">🗑 Clear All Lenses</button>
+        <button class="btn btn-burgundy" id="wiz-save-btn" onclick="runLensWizard()">Generate</button>
+      </div>
     </div>
   </div>
 </div>
