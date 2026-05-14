@@ -134,7 +134,26 @@ function clearPatientForm() {
   NOOR._selectedFrameInvId = null;
   NOOR._lastVisit = null;
   NOOR.editingVisitId = null;
+  setNoFrame(false);
   calcTotal();
+}
+
+function setNoFrame(noFrame) {
+  NOOR._noFrame = !!noFrame;
+  const toggle = document.getElementById('no-frame-toggle');
+  if (toggle) toggle.checked = noFrame;
+  const framePanel = document.getElementById('ptab-frame');
+  if (framePanel) framePanel.classList.toggle('no-frame-mode', noFrame);
+  const frameTab = document.getElementById('ptab-frame-btn');
+  if (frameTab) frameTab.style.opacity = noFrame ? '0.45' : '';
+  // Clear frame fields when toggling to no-frame
+  if (noFrame) {
+    ['p-frame-brand'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('f-frame-cost').value = '';
+    document.getElementById('f-frame-price').value = '';
+    NOOR._selectedFrameInvId = null;
+    calcTotal();
+  }
 }
 
 function switchPatientTab(tab) {
@@ -383,11 +402,20 @@ function onFrameInvSelect() {
 function onCheckupToggle() {
   const checked = document.getElementById('f-checkup').checked;
   document.getElementById('followup-date-row').style.display = checked ? 'grid' : 'none';
-  if (checked && !document.getElementById('f-checkup-fee').value) {
-    document.getElementById('f-checkup-fee').value = NOOR.settings.default_checkup_fee || 0;
+  if (checked) {
+    const defaultFee = parseFloat(NOOR.settings.default_checkup_fee) || 0;
+    if (!document.getElementById('f-checkup-fee').value && defaultFee > 0) {
+      document.getElementById('f-checkup-fee').value = defaultFee;
+      calcTotal();
+      // Switch to financials tab so user sees the auto-filled amount
+      switchPatientTab('financials');
+    }
+    updateNextVisitDate();
+  } else {
+    // Clear checkup fee when unchecked
+    document.getElementById('f-checkup-fee').value = '';
     calcTotal();
   }
-  if (checked) updateNextVisitDate();
 }
 
 function updateNextVisitDate() {
@@ -546,6 +574,14 @@ async function openEditVisit(visitId) {
   clearPatientForm();
   switchPatientTab('rx');
 
+  // Fill patient info so name validation passes without forcing re-entry
+  document.getElementById('p-name').value    = detail.full_name || '';
+  document.getElementById('p-phone').value   = detail.phone || '';
+  document.getElementById('p-age').value     = detail.age || '';
+  document.getElementById('p-address').value = detail.address || '';
+  document.getElementById('p-notes').value   = detail.notes || '';
+  if (detail.gender) document.getElementById('p-gender').value = detail.gender;
+
   // Fill visit date
   document.getElementById('visit-date-group').style.display = 'block';
   document.getElementById('f-visit-date').value = visit.visit_date || '';
@@ -577,6 +613,8 @@ async function openEditVisit(visitId) {
   document.getElementById('p-frame-brand').value = visit.frame_brand || '';
   if (visit.frame_type) document.getElementById('p-frame-type').value = visit.frame_type;
   if (visit.frame_material) document.getElementById('p-frame-material').value = visit.frame_material;
+  // Restore no-frame toggle based on saved visit data
+  setNoFrame(!(visit.frame_brand || visit.frame_price));
 
   // Fill financials
   document.getElementById('f-frame-price').value  = visit.frame_price || '';

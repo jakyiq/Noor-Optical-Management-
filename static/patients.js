@@ -180,19 +180,17 @@ function openAddPatient() {
 
 async function openEditPatient() {
   if (!NOOR.editingPatientId) return;
-  NOOR.patientModalMode = 'edit';
+  NOOR.patientModalMode = 'edit_general';
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm();
-  switchPatientTab('rx');
-  document.getElementById('visit-date-group').style.display = 'block';
-  document.getElementById('modal-patient-title').textContent = t('edit');
+  switchPatientTab('info');
+  document.getElementById('visit-date-group').style.display = 'none';
+  document.getElementById('modal-patient-title').textContent = NOOR.lang === 'ar' ? 'تعديل البيانات العامة' : 'Edit General Details';
   try {
     const data = await get(`/api/patients/${NOOR.editingPatientId}`);
     const patient = data.data || {};
     fillPatientForm(patient);
-    const latest = (patient.visits || [])[0];
-    NOOR.editingVisitId = latest?.id || null;
-    if (latest) fillVisitForm(latest);
+    NOOR.editingVisitId = null;
     openModal('modal-patient');
   } catch(e) { toast(e.message,'error'); }
 }
@@ -390,7 +388,7 @@ async function savePatient() {
     // 1. Create or update patient profile
     pid = await savePatientProfile(pid, patientProfilePayload(), isNewPatient);
 
-    // 2. Create visit if any data entered
+    // 2. Create visit if any data entered (skip entirely for edit_general mode)
     const lp = parseFloat(document.getElementById('f-lens-price').value)||0;
     const fp = parseFloat(document.getElementById('f-frame-price').value)||0;
     const cf = parseFloat(document.getElementById('f-checkup-fee').value)||0;
@@ -402,7 +400,7 @@ async function savePatient() {
     const hasCheckup = NOOR.patientModalMode !== 'old_rx' && (document.getElementById('f-checkup').checked || document.getElementById('f-next-visit').value !== '');
     const hasVisitNotes = (document.getElementById('f-visit-notes').value || '').trim() !== '';
 
-    if (total > 0 || hasRx || hasFrame || hasCheckup || hasVisitNotes) {
+    if (NOOR.patientModalMode !== 'edit_general' && (total > 0 || hasRx || hasFrame || hasCheckup || hasVisitNotes)) {
       const coatings = [...document.querySelectorAll('.coating-chip.selected')].map(c=>c.dataset.val).join(',');
       const visitPayload = {
         patient_id:      pid,

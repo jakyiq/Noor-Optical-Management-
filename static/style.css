@@ -532,7 +532,8 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .modal-body{padding:24px 28px;overflow-y:auto;min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}
 @media(pointer:fine){.modal-body{overflow-y:scroll}}
 .modal-footer{padding:16px 28px 24px;display:flex;gap:10px;justify-content:flex-end}
-.tabs{display:flex;gap:0;border-bottom:1px solid var(--cream-border);margin-bottom:24px;overflow-x:auto}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--cream-border);margin-bottom:24px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
 .tab-btn{padding:10px 20px;background:none;border:none;border-bottom:2px solid transparent;font-family:inherit;font-size:.85rem;font-weight:600;color:var(--ink-light);cursor:pointer;white-space:nowrap;transition:all .15s;margin-bottom:-1px}
 .tab-btn:hover{color:var(--burgundy)}
 .tab-btn.active{color:var(--burgundy);border-bottom-color:var(--burgundy)}
@@ -772,6 +773,9 @@ html[dir=ltr] .donut-legend-item:hover{transform:translateX(2px)}
 #modal-patient.old-rx-mode #ptab-rx .form-grid,
 #modal-patient.old-rx-mode #ptab-rx .form-group,
 #modal-patient.old-rx-mode #ptab-rx .inv-match-box{display:none!important}
+/* Hide checkup toggle & follow-up row in old-rx mode */
+#modal-patient.old-rx-mode #checkup-toggle-row,
+#modal-patient.old-rx-mode #followup-date-row{display:none!important}
 @media(max-width:600px){.patient-summary-grid{grid-template-columns:1fr 1fr}.patient-detail-actions .btn{flex:1;justify-content:center}.visit-body-grid{grid-template-columns:1fr;gap:12px}}
 
 /* VISIT CARD */
