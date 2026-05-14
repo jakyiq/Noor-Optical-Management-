@@ -61,23 +61,12 @@ async function renderDashboard() {
   document.getElementById('dash-greeting').textContent = h<12?t('greetingMorning'):h<17?t('greetingAfternoon'):t('greetingEvening');
   document.getElementById('dash-date').textContent = now.toLocaleDateString(NOOR.lang==='ar'?'ar-IQ':'en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('dash-date-sub').textContent = now.toLocaleTimeString(NOOR.lang==='ar'?'ar-IQ':'en-GB',{hour:'2-digit',minute:'2-digit'});
-  const cached = getCachedApiData('/api/dashboard/stats');
-  if (cached?.data) {
-    const s = cached.data;
-    document.getElementById('stat-today-patients').textContent = fmtNum(s.today_patients);
-    document.getElementById('stat-today-earnings').textContent = fmtNum(s.today_earnings);
-    document.getElementById('stat-debt').textContent = fmtNum(s.outstanding_debt);
-    document.getElementById('stat-low-stock').textContent = fmtNum(s.low_stock_count);
-    document.getElementById('stat-monthly').textContent = fmtNum(s.monthly_revenue);
-    renderChart(s.chart_7days || {});
-  } else {
     ['stat-today-patients','stat-today-earnings','stat-debt','stat-low-stock','stat-monthly'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = '<span class="skeleton-line short" style="display:inline-block;width:70px"></span>';
     });
     const cont = document.getElementById('dash-recent-patients');
     if (cont) cont.innerHTML = skeletonCards(3);
-  }
 
   try {
     const data = await get('/api/dashboard/stats');

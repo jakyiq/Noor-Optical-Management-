@@ -1,16 +1,9 @@
 /* patients.js - extracted from index.html. Plain script, globals intentionally preserved. */
 async function renderPatients() {
-  const cached = getCachedApiData('/api/patients?limit=200');
-  if (cached?.data) {
-    setPatients(cached.data || []);
-    document.getElementById('patients-total').textContent = cached.total || NOOR.patients.length;
-    filterPatients();
-  } else {
     const tbody = document.getElementById('patients-tbody');
     const empty = document.getElementById('patients-empty');
     if (tbody) tbody.innerHTML = skeletonRows(6, 6);
     if (empty) empty.style.display = 'none';
-  }
   try {
     const data = await get('/api/patients?limit=200');
     setPatients(data.data || []);
