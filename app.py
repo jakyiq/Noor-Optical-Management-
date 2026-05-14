@@ -51,9 +51,9 @@ def _rate_limit_storage_uri():
     storage_uri = os.environ.get("RATELIMIT_STORAGE_URI")
     is_production = os.environ.get("VERCEL") or os.environ.get("FLASK_ENV") == "production"
     if is_production and not storage_uri:
-        raise RuntimeError(
-            "RATELIMIT_STORAGE_URI must be set in production. "
-            "Use Redis/Upstash; memory:// resets on Vercel cold starts."
+        logging.warning(
+            "RATELIMIT_STORAGE_URI is not set; falling back to memory://. "
+            "Use Redis/Upstash in production for persistent rate limits."
         )
     return storage_uri or "memory://"
 
@@ -236,8 +236,9 @@ def _auth_rest(path, payload, query=""):
 def _clinic_is_banned(clinic_id):
     if not clinic_id:
         return False
-    res = db.table("clinics").select("is_banned").eq("id", clinic_id).single().execute()
-    return bool(res.data and res.data.get("is_banned"))
+    res = db.table("clinics").select("is_banned").eq("id", clinic_id).limit(1).execute()
+    row = res.data[0] if res.data else None
+    return bool(row and row.get("is_banned"))
 
 
 def _license_state(clinic_id):

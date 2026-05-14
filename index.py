@@ -51,9 +51,9 @@ def _rate_limit_storage_uri():
     storage_uri = os.environ.get("RATELIMIT_STORAGE_URI")
     is_production = os.environ.get("VERCEL") or os.environ.get("FLASK_ENV") == "production"
     if is_production and not storage_uri:
-        raise RuntimeError(
-            "RATELIMIT_STORAGE_URI must be set in production. "
-            "Use Redis/Upstash; memory:// resets on Vercel cold starts."
+        logging.warning(
+            "RATELIMIT_STORAGE_URI is not set; falling back to memory://. "
+            "Use Redis/Upstash in production for persistent rate limits."
         )
     return storage_uri or "memory://"
 
