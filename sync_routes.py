@@ -19,14 +19,36 @@ queue item.  This route:
 
 from flask import Blueprint, request, jsonify, session
 from datetime import datetime
+from functools import wraps
 import logging
 
-# These helpers are already defined in app.py.
-# When registered as a blueprint they inherit the app context,
-# so `db` (the Supabase client) is imported directly.
-from app import db, ok, err, now_iso, _write_audit, _auth
-
 sync_bp = Blueprint('sync', __name__, url_prefix='/api/sync')
+
+db = None
+ok = None
+err = None
+now_iso = None
+_write_audit = None
+_auth = None
+
+
+def init_sync_routes(*, db_client, ok_fn, err_fn, now_iso_fn, write_audit_fn, auth_fn):
+    global db, ok, err, now_iso, _write_audit, _auth
+    db = db_client
+    ok = ok_fn
+    err = err_fn
+    now_iso = now_iso_fn
+    _write_audit = write_audit_fn
+    _auth = auth_fn
+
+
+def _require_auth(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if _auth is None:
+            return jsonify({"error": "Sync routes are not initialised"}), 500
+        return _auth()(fn)(*args, **kwargs)
+    return wrapper
 
 # Tables the client is allowed to push via the sync endpoint.
 # Add or remove tables as your schema evolves.
@@ -54,7 +76,7 @@ def _parse_ts(ts_str):
 
 
 @sync_bp.route('/item', methods=['POST'])
-@_auth()
+@_require_auth
 def sync_item():
     """
     Accept a single pending queue item from the client and upsert it into
@@ -179,7 +201,7 @@ def sync_item():
 
 # ── Bulk status endpoint (optional — for a debug/admin panel) ─────────────────
 @sync_bp.route('/status', methods=['GET'])
-@_auth()
+@_require_auth
 def sync_status():
     """
     Returns per-table row counts for the clinic.

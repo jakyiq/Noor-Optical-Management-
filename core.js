@@ -23,6 +23,9 @@ function ensureApiBase() {
 }
 
 async function api(method, path, body) {
+  const localFirstWrite = await getLocalFirstWrite(method, path, body);
+  if (localFirstWrite) return localFirstWrite;
+
   if (typeof NOOR !== 'undefined' && NOOR.offlineMode) {
     return offlineApi(method, path, body);
   }
@@ -53,7 +56,10 @@ async function api(method, path, body) {
   } catch (error) {
     const cached = method === 'GET' ? getCachedApiData(path) : null;
     if (cached && shouldUseOfflineApi(path, error)) return cached;
-    if (shouldUseOfflineApi(path, error)) return offlineApi(method, path, body);
+    if (shouldUseOfflineApi(path, error)) {
+      const queuedWrite = method === 'GET' ? null : await getLocalFirstWrite(method, path, body, true);
+      return queuedWrite || offlineApi(method, path, body);
+    }
     throw error;
   }
 }
@@ -117,7 +123,37 @@ function shouldUseOfflineApi(path, error) {
   return !status || status === 404 || status >= 500;
 }
 
+function localFirstRoute(method, path) {
+  if (typeof NoorLF === 'undefined') return null;
+  const url = new URL(path, window.location.origin);
+  if (url.search) return null;
+  const parts = url.pathname.split('/').filter(Boolean);
+  if (parts[0] !== 'api') return null;
+  const entity = parts[1];
+  if (!['patients', 'visits', 'lenses', 'frames', 'retail-sales', 'operating-expenses'].includes(entity)) return null;
+  if (parts.length > 3 || (parts.length === 3 && parts[2] === 'print')) return null;
+  const table = entity.replace(/-/g, '_');
+  if (method === 'POST' && parts.length === 2) return { entityType: table, operation: 'upsert', entityId: null };
+  if (method === 'PUT' && parts.length === 3) return { entityType: table, operation: 'upsert', entityId: parts[2] };
+  if (method === 'DELETE' && parts.length === 3) return { entityType: table, operation: 'delete', entityId: parts[2] };
+  return null;
+}
+
+async function getLocalFirstWrite(method, path, body, force = false) {
+  const route = localFirstRoute(method, path);
+  if (!route || typeof NOOR === 'undefined' || !NOOR.localFirstWrites) return null;
+  if (!force && !NOOR.offlineMode && navigator.onLine !== false) return null;
+  const optimistic = await offlineApi(method, path, body, { enableMode: false });
+  const payload = route.operation === 'delete'
+    ? { id: route.entityId }
+    : (optimistic.data || { ...(body || {}), id: route.entityId });
+  await NoorLF.enqueue(route.entityType, route.operation, payload, payload.id || route.entityId || null);
+  optimistic.pending = true;
+  return optimistic;
+}
+
 function makeOfflineId(prefix) {
+  if (crypto?.randomUUID) return crypto.randomUUID();
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -266,8 +302,8 @@ function skeletonCards(count = 4) {
   return Array.from({ length: count }, () => '<div class="skeleton-card"><div class="skeleton-line wide"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>').join('');
 }
 
-async function offlineApi(method, path, body) {
-  enableOfflineMode();
+async function offlineApi(method, path, body, options = {}) {
+  if (options.enableMode !== false) enableOfflineMode();
   const db = offlineLoadDb();
   const url = new URL(path, window.location.origin);
   const pathname = url.pathname;
@@ -571,6 +607,7 @@ const NOOR = {
   user: null, role: null, clinicId: null,
   csrfToken: null,
   offlineMode: false,
+  localFirstWrites: true,
   clinicName: '',
   currentSection: 'dashboard',
   // editing IDs
@@ -838,109 +875,6 @@ async function buildRxPdfFile(payload, filename) {
   } finally {
     host.remove();
   }
-}
-
-function buildRxPdfFileLegacy(payload, filename) {
-  const jsPDFCtor = window.jspdf?.jsPDF;
-  if (!jsPDFCtor || typeof File === 'undefined') return null;
-  const v = payload.visit || {};
-  const p = payload.patient || {};
-  const cl = payload.clinic || {};
-  const st = payload.settings || {};
-  const doc = new jsPDFCtor({ orientation: 'portrait', unit: 'mm', format: [148, 210], compress: true });
-  const clinicName = cl.name || NOOR.clinicName || 'Noor Optical';
-  const patientName = p.full_name || filename.replace(/_/g, ' ');
-  const visitDate = v.visit_date ? fmtDate(v.visit_date) : fmtDate(new Date());
-  const fmtVal = x => (x === null || x === undefined || x === '') ? '-' : String(x);
-  const line = (label, value, x, y) => {
-    doc.setFont('helvetica', 'bold');
-    doc.text(String(label), x, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(String(value || '-'), x + 30, y);
-  };
-
-  doc.setProperties({ title: filename, subject: 'A5 prescription', creator: 'Noor Optical' });
-  doc.setTextColor(107, 26, 42);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text(clinicName, 74, 13, { align: 'center' });
-  doc.setTextColor(30, 25, 20);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  if (st.print_header_text) doc.text(String(st.print_header_text), 74, 19, { align: 'center' });
-  doc.setDrawColor(196, 154, 60);
-  doc.line(10, 24, 138, 24);
-
-  doc.setFontSize(9);
-  line('Patient', patientName, 12, 33);
-  line('Date', visitDate, 84, 33);
-  line('Age', fmtVal(p.age), 12, 41);
-  line('Phone', fmtVal(p.phone), 84, 41);
-  const tableHead = ['Eye', 'SPH', 'CYL', 'AXIS', 'ADD', 'VA', 'BCVA'];
-  const tableRows = [
-    ['OD', fmtVal(v.od_sphere), fmtVal(v.od_cylinder), fmtVal(v.od_axis), fmtVal(v.od_addition), fmtVal(v.od_va), fmtVal(v.od_bcva)],
-    ['OS', fmtVal(v.os_sphere), fmtVal(v.os_cylinder), fmtVal(v.os_axis), fmtVal(v.os_addition), fmtVal(v.os_va), fmtVal(v.os_bcva)],
-  ];
-  let tableBottom = 72;
-  if (typeof doc.autoTable === 'function') {
-    doc.autoTable({
-      startY: 50,
-      head: [tableHead],
-      body: tableRows,
-      theme: 'grid',
-      headStyles: { fillColor: [107, 26, 42], textColor: 255 },
-      styles: { fontSize: 8, cellPadding: 2 },
-      margin: { left: 10, right: 10 },
-    });
-    tableBottom = doc.lastAutoTable.finalY;
-  } else {
-    const widths = [14, 18, 18, 18, 18, 18, 22];
-    const left = 10;
-    let x = left;
-    let y0 = 50;
-    doc.setFillColor(107, 26, 42);
-    doc.rect(left, y0, widths.reduce((a, b) => a + b, 0), 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(7.5);
-    tableHead.forEach((h, i) => {
-      doc.text(h, x + 2, y0 + 5.2);
-      x += widths[i];
-    });
-    doc.setTextColor(30, 25, 20);
-    tableRows.forEach((row, ri) => {
-      x = left;
-      y0 = 58 + ri * 8;
-      row.forEach((cell, i) => {
-        doc.rect(x, y0, widths[i], 8);
-        doc.text(String(cell), x + 2, y0 + 5.2);
-        x += widths[i];
-      });
-    });
-    tableBottom = 74;
-  }
-
-  let y = tableBottom + 9;
-  line('IPD', fmtVal(v.ipd), 12, y);
-  y += 8;
-  line('Lens', [v.lens_type, v.lens_material, v.lens_coating].filter(Boolean).map(x => String(x).replace(/_/g, ' ')).join(' / ') || '-', 12, y);
-  y += 8;
-  line('Frame', [v.frame_brand, v.frame_type, v.frame_material].filter(Boolean).map(x => String(x).replace(/_/g, ' ')).join(' / ') || '-', 12, y);
-  if (v.next_visit_date) {
-    y += 8;
-    line('Next visit', fmtDate(v.next_visit_date), 12, y);
-  }
-  if (st.print_warning_text) {
-    y += 12;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Notes', 12, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(doc.splitTextToSize(String(st.print_warning_text), 120), 12, y + 6);
-  }
-  doc.setFontSize(8);
-  doc.setTextColor(120, 120, 120);
-  doc.text([st.print_doctor_name, st.print_doctor_credentials].filter(Boolean).join(' - '), 74, 198, { align: 'center' });
-
-  return new File([doc.output('blob')], filename + '.pdf', { type: 'application/pdf' });
 }
 
 function toast(msg, type='success', duration=3500) {

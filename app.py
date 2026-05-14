@@ -47,13 +47,23 @@ _cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()] o
 ]
 CORS(app, supports_credentials=True, origins=_cors_origins)
 
+def _rate_limit_storage_uri():
+    storage_uri = os.environ.get("RATELIMIT_STORAGE_URI")
+    is_production = os.environ.get("VERCEL") or os.environ.get("FLASK_ENV") == "production"
+    if is_production and not storage_uri:
+        raise RuntimeError(
+            "RATELIMIT_STORAGE_URI must be set in production. "
+            "Use Redis/Upstash; memory:// resets on Vercel cold starts."
+        )
+    return storage_uri or "memory://"
+
 limiter = Limiter(
     get_remote_address,
     app=app,
     default_limits=["300 per hour"],
     # IMPORTANT: set RATELIMIT_STORAGE_URI to a Redis/Upstash URL in production.
     # "memory://" resets on every cold start — rate limits won't work on Vercel otherwise.
-    storage_uri=os.environ.get("RATELIMIT_STORAGE_URI", "memory://"),
+    storage_uri=_rate_limit_storage_uri(),
 )
 
 # The public URL of this app — used as redirect_to in Supabase auth emails
@@ -395,6 +405,18 @@ def _auth(roles=None, setting=None, export=False, allow_readonly_write=False):
             return f(*args, **kwargs)
         return wrapper
     return decorator
+
+
+from sync_routes import init_sync_routes, sync_bp
+init_sync_routes(
+    db_client=db,
+    ok_fn=ok,
+    err_fn=err,
+    now_iso_fn=now_iso,
+    write_audit_fn=_write_audit,
+    auth_fn=_auth,
+)
+app.register_blueprint(sync_bp)
 
 
 # ─────────────────────────────────────────────────────────────
