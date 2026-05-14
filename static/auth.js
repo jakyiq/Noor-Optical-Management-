@@ -208,6 +208,16 @@ function bootApp() {
   }
   applyLang();
   ensureLensCatalog().catch(()=>{});
+  // Preload clinic settings so default_checkup_fee and other defaults are ready
+  // immediately without requiring the user to visit the Settings tab first.
+  get('/api/settings').then(s => {
+    const st = s.data?.settings || {};
+    NOOR.settings = Object.assign(NOOR.settings || {}, st);
+    NOOR._settingsLoaded = true;
+    NOOR.clinicName = s.data?.clinic?.name || NOOR.clinicName || '';
+    const el = document.getElementById('sidebar-clinic-name');
+    if (el && NOOR.clinicName) el.textContent = NOOR.clinicName;
+  }).catch(() => {});
   navigate('dashboard');
 }
 

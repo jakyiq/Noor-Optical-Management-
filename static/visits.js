@@ -399,11 +399,22 @@ function onFrameInvSelect() {
   }
 }
 
-function onCheckupToggle() {
+async function onCheckupToggle() {
   const checked = document.getElementById('f-checkup').checked;
   document.getElementById('followup-date-row').style.display = checked ? 'grid' : 'none';
+
+  // Eagerly load settings if not yet cached (e.g. user hasn't visited Settings tab)
+  if (!NOOR.settings?.default_checkup_fee && !NOOR._settingsLoaded) {
+    try {
+      const s = await get('/api/settings');
+      const st = s.data?.settings || {};
+      NOOR.settings = Object.assign(NOOR.settings || {}, st);
+      NOOR._settingsLoaded = true;
+    } catch(_) {}
+  }
+
   if (checked) {
-    // Always apply the default checkup fee when toggled on (overwrite 0 or empty)
+    // Apply the default checkup fee when toggled on (only if field is empty/zero)
     const defaultFee = parseFloat(NOOR.settings?.default_checkup_fee) || 0;
     const currentFee = parseFloat(document.getElementById('f-checkup-fee').value) || 0;
     if (defaultFee > 0 && currentFee === 0) {

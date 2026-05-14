@@ -85,17 +85,51 @@ function rxPart(v, eye) {
 function renderPatientSummary(p, visits) {
   const latest = visits[0] || {};
   const outstanding = visits.reduce((sum, v) => sum + (parseFloat(v.remaining) || 0), 0);
-  const latestRx = latest.id ? `OD ${rxPart(latest,'od')} | OS ${rxPart(latest,'os')}` : '—';
-  const latestLens = latest.id ? [latest.lens_type, latest.lens_material, latest.lens_coating].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
-  const latestFrame = latest.id ? [latest.frame_brand, latest.frame_type].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
   const nextVisit = visits.find(v => v.next_visit_date)?.next_visit_date;
+  const isAr = NOOR.lang === 'ar';
+
+  // Build a compact Rx/lens/frame info strip for the latest visit (replaces two redundant cards)
+  let rxStrip = '';
+  if (latest.id) {
+    const odSph  = latest.od_sphere  != null ? (latest.od_sphere  > 0 ? '+' : '') + latest.od_sphere  : '—';
+    const odCyl  = latest.od_cylinder != null ? (latest.od_cylinder > 0 ? '+' : '') + latest.od_cylinder : '—';
+    const odAx   = latest.od_axis  != null ? latest.od_axis  : '—';
+    const osSph  = latest.os_sphere  != null ? (latest.os_sphere  > 0 ? '+' : '') + latest.os_sphere  : '—';
+    const osCyl  = latest.os_cylinder != null ? (latest.os_cylinder > 0 ? '+' : '') + latest.os_cylinder : '—';
+    const osAx   = latest.os_axis  != null ? latest.os_axis  : '—';
+    const lens   = [latest.lens_type, latest.lens_material, latest.lens_coating].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—';
+    const frame  = [latest.frame_brand, latest.frame_type].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—';
+    const ipd    = latest.ipd != null ? `IPD: ${latest.ipd}` : '';
+    rxStrip = `
+      <div class="patient-rx-strip">
+        <div class="patient-rx-strip-row">
+          <span class="rx-strip-eye">OD</span>
+          <span class="rx-strip-val">SPH <strong>${esc(odSph)}</strong></span>
+          <span class="rx-strip-val">CYL <strong>${esc(odCyl)}</strong></span>
+          <span class="rx-strip-val">AX <strong>${esc(odAx)}</strong></span>
+          ${latest.od_va ? `<span class="rx-strip-val">VA <strong>${esc(latest.od_va)}</strong></span>` : ''}
+        </div>
+        <div class="patient-rx-strip-row">
+          <span class="rx-strip-eye">OS</span>
+          <span class="rx-strip-val">SPH <strong>${esc(osSph)}</strong></span>
+          <span class="rx-strip-val">CYL <strong>${esc(osCyl)}</strong></span>
+          <span class="rx-strip-val">AX <strong>${esc(osAx)}</strong></span>
+          ${latest.os_va ? `<span class="rx-strip-val">VA <strong>${esc(latest.os_va)}</strong></span>` : ''}
+        </div>
+        <div class="patient-rx-strip-meta">
+          ${ipd ? `<span>${esc(ipd)}</span>` : ''}
+          <span>${isAr ? 'عدسة' : 'Lens'}: <strong>${esc(lens)}</strong></span>
+          ${frame !== '—' ? `<span>${isAr ? 'إطار' : 'Frame'}: <strong>${esc(frame)}</strong></span>` : ''}
+        </div>
+      </div>`;
+  }
+
   document.getElementById('patient-summary').innerHTML = `
     <div class="patient-summary-grid">
       <div class="patient-summary-card"><div class="patient-summary-label">${t('outstandingDebt')}</div><div class="patient-summary-value ${outstanding>0?'danger':''}">${fmtIQD(outstanding)}</div><div class="patient-summary-sub">${visits.length} ${t('visits')}</div></div>
       <div class="patient-summary-card"><div class="patient-summary-label">${t('latestVisit')}</div><div class="patient-summary-value">${latest.visit_date?fmtDate(latest.visit_date):'—'}</div><div class="patient-summary-sub">${nextVisit?`${t('nextVisit')}: ${fmtDate(nextVisit)}`:''}</div></div>
-      <div class="patient-summary-card"><div class="patient-summary-label">RX</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestRx)}</div><div class="patient-summary-sub">IPD: ${esc(latest.ipd||'—')}</div></div>
-      <div class="patient-summary-card"><div class="patient-summary-label">${t('lensType')} / ${t('frame')}</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestLens)}</div><div class="patient-summary-sub">${esc(latestFrame)}</div></div>
     </div>
+    ${rxStrip}
     <div class="patient-detail-actions">
       ${outstanding>0?`<button class="btn btn-gold" onclick="topUpPatientRemaining()">${t('topUpRemaining')}: ${fmtIQD(outstanding)}</button>`:''}
       ${latest.id?`<button class="btn btn-outline" onclick="showRxSlip('${escAttr(latest.id)}')">${t('printA5')}</button>`:''}
@@ -148,26 +182,11 @@ function renderVisitHistory(visits) {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
             ${NOOR.lang==='ar'?'تسديد':'Pay'}
           </button>` : ''}
-          <div class="visit-action-menu" id="vam-${escAttr(v.id)}">
-            <button class="btn btn-outline btn-sm visit-action-trigger" onclick="toggleVisitMenu('${escAttr(v.id)}',event)" aria-haspopup="true" aria-expanded="false">
-              <span>${NOOR.lang==='ar'?'إجراءات':'Actions'}</span>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-inline-start:4px"><polyline points="6,9 12,15 18,9"/></svg>
-            </button>
-            <div class="visit-action-dropdown" id="vad-${escAttr(v.id)}">
-              <button class="visit-action-item" onclick="closeVisitMenus();openEditVisit('${escAttr(v.id)}')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                ${NOOR.lang==='ar'?'تعديل الزيارة':'Edit Visit'}
-              </button>
-              <button class="visit-action-item" onclick="closeVisitMenus();showRxSlip('${escAttr(v.id)}')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
-                ${NOOR.lang==='ar'?'طباعة الوصفة':'Print Rx'}
-              </button>
-              ${NOOR.role==='doctor' || NOOR.role==='super_admin' ? `<button class="visit-action-item visit-action-item--danger" onclick="closeVisitMenus();deleteVisit('${escAttr(v.id)}')">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
-                ${NOOR.lang==='ar'?'حذف':'Delete'}
-              </button>` : ''}
-            </div>
-          </div>
+          <button class="btn btn-outline btn-sm" onclick="openEditVisit('${escAttr(v.id)}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            ${NOOR.lang==='ar'?'تعديل':'Edit'}
+          </button>
+          ${NOOR.role==='doctor' || NOOR.role==='super_admin' ? `<button class="btn btn-sm" style="color:var(--danger);border:1.5px solid #fecaca;background:transparent" onclick="deleteVisit('${escAttr(v.id)}')">${t('delete')}</button>` : ''}
         </div>
       </div>
     </div>
@@ -195,17 +214,24 @@ function openAddPatient() {
 
 async function openEditPatient() {
   if (!NOOR.editingPatientId) return;
-  NOOR.patientModalMode = 'edit_general';
+  // Edit patient profile only — never touches visits or financials
+  NOOR.patientModalMode = 'edit_profile_only';
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm();
+  // Go straight to the info tab — that's all we're editing
   switchPatientTab('info');
+  // Hide the visit-date field so it's clear this isn't a visit form
   document.getElementById('visit-date-group').style.display = 'none';
-  document.getElementById('modal-patient-title').textContent = NOOR.lang === 'ar' ? 'تعديل البيانات العامة' : 'Edit General Details';
+  document.getElementById('modal-patient-title').textContent =
+    NOOR.lang === 'ar' ? 'تعديل بيانات المراجع' : 'Edit Patient Info';
+  // Hide tabs that are not relevant for a profile-only edit
+  ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
   try {
     const data = await get(`/api/patients/${NOOR.editingPatientId}`);
-    const patient = data.data || {};
-    fillPatientForm(patient);
-    NOOR.editingVisitId = null;
+    fillPatientForm(data.data || {});
     openModal('modal-patient');
   } catch(e) { toast(e.message,'error'); }
 }
@@ -315,7 +341,7 @@ async function savePatientProfile(pid, payload, isNewPatient) {
       const res = await post('/api/patients', payload);
       return res.data.id;
     }
-    if (NOOR.patientModalMode === 'edit' || NOOR.patientModalMode === 'edit_general') {
+    if (NOOR.patientModalMode === 'edit') {
       await put(`/api/patients/${pid}`, payload);
     }
     return pid;
@@ -330,7 +356,7 @@ async function savePatientProfile(pid, payload, isNewPatient) {
         const res = await post('/api/patients', retryPayload);
         return res.data.id;
       }
-      if (NOOR.patientModalMode === 'edit' || NOOR.patientModalMode === 'edit_general') {
+      if (NOOR.patientModalMode === 'edit') {
         await put(`/api/patients/${pid}`, retryPayload);
       }
       return pid;
@@ -393,32 +419,30 @@ async function savePatient() {
     }
   }
 
-  // Validate Rx eye completeness: if any SPH/CYL/AXIS entered for one eye, the
-  // other eye must also have at least SPH entered (can't have half an Rx).
-  // Only applies when not in edit_general or old_rx modes — old_rx can be one-eyed.
-  if (NOOR.patientModalMode !== 'edit_general') {
-    const odSph = document.getElementById('rx-od-sph')?.value ?? '';
-    const osSph = document.getElementById('rx-os-sph')?.value ?? '';
-    const odCyl = document.getElementById('rx-od-cyl')?.value ?? '';
-    const osCyl = document.getElementById('rx-os-cyl')?.value ?? '';
-    const odAxis = document.getElementById('rx-od-axis')?.value ?? '';
-    const osAxis = document.getElementById('rx-os-axis')?.value ?? '';
-    const odAdd = document.getElementById('rx-od-add')?.value ?? '';
-    const osAdd = document.getElementById('rx-os-add')?.value ?? '';
-    const hasOD = odSph !== '' || odCyl !== '' || odAxis !== '' || odAdd !== '';
-    const hasOS = osSph !== '' || osCyl !== '' || osAxis !== '' || osAdd !== '';
-    if (hasOD && !hasOS) {
-      toast(isAr ? 'يرجى إدخال قيم العين اليسرى (OS) أيضاً' : 'Please also enter values for the left eye (OS)', 'error');
-      switchPatientTab('rx');
-      document.getElementById('rx-os-sph').focus();
-      return;
+
+  // ── Profile-only edit (Edit button on patient detail header) ───────────────
+  if (NOOR.patientModalMode === 'edit_profile_only') {
+    NOOR.savingPatient = true;
+    const saveBtn2 = document.getElementById('patient-save-btn');
+    if (saveBtn2) saveBtn2.disabled = true;
+    const _restoreTabs = () => ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.style.display = '';
+    });
+    try {
+      await put(`/api/patients/${NOOR.editingPatientId}`, patientProfilePayload());
+      markPatientFormClean();
+      _restoreTabs();
+      closeModal('modal-patient');
+      toast(t('successSaved'));
+      await renderPatients();
+      await openPatientDetail(NOOR.editingPatientId);
+    } catch(e) {
+      if (!e.silent) toast(e.message, 'error');
+    } finally {
+      NOOR.savingPatient = false;
+      if (saveBtn2) saveBtn2.disabled = false;
     }
-    if (hasOS && !hasOD) {
-      toast(isAr ? 'يرجى إدخال قيم العين اليمنى (OD) أيضاً' : 'Please also enter values for the right eye (OD)', 'error');
-      switchPatientTab('rx');
-      document.getElementById('rx-od-sph').focus();
-      return;
-    }
+    return;
   }
 
   const isNewPatient = !NOOR.editingPatientId;
@@ -431,8 +455,7 @@ async function savePatient() {
     // 1. Create or update patient profile
     pid = await savePatientProfile(pid, patientProfilePayload(), isNewPatient);
 
-    // 2. Create or update visit — skip entirely for edit_general (profile-only edit)
-    if (NOOR.patientModalMode !== 'edit_general') {
+    // 2. Create visit if any data entered
     const lp = parseFloat(document.getElementById('f-lens-price').value)||0;
     const fp = parseFloat(document.getElementById('f-frame-price').value)||0;
     const cf = parseFloat(document.getElementById('f-checkup-fee').value)||0;
@@ -440,7 +463,7 @@ async function savePatient() {
     const total = lp+fp+cf;
     const rxIds = ['rx-od-sph','rx-od-cyl','rx-od-axis','rx-od-add','rx-od-va','rx-od-bcva','rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva','rx-ipd'];
     const hasRx = rxIds.some(id => document.getElementById(id).value !== '');
-    const hasFrame = !NOOR._noFrame && NOOR.patientModalMode !== 'old_rx' && ['p-frame-brand','p-frame-inv'].some(id => (document.getElementById(id)?.value || '') !== '');
+    const hasFrame = NOOR.patientModalMode !== 'old_rx' && ['p-frame-brand','p-frame-type','p-frame-material','p-frame-inv'].some(id => document.getElementById(id).value !== '');
     const hasCheckup = NOOR.patientModalMode !== 'old_rx' && (document.getElementById('f-checkup').checked || document.getElementById('f-next-visit').value !== '');
     const hasVisitNotes = (document.getElementById('f-visit-notes').value || '').trim() !== '';
 
@@ -469,29 +492,28 @@ async function savePatient() {
         lens_id:         NOOR._selectedLensId||null,
         od_lens_id:      NOOR.patientModalMode === 'old_rx' ? null : ((NOOR._selectedLensIds || {}).od || null),
         os_lens_id:      NOOR.patientModalMode === 'old_rx' ? null : ((NOOR._selectedLensIds || {}).os || null),
-        frame_id:        (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? null : (NOOR._selectedFrameInvId||null),
-        frame_brand:     (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? null : (document.getElementById('p-frame-brand').value||null),
-        frame_type:      (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? null : (document.getElementById('p-frame-type').value||null),
-        frame_material:  (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? null : (document.getElementById('p-frame-material').value||null),
+        frame_id:        NOOR.patientModalMode === 'old_rx' ? null : (NOOR._selectedFrameInvId||null),
+        frame_brand:     NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-brand').value||null),
+        frame_type:      NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-type').value||null),
+        frame_material:  NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-material').value||null),
         did_checkup:     NOOR.patientModalMode === 'old_rx' ? false : document.getElementById('f-checkup').checked,
         next_visit_date: NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('f-next-visit').value||null),
         followup_months: parseInt(document.getElementById('f-followup-months').value)||3,
-        frame_cost:      (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? 0 : (parseFloat(document.getElementById('f-frame-cost').value)||0),
-        frame_price:     (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? 0 : fp,
+        frame_cost:      NOOR.patientModalMode === 'old_rx' ? 0 : (parseFloat(document.getElementById('f-frame-cost').value)||0),
+        frame_price:     NOOR.patientModalMode === 'old_rx' ? 0 : fp,
         lens_cost:       NOOR.patientModalMode === 'old_rx' ? 0 : (parseFloat(document.getElementById('f-lens-cost').value)||0),
         lens_price:      NOOR.patientModalMode === 'old_rx' ? 0 : lp,
         checkup_fee:     NOOR.patientModalMode === 'old_rx' ? 0 : cf,
         amount_paid:     NOOR.patientModalMode === 'old_rx' ? 0 : pd,
         // Bug fix #21: compute and send total_amount / remaining so debt displays are correct
         // (schema stores these as plain columns, not computed)
-        total_amount:    NOOR.patientModalMode === 'old_rx' ? 0 : ((NOOR._noFrame ? 0 : fp) + lp + cf),
-        remaining:       NOOR.patientModalMode === 'old_rx' ? 0 : Math.max(0, ((NOOR._noFrame ? 0 : fp) + lp + cf) - pd),
+        total_amount:    NOOR.patientModalMode === 'old_rx' ? 0 : (fp + lp + cf),
+        remaining:       NOOR.patientModalMode === 'old_rx' ? 0 : Math.max(0, (fp + lp + cf) - pd),
         notes:           document.getElementById('f-visit-notes').value,
       };
       if (NOOR.patientModalMode === 'edit' && NOOR.editingVisitId) await put(`/api/visits/${NOOR.editingVisitId}`, visitPayload);
       else await post('/api/visits', visitPayload);
     }
-    } // end !edit_general
 
     markPatientFormClean();
     closeModal('modal-patient');
@@ -516,31 +538,4 @@ async function deletePatient(id) {
     toast(t('successDeleted'));
     await renderPatients();
   } catch(e) { toast(e.message,'error'); }
-}
-
-// ── Visit card action dropdown helpers ───────────────────────
-function toggleVisitMenu(visitId, e) {
-  e.stopPropagation();
-  const dropdown = document.getElementById('vad-' + visitId);
-  const trigger  = e.currentTarget;
-  const isOpen   = dropdown?.classList.contains('open');
-  closeVisitMenus();
-  if (!isOpen && dropdown) {
-    dropdown.classList.add('open');
-    trigger.setAttribute('aria-expanded', 'true');
-    // Close when clicking outside
-    setTimeout(() => {
-      document.addEventListener('click', _closeVisitMenuOnOutside, { once: true });
-    }, 0);
-  }
-}
-
-function _closeVisitMenuOnOutside() { closeVisitMenus(); }
-
-function closeVisitMenus() {
-  document.querySelectorAll('.visit-action-dropdown.open').forEach(d => {
-    d.classList.remove('open');
-    const trigger = d.closest('.visit-action-menu')?.querySelector('.visit-action-trigger');
-    if (trigger) trigger.setAttribute('aria-expanded', 'false');
-  });
 }

@@ -757,9 +757,18 @@ html[dir=ltr] .donut-legend-item:hover{transform:translateX(2px)}
 @media(max-width:980px){.report-grid{grid-template-columns:1fr}.donut-layout{grid-template-columns:1fr}.donut-wrap{width:200px;height:200px}.donut-wrap svg{width:200px;height:200px}.donut-center{inset:48px}.quick-form{grid-template-columns:1fr}}
 
 /* VISIT CARD INNER GRID */
-.patient-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.patient-summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:12px}
 .patient-summary-card{background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-md);padding:14px;box-shadow:var(--shadow-sm)}
 .patient-summary-label{font-size:.68rem;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+/* Rx strip: replaces the two redundant summary cards */
+.patient-rx-strip{background:var(--surface);border:1px solid var(--cream-border);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+.patient-rx-strip-row{display:flex;align-items:center;gap:16px;padding:5px 0;font-size:.82rem;font-family:'Figtree','DM Sans',sans-serif}
+.patient-rx-strip-row+.patient-rx-strip-row{border-top:1px solid var(--cream-border)}
+.rx-strip-eye{font-weight:800;font-size:.75rem;letter-spacing:.07em;color:var(--burgundy);min-width:24px}
+.rx-strip-val{color:var(--ink-mid);font-size:.8rem}
+.rx-strip-val strong{color:var(--ink);font-weight:700}
+.patient-rx-strip-meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;padding-top:8px;border-top:1px solid var(--cream-border);font-size:.78rem;color:var(--ink-mid)}
+.patient-rx-strip-meta strong{color:var(--ink);font-weight:600}
 .patient-summary-value{font-family:'Figtree','DM Sans',sans-serif;font-size:1.05rem;font-weight:700;color:var(--ink)}
 .patient-summary-value.danger{color:var(--danger)}
 .patient-summary-sub{font-size:.78rem;color:var(--ink-light);margin-top:3px}
