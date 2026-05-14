@@ -398,7 +398,7 @@ async function savePatient() {
     const total = lp+fp+cf;
     const rxIds = ['rx-od-sph','rx-od-cyl','rx-od-axis','rx-od-add','rx-od-va','rx-od-bcva','rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva','rx-ipd'];
     const hasRx = rxIds.some(id => document.getElementById(id).value !== '');
-    const hasFrame = NOOR.patientModalMode !== 'old_rx' && ['p-frame-brand','p-frame-type','p-frame-material','p-frame-inv'].some(id => document.getElementById(id).value !== '');
+    const hasFrame = !NOOR._noFrame && NOOR.patientModalMode !== 'old_rx' && ['p-frame-brand','p-frame-inv'].some(id => (document.getElementById(id)?.value || '') !== '');
     const hasCheckup = NOOR.patientModalMode !== 'old_rx' && (document.getElementById('f-checkup').checked || document.getElementById('f-next-visit').value !== '');
     const hasVisitNotes = (document.getElementById('f-visit-notes').value || '').trim() !== '';
 
@@ -427,23 +427,23 @@ async function savePatient() {
         lens_id:         NOOR._selectedLensId||null,
         od_lens_id:      NOOR.patientModalMode === 'old_rx' ? null : ((NOOR._selectedLensIds || {}).od || null),
         os_lens_id:      NOOR.patientModalMode === 'old_rx' ? null : ((NOOR._selectedLensIds || {}).os || null),
-        frame_id:        NOOR.patientModalMode === 'old_rx' ? null : (NOOR._selectedFrameInvId||null),
-        frame_brand:     NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-brand').value||null),
-        frame_type:      NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-type').value||null),
-        frame_material:  NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('p-frame-material').value||null),
+        frame_id:        (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? null : (NOOR._selectedFrameInvId||null),
+        frame_brand:     (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? null : (document.getElementById('p-frame-brand').value||null),
+        frame_type:      (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? null : (document.getElementById('p-frame-type').value||null),
+        frame_material:  (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? null : (document.getElementById('p-frame-material').value||null),
         did_checkup:     NOOR.patientModalMode === 'old_rx' ? false : document.getElementById('f-checkup').checked,
         next_visit_date: NOOR.patientModalMode === 'old_rx' ? null : (document.getElementById('f-next-visit').value||null),
         followup_months: parseInt(document.getElementById('f-followup-months').value)||3,
-        frame_cost:      NOOR.patientModalMode === 'old_rx' ? 0 : (parseFloat(document.getElementById('f-frame-cost').value)||0),
-        frame_price:     NOOR.patientModalMode === 'old_rx' ? 0 : fp,
+        frame_cost:      (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? 0 : (parseFloat(document.getElementById('f-frame-cost').value)||0),
+        frame_price:     (NOOR.patientModalMode === 'old_rx' || NOOR._noFrame) ? 0 : fp,
         lens_cost:       NOOR.patientModalMode === 'old_rx' ? 0 : (parseFloat(document.getElementById('f-lens-cost').value)||0),
         lens_price:      NOOR.patientModalMode === 'old_rx' ? 0 : lp,
         checkup_fee:     NOOR.patientModalMode === 'old_rx' ? 0 : cf,
         amount_paid:     NOOR.patientModalMode === 'old_rx' ? 0 : pd,
         // Bug fix #21: compute and send total_amount / remaining so debt displays are correct
         // (schema stores these as plain columns, not computed)
-        total_amount:    NOOR.patientModalMode === 'old_rx' ? 0 : (fp + lp + cf),
-        remaining:       NOOR.patientModalMode === 'old_rx' ? 0 : Math.max(0, (fp + lp + cf) - pd),
+        total_amount:    NOOR.patientModalMode === 'old_rx' ? 0 : ((NOOR._noFrame ? 0 : fp) + lp + cf),
+        remaining:       NOOR.patientModalMode === 'old_rx' ? 0 : Math.max(0, ((NOOR._noFrame ? 0 : fp) + lp + cf) - pd),
         notes:           document.getElementById('f-visit-notes').value,
       };
       if (NOOR.patientModalMode === 'edit' && NOOR.editingVisitId) await put(`/api/visits/${NOOR.editingVisitId}`, visitPayload);
