@@ -1,6 +1,5 @@
 /* frames.js - extracted from index.html. Plain script, globals intentionally preserved. */
 
-// ── Collapsible low-stock banner (shared by frames & lenses) ──
 function toggleLowStockBanner(bannerId) {
   const banner = document.getElementById(bannerId);
   if (!banner) return;
