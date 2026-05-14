@@ -199,7 +199,17 @@ async function renderLenses() {
     if (low.length) {
       banner.classList.add('show');
       document.getElementById('lenses-low-items').innerHTML = low.map(l=>`<div class="low-stock-item">SPH ${esc(l.sphere)} CYL ${esc(l.cylinder||0)} — ${esc(l.quantity)} ${t('qty')}</div>`).join('');
-    } else banner.classList.remove('show');
+      // Collapse by default; preserve open state if user already expanded
+      const body = document.getElementById('lenses-low-body');
+      const btn  = banner.querySelector('.low-stock-toggle');
+      if (body && !banner.classList.contains('expanded')) {
+        body.hidden = true;
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    } else {
+      banner.classList.remove('show');
+      banner.classList.remove('expanded');
+    }
     filterLenses();
   } catch(e) { toast(e.message,'error'); }
 }

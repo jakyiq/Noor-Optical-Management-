@@ -1,5 +1,6 @@
 /* frames.js - extracted from index.html. Plain script, globals intentionally preserved. */
 
+// ── Collapsible low-stock banner (shared by frames & lenses) ──
 function toggleLowStockBanner(bannerId) {
   const banner = document.getElementById(bannerId);
   if (!banner) return;
@@ -31,7 +32,17 @@ async function renderFrames() {
     if (low.length) {
       banner.classList.add('show');
       document.getElementById('frames-low-items').innerHTML = low.map(f=>`<div class="low-stock-item">${esc(f.brand||'Frame')} — ${esc(f.quantity)} ${t('qty')}</div>`).join('');
-    } else banner.classList.remove('show');
+      // Collapse by default; preserve open state if user already expanded
+      const body = document.getElementById('frames-low-body');
+      const btn  = banner.querySelector('.low-stock-toggle');
+      if (body && !banner.classList.contains('expanded')) {
+        body.hidden = true;
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    } else {
+      banner.classList.remove('show');
+      banner.classList.remove('expanded');
+    }
     filterFrames();
   } catch(e) { toast(e.message,'error'); }
 }

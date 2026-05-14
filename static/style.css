@@ -664,7 +664,9 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 /* LOW STOCK BANNER */
 .low-stock-banner{background:#fef3e2;border:1px solid #f4c87a;border-radius:var(--radius-md);padding:14px 18px;margin-bottom:18px;display:none}
 .low-stock-banner.show{display:block}
-.low-stock-title{font-size:.78rem;font-weight:700;color:var(--warning);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.low-stock-title{font-size:.78rem;font-weight:700;color:var(--warning);text-transform:uppercase;letter-spacing:.08em;margin-bottom:0}
+.low-stock-body{margin-top:10px}
+.low-stock-body[hidden]{display:none!important}
 .low-stock-items{display:flex;flex-wrap:wrap;gap:6px}
 .low-stock-item{padding:4px 10px;background:white;border:1px solid #f4c87a;border-radius:var(--radius-sm);font-size:.76rem;color:#7a5200}
 
@@ -1091,7 +1093,7 @@ html[dir=rtl] .collapse-btn-icon{transform:rotate(180deg)}
 
   /* ── Low stock banner ── */
   .low-stock-banner{ padding:12px 14px; border-radius:var(--radius-sm); margin-bottom:14px }
-  .low-stock-title{ font-size:.72rem; margin-bottom:8px }
+  .low-stock-title{ font-size:.72rem; margin-bottom:0 }
 
   /* ── Coating / match chips ── */
   .coating-chips{ gap:8px }
