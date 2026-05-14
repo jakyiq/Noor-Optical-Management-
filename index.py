@@ -236,8 +236,9 @@ def _auth_rest(path, payload, query=""):
 def _clinic_is_banned(clinic_id):
     if not clinic_id:
         return False
-    res = db.table("clinics").select("is_banned").eq("id", clinic_id).single().execute()
-    return bool(res.data and res.data.get("is_banned"))
+    res = db.table("clinics").select("is_banned").eq("id", clinic_id).limit(1).execute()
+    row = res.data[0] if res.data else None
+    return bool(row and row.get("is_banned"))
 
 
 def _license_state(clinic_id):
@@ -389,9 +390,10 @@ def _auth(roles=None, setting=None, export=False, allow_readonly_write=False):
                     cs_res = db.table("clinic_settings") \
                         .select(setting) \
                         .eq("clinic_id", clinic_id) \
-                        .single() \
+                        .limit(1) \
                         .execute()
-                    if not cs_res.data or not cs_res.data.get(setting):
+                    cs_row = cs_res.data[0] if cs_res.data else None
+                    if not cs_row or not cs_row.get(setting):
                         return err("Permission denied", 403)
                 except Exception:
                     # clinic_settings row missing — deny access rather than crash
@@ -785,9 +787,10 @@ def me():
     session["expires_at"] = (datetime.utcnow() + timedelta(hours=8)).isoformat() + "Z"
 
     # Re-fetch full_name from DB so it's always accurate on session restore
-    user_row = db.table("users").select("full_name,username").eq("id", session["user_id"]).single().execute()
-    full_name = (user_row.data or {}).get("full_name", "")
-    username  = (user_row.data or {}).get("username", "")
+    user_row = db.table("users").select("full_name,username").eq("id", session["user_id"]).limit(1).execute()
+    _user = user_row.data[0] if user_row.data else {}
+    full_name = _user.get("full_name", "")
+    username  = _user.get("username", "")
 
     return ok({
         "user_id":              session["user_id"],
@@ -1016,34 +1019,6 @@ def _patient_duplicate_matches(cid, full_name, phone, exclude_id=None):
     return list(matches.values())
 
 
-def _looks_like_duplicate_db_error(exc):
-    text = str(exc or "").lower()
-    return "duplicate" in text or "unique constraint" in text or "23505" in text
-
-
-def _duplicate_patient_response_from_request():
-    body = request.get_json(silent=True) or {}
-    cid = session.get("clinic_id")
-    pid = request.view_args.get("pid") if request.view_args else None
-    duplicates = []
-    if cid:
-        try:
-            duplicates = _patient_duplicate_matches(
-                cid,
-                body.get("full_name"),
-                body.get("phone"),
-                exclude_id=pid,
-            )
-        except Exception:
-            logging.exception("Failed to collect duplicate patient matches")
-    return err(
-        "A patient with the same name or phone already exists",
-        409,
-        duplicates=duplicates,
-        code="duplicate_patient",
-    )
-
-
 @app.route("/api/patients", methods=["POST"])
 @_auth(roles=["doctor", "super_admin", "receptionist"], setting="recept_edit_patients")
 def create_patient():
@@ -1093,14 +1068,15 @@ def create_patient():
 @_auth(setting="recept_view_patients")
 def get_patient(pid):
     cid = session["clinic_id"]
-    res = db.table("patients").select("*").eq("clinic_id", cid).eq("id", pid).single().execute()
+    res = db.table("patients").select("*").eq("clinic_id", cid).eq("id", pid).limit(1).execute()
     if not res.data:
         return err("Patient not found", 404)
+    patient_row = res.data[0]
 
     visits = db.table("visits").select("*").eq("clinic_id", cid) \
         .eq("patient_id", pid).order("visit_date", desc=True).execute()
 
-    return ok({**res.data, "visits": visits.data or []})
+    return ok({**patient_row, "visits": visits.data or []})
 
 
 @app.route("/api/patients/<pid>", methods=["PUT"])
@@ -1110,15 +1086,16 @@ def update_patient(pid):
     uid  = session["user_id"]
     body = request.get_json() or {}
 
-    old = db.table("patients").select("*").eq("clinic_id", cid).eq("id", pid).single().execute()
+    old = db.table("patients").select("*").eq("clinic_id", cid).eq("id", pid).limit(1).execute()
     if not old.data:
         return err("Patient not found", 404)
+    old_row = old.data[0]
 
     allowed = ["full_name","phone","age","gender","address","notes"]
     updates = {k: v for k, v in body.items() if k in allowed}
     if "full_name" in updates or "phone" in updates:
-        new_name = updates.get("full_name", old.data.get("full_name"))
-        new_phone = updates.get("phone", old.data.get("phone"))
+        new_name = updates.get("full_name", old_row.get("full_name"))
+        new_phone = updates.get("phone", old_row.get("phone"))
         duplicates = _patient_duplicate_matches(cid, new_name, new_phone, exclude_id=pid)
         if duplicates and not bool(body.get("allow_duplicate")):
             return err(
@@ -1130,7 +1107,7 @@ def update_patient(pid):
     updates["updated_at"] = now_iso()
 
     res = db.table("patients").update(updates).eq("clinic_id", cid).eq("id", pid).execute()
-    _write_audit(cid, uid, "update", "patient", pid, old_value=old.data, new_value=res.data[0])
+    _write_audit(cid, uid, "update", "patient", pid, old_value=old_row, new_value=res.data[0])
     return ok(res.data[0])
 
 
@@ -1140,16 +1117,17 @@ def delete_visit(vid):
     cid = session["clinic_id"]
     uid = session["user_id"]
 
-    old = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).single().execute()
+    old = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).limit(1).execute()
     if not old.data:
         return err("Visit not found", 404)
+    old_row = old.data[0]
 
-    patient_id = old.data.get("patient_id")
+    patient_id = old_row.get("patient_id")
     db.table("visits").delete().eq("clinic_id", cid).eq("id", vid).execute()
     if patient_id:
         db.table("patients").update({"updated_at": now_iso()}).eq("clinic_id", cid).eq("id", patient_id).execute()
 
-    _write_audit(cid, uid, "delete", "visit", vid, old_value=old.data)
+    _write_audit(cid, uid, "delete", "visit", vid, old_value=old_row)
     return ok()
 
 
@@ -1159,15 +1137,16 @@ def delete_patient(pid):
     cid = session["clinic_id"]
     uid = session["user_id"]
 
-    old = db.table("patients").select("id,full_name").eq("clinic_id", cid).eq("id", pid).single().execute()
+    old = db.table("patients").select("id,full_name").eq("clinic_id", cid).eq("id", pid).limit(1).execute()
     if not old.data:
         return err("Patient not found", 404)
+    old_row = old.data[0]
 
     # Cascade delete visits
     db.table("visits").delete().eq("clinic_id", cid).eq("patient_id", pid).execute()
     db.table("patients").delete().eq("clinic_id", cid).eq("id", pid).execute()
 
-    _write_audit(cid, uid, "delete", "patient", pid, old_value=old.data)
+    _write_audit(cid, uid, "delete", "patient", pid, old_value=old_row)
     return ok()
 
 
@@ -1187,15 +1166,12 @@ def create_visit():
         return err("patient_id is required")
 
     # Verify patient belongs to this clinic
-    p = db.table("patients").select("id").eq("clinic_id", cid).eq("id", patient_id).single().execute()
+    p = db.table("patients").select("id").eq("clinic_id", cid).eq("id", patient_id).limit(1).execute()
     if not p.data:
         return err("Patient not found", 404)
 
     # ── Enum-safe helpers ──────────────────────────────────────
-    VALID_FRAME_TYPES = {
-        "full_rim", "half_rim", "rimless", "wrap", "butterfly",
-        "aviator", "round", "cat_eye",
-    }
+    VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
 
     def _enum_or_none(val, valid_set):
         """Return val if it's a non-empty member of valid_set, else None."""
@@ -1237,13 +1213,6 @@ def create_visit():
     # VA / BCVA: store as-is (text), but strip whitespace
     def _va_clean(val):
         return (val or "").strip() or None
-
-    od_lens_id = body.get("od_lens_id") or None
-    os_lens_id = body.get("os_lens_id") or None
-    selected_lens_ids = [x for x in [od_lens_id, os_lens_id] if x]
-    legacy_lens_id = body.get("lens_id") or None
-    if not selected_lens_ids and legacy_lens_id:
-        selected_lens_ids = [legacy_lens_id] * max(1, _int_or_none(body.get("lens_count")) or 1)
 
     row = {
         "clinic_id":     cid,
@@ -1291,28 +1260,24 @@ def create_visit():
         "notes":         (body.get("notes") or "").strip() or None,
         "created_by":    uid,
         # Inventory reference
-        "lens_id":       legacy_lens_id or (selected_lens_ids[0] if selected_lens_ids else None),
-        "od_lens_id":    od_lens_id,
-        "os_lens_id":    os_lens_id,
+        "lens_id":       body.get("lens_id") or None,
     }
 
     # ── Inventory deduction (optimistic-lock guard) ──────────────────────────
     # Each UPDATE conditions on the quantity we just read.  If a concurrent
     # request already decremented it, the WHERE clause won't match and .data
     # will be empty — we treat that as a stock conflict and abort.
+    lens_id  = body.get("lens_id")
     frame_id = body.get("frame_id")
+    lens_count = int(body.get("lens_count", 2))
 
-    lens_counts = {}
-    for lid in selected_lens_ids:
-        lens_counts[lid] = lens_counts.get(lid, 0) + 1
-
-    for lens_id, needed_qty in lens_counts.items():
-        l = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).eq("id", lens_id).single().execute()
+    if lens_id:
+        l = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).eq("id", lens_id).limit(1).execute()
         if l.data:
-            current_qty = l.data["quantity"]
-            if current_qty < needed_qty:
-                return err(f"Insufficient lens stock (have {current_qty}, need {needed_qty})", 409)
-            new_qty = current_qty - needed_qty
+            current_qty = l.data[0]["quantity"]
+            if current_qty < lens_count:
+                return err(f"Insufficient lens stock (have {current_qty}, need {lens_count})", 409)
+            new_qty = current_qty - lens_count
             updated = db.table("lenses").update({"quantity": new_qty}) \
                 .eq("clinic_id", cid).eq("id", lens_id) \
                 .eq("quantity", current_qty).execute()   # optimistic lock
@@ -1320,9 +1285,9 @@ def create_visit():
                 return err("Lens stock changed while saving. Please try again.", 409)
 
     if frame_id:
-        f = db.table("frames").select("quantity").eq("clinic_id", cid).eq("id", frame_id).single().execute()
+        f = db.table("frames").select("quantity").eq("clinic_id", cid).eq("id", frame_id).limit(1).execute()
         if f.data:
-            current_qty = f.data["quantity"]
+            current_qty = f.data[0]["quantity"]
             if current_qty < 1:
                 return err("Frame out of stock", 409)
             updated = db.table("frames").update({"quantity": current_qty - 1}) \
@@ -1345,30 +1310,31 @@ def create_visit():
 @_auth(setting="recept_view_patients")
 def get_visit(vid):
     cid = session["clinic_id"]
-    res = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).single().execute()
+    res = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).limit(1).execute()
     if not res.data:
         return err("Visit not found", 404)
-    return ok(res.data)
+    return ok(res.data[0])
 
 
 @app.route("/api/visits/<vid>/print", methods=["GET"])
 @_auth(setting="recept_view_patients")
 def get_visit_print_payload(vid):
     cid = session["clinic_id"]
-    visit = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).single().execute()
+    visit = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).limit(1).execute()
     if not visit.data:
         return err("Visit not found", 404)
+    visit_row = visit.data[0]
 
     patient = db.table("patients").select("*").eq("clinic_id", cid) \
-        .eq("id", visit.data["patient_id"]).single().execute()
-    clinic = db.table("clinics").select("id,name,logo_url,phone,address").eq("id", cid).single().execute()
-    settings = db.table("clinic_settings").select("*").eq("clinic_id", cid).single().execute()
+        .eq("id", visit_row["patient_id"]).limit(1).execute()
+    clinic = db.table("clinics").select("id,name,logo_url,phone,address").eq("id", cid).limit(1).execute()
+    settings = db.table("clinic_settings").select("*").eq("clinic_id", cid).limit(1).execute()
 
     return ok({
-        "visit": visit.data,
-        "patient": patient.data,
-        "clinic": clinic.data,
-        "settings": settings.data,
+        "visit":    visit_row,
+        "patient":  patient.data[0] if patient.data else {},
+        "clinic":   clinic.data[0] if clinic.data else {},
+        "settings": settings.data[0] if settings.data else {},
     })
 
 
@@ -1379,59 +1345,34 @@ def update_visit(vid):
     uid  = session["user_id"]
     body = request.get_json() or {}
 
-    old = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).single().execute()
+    old = db.table("visits").select("*").eq("clinic_id", cid).eq("id", vid).limit(1).execute()
     if not old.data:
         return err("Visit not found", 404)
+    old_row = old.data[0]
 
     allowed = [
-        "visit_date",
         "od_sphere","od_cylinder","od_axis","od_addition","od_va","od_bcva",
         "os_sphere","os_cylinder","os_axis","os_addition","os_va","os_bcva",
         "ipd","lens_type","lens_material","lens_coating","lens_count",
-        "lens_id","od_lens_id","os_lens_id",
-        "frame_id","frame_brand","frame_type","frame_material",
+        "frame_brand","frame_type","frame_material",
         "did_checkup","next_visit_date","followup_months",
         "frame_cost","frame_price","lens_cost","lens_price","checkup_fee",
-        "total_amount","amount_paid","remaining","notes",
+        "amount_paid","notes",
     ]
     updates = {k: v for k, v in body.items() if k in allowed}
 
-    # Always recalculate totals from price components to keep data consistent.
-    # If the client already sent total_amount/remaining we ignore those and
-    # recompute server-side so the values are always trustworthy.
+    # Recalculate totals if any price changed
     price_fields = {"frame_price","lens_price","checkup_fee","amount_paid"}
     if price_fields & set(updates.keys()):
-        fp   = float(updates.get("frame_price",  old.data.get("frame_price",  0)) or 0)
-        lp   = float(updates.get("lens_price",   old.data.get("lens_price",   0)) or 0)
-        cf   = float(updates.get("checkup_fee",  old.data.get("checkup_fee",  0)) or 0)
-        paid = float(updates.get("amount_paid",  old.data.get("amount_paid",  0)) or 0)
+        fp   = float(updates.get("frame_price",  old_row.get("frame_price",  0)) or 0)
+        lp   = float(updates.get("lens_price",   old_row.get("lens_price",   0)) or 0)
+        cf   = float(updates.get("checkup_fee",  old_row.get("checkup_fee",  0)) or 0)
+        paid = float(updates.get("amount_paid",  old_row.get("amount_paid",  0)) or 0)
         updates["total_amount"] = fp + lp + cf
         updates["remaining"]    = max(0, updates["total_amount"] - paid)
-    elif "total_amount" in updates or "remaining" in updates:
-        # Remove client-sent totals if no price component was also sent —
-        # prevents accidental overwrites without a full price recalculation.
-        updates.pop("total_amount", None)
-        updates.pop("remaining", None)
 
     # ── Enum-safe sanitisation ──────────────────────────────────
-    VALID_FRAME_TYPES = {
-        "full_rim", "half_rim", "rimless", "wrap", "butterfly",
-        "aviator", "round", "cat_eye",
-    }
-
-    # visit_date: must be a valid ISO date string or we drop it
-    if "visit_date" in updates:
-        raw_vd = (updates["visit_date"] or "").strip()
-        try:
-            date.fromisoformat(raw_vd)
-            updates["visit_date"] = raw_vd
-        except (ValueError, AttributeError):
-            updates.pop("visit_date", None)
-
-    # id fields: pass through as-is or None
-    for id_field in ("lens_id", "od_lens_id", "os_lens_id", "frame_id"):
-        if id_field in updates:
-            updates[id_field] = updates[id_field] or None
+    VALID_FRAME_TYPES    = {"full_rim","half_rim","rimless"}
 
     if "lens_type" in updates:
         v = (updates["lens_type"] or "").strip()
@@ -1452,7 +1393,7 @@ def update_visit(vid):
             updates[fld] = 0
 
     res = db.table("visits").update(updates).eq("clinic_id", cid).eq("id", vid).execute()
-    _write_audit(cid, uid, "update", "visit", vid, old_value=old.data, new_value=res.data[0])
+    _write_audit(cid, uid, "update", "visit", vid, old_value=old_row, new_value=res.data[0])
     return ok(res.data[0])
 
 
@@ -1763,7 +1704,7 @@ def update_lens(lid):
     uid  = session["user_id"]
     body = request.get_json() or {}
 
-    old = db.table("lenses").select("*").eq("clinic_id", cid).eq("id", lid).single().execute()
+    old = db.table("lenses").select("*").eq("clinic_id", cid).eq("id", lid).limit(1).execute()
     if not old.data:
         return err("Lens not found", 404)
 
@@ -1775,7 +1716,7 @@ def update_lens(lid):
     updates["updated_at"] = now_iso()
 
     res = db.table("lenses").update(updates).eq("clinic_id", cid).eq("id", lid).execute()
-    _write_audit(cid, uid, "update", "lens", lid, old_value=old.data, new_value=res.data[0])
+    _write_audit(cid, uid, "update", "lens", lid, old_value=old.data[0], new_value=res.data[0])
     return ok(res.data[0])
 
 
@@ -1784,21 +1725,11 @@ def update_lens(lid):
 def delete_lens(lid):
     cid = session["clinic_id"]
     uid = session["user_id"]
-    old = db.table("lenses").select("*").eq("clinic_id", cid).eq("id", lid).single().execute()
+    old = db.table("lenses").select("*").eq("clinic_id", cid).eq("id", lid).limit(1).execute()
     if not old.data:
         return err("Lens not found", 404)
     db.table("lenses").delete().eq("clinic_id", cid).eq("id", lid).execute()
-    _write_audit(cid, uid, "delete", "lens", lid, old_value=old.data)
-    return ok()
-
-
-@app.route("/api/lenses", methods=["DELETE"])
-@_auth(roles=["doctor", "super_admin"])
-def delete_all_lenses():
-    cid = session["clinic_id"]
-    uid = session["user_id"]
-    db.table("lenses").delete().eq("clinic_id", cid).execute()
-    _write_audit(cid, uid, "delete", "lens", "all", old_value={"note": "all lenses cleared"})
+    _write_audit(cid, uid, "delete", "lens", lid, old_value=old.data[0])
     return ok()
 
 
@@ -1812,11 +1743,11 @@ def restock_lens(lid):
     if qty <= 0:
         return err("quantity must be positive")
 
-    l = db.table("lenses").select("quantity").eq("clinic_id", cid).eq("id", lid).single().execute()
+    l = db.table("lenses").select("quantity").eq("clinic_id", cid).eq("id", lid).limit(1).execute()
     if not l.data:
         return err("Lens not found", 404)
 
-    new_qty = l.data["quantity"] + qty
+    new_qty = l.data[0]["quantity"] + qty
     res = db.table("lenses").update({"quantity": new_qty, "updated_at": now_iso()}) \
         .eq("clinic_id", cid).eq("id", lid).execute()
 
@@ -1827,65 +1758,30 @@ def restock_lens(lid):
 @app.route("/api/lenses/match", methods=["GET"])
 @_auth()
 def match_lenses():
-    """
-    Return inventory lenses matching OD and OS powers independently.
-
-    Query params: od_sph, od_cyl, os_sph, os_cyl (all optional floats).
-
-    Response shape:
-        { od: [...], os: [...], single: bool }
-
-    When only one eye has values, `single` is True.
-    When both eyes have values, each list is filtered independently so that
-    a lens matching only OD appears only in `od`, and vice versa.
-    """
-    cid  = session["clinic_id"]
+    """Return inventory lenses within ±0.25 of OD and OS powers."""
+    cid = session["clinic_id"]
     args = request.args
 
-    res  = db.table("lenses").select("*").eq("clinic_id", cid).gt("quantity", 0).execute()
+    res = db.table("lenses").select("*").eq("clinic_id", cid).gt("quantity", 0).execute()
     rows = res.data or []
-    lens_type = (args.get("lens_type") or "").strip()
-    material = (args.get("material") or "").strip()
-    coatings = [c.strip() for c in (args.get("coating") or "").split(",") if c.strip()]
-    if lens_type:
-        rows = [r for r in rows if r.get("lens_type") == lens_type]
-    if material:
-        rows = [r for r in rows if r.get("material") == material]
-    if coatings:
-        rows = [r for r in rows if (r.get("coating") or "clear") in coatings]
 
-    def _eye_matches(row_list, sph_str, cyl_str):
-        if sph_str is None:
-            return []
-        try:
-            sph = float(sph_str)
-        except (ValueError, TypeError):
-            return []
-        matched = []
-        for r in row_list:
-            if abs((r.get("sphere") or 0) - sph) <= 0.25:
-                if cyl_str is not None:
-                    try:
-                        cyl = float(cyl_str)
-                    except (ValueError, TypeError):
-                        cyl = 0.0
-                    if abs((r.get("cylinder") or 0) - cyl) > 0.25:
-                        continue
-                matched.append(r)
-        return matched
+    results = []
+    for r in rows:
+        match = False
+        for eye in ["od", "os"]:
+            sph = args.get(f"{eye}_sph")
+            cyl = args.get(f"{eye}_cyl")
+            if sph is not None:
+                if abs((r.get("sphere") or 0) - float(sph)) <= 0.25:
+                    cyl_ok = True
+                    if cyl is not None:
+                        cyl_ok = abs((r.get("cylinder") or 0) - float(cyl)) <= 0.25
+                    if cyl_ok:
+                        match = True
+        if match:
+            results.append(r)
 
-    od_matches = _eye_matches(rows, args.get("od_sph"), args.get("od_cyl"))
-    os_matches = _eye_matches(rows, args.get("os_sph"), args.get("os_cyl"))
-
-    od_provided = args.get("od_sph") is not None
-    os_provided = args.get("os_sph") is not None
-    single_eye  = bool(od_provided) ^ bool(os_provided)
-
-    return ok({
-        "od":     od_matches,
-        "os":     os_matches,
-        "single": single_eye,
-    })
+    return ok(results)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1932,7 +1828,7 @@ def update_frame(fid):
     uid  = session["user_id"]
     body = request.get_json() or {}
 
-    old = db.table("frames").select("*").eq("clinic_id", cid).eq("id", fid).single().execute()
+    old = db.table("frames").select("*").eq("clinic_id", cid).eq("id", fid).limit(1).execute()
     if not old.data:
         return err("Frame not found", 404)
 
@@ -1941,7 +1837,7 @@ def update_frame(fid):
     updates["updated_at"] = now_iso()
 
     res = db.table("frames").update(updates).eq("clinic_id", cid).eq("id", fid).execute()
-    _write_audit(cid, uid, "update", "frame", fid, old_value=old.data, new_value=res.data[0])
+    _write_audit(cid, uid, "update", "frame", fid, old_value=old.data[0], new_value=res.data[0])
     return ok(res.data[0])
 
 
@@ -1950,11 +1846,11 @@ def update_frame(fid):
 def delete_frame(fid):
     cid = session["clinic_id"]
     uid = session["user_id"]
-    old = db.table("frames").select("*").eq("clinic_id", cid).eq("id", fid).single().execute()
+    old = db.table("frames").select("*").eq("clinic_id", cid).eq("id", fid).limit(1).execute()
     if not old.data:
         return err("Frame not found", 404)
     db.table("frames").delete().eq("clinic_id", cid).eq("id", fid).execute()
-    _write_audit(cid, uid, "delete", "frame", fid, old_value=old.data)
+    _write_audit(cid, uid, "delete", "frame", fid, old_value=old.data[0])
     return ok()
 
 
@@ -1968,11 +1864,11 @@ def restock_frame(fid):
     if qty <= 0:
         return err("quantity must be positive")
 
-    f = db.table("frames").select("quantity").eq("clinic_id", cid).eq("id", fid).single().execute()
+    f = db.table("frames").select("quantity").eq("clinic_id", cid).eq("id", fid).limit(1).execute()
     if not f.data:
         return err("Frame not found", 404)
 
-    new_qty = f.data["quantity"] + qty
+    new_qty = f.data[0]["quantity"] + qty
     res = db.table("frames").update({"quantity": new_qty, "updated_at": now_iso()}) \
         .eq("clinic_id", cid).eq("id", fid).execute()
 
@@ -2284,11 +2180,11 @@ def get_settings():
     if "user_id" not in session:
         return err("Unauthorized", 401)
     cid = session.get("clinic_id")
-    cs  = db.table("clinic_settings").select("*").eq("clinic_id", cid).single().execute()
-    cl  = db.table("clinics").select("id,name,logo_url,phone,address,owner_email,is_banned").eq("id", cid).single().execute()
+    cs  = db.table("clinic_settings").select("*").eq("clinic_id", cid).limit(1).execute()
+    cl  = db.table("clinics").select("id,name,logo_url,phone,address,owner_email,is_banned").eq("id", cid).limit(1).execute()
     return ok({
-        "clinic":   cl.data,
-        "settings": cs.data,
+        "clinic":   cl.data[0] if cl.data else {},
+        "settings": cs.data[0] if cs.data else {},
     })
 
 
@@ -2450,7 +2346,7 @@ def create_backup():
                 "Upgrade to a paid plan to enable backups.", 403
             )
 
-    clinic = db.table("clinics").select("*").eq("id", cid).single().execute()
+    clinic = db.table("clinics").select("*").eq("id", cid).limit(1).execute()
     if not clinic.data:
         return err("Clinic not found", 404)
 
@@ -2462,7 +2358,7 @@ def create_backup():
             "created_at": now_iso(),
             "created_by": uid,
         },
-        "clinic": clinic.data,
+        "clinic": clinic.data[0],
     }
 
     for table in BACKUP_TABLES:
@@ -2521,12 +2417,12 @@ def download_backup(backup_id):
         .select("*")
         .eq("id", backup_id)
         .eq("clinic_id", cid)
-        .single()
+        .limit(1)
         .execute()
     )
     if not res.data:
         return err("Backup not found", 404)
-    return ok(res.data)
+    return ok(res.data[0])
 
 
 @app.route("/api/restore", methods=["POST"])
@@ -2696,10 +2592,11 @@ def update_user(target_id):
     uid  = session["user_id"]
     body = request.get_json() or {}
 
-    target = db.table("users").select("*").eq("clinic_id", cid).eq("id", target_id).single().execute()
+    target = db.table("users").select("*").eq("clinic_id", cid).eq("id", target_id).limit(1).execute()
     if not target.data:
         return err("User not found", 404)
-    if target.data["role"] == "super_admin":
+    target_row = target.data[0]
+    if target_row["role"] == "super_admin":
         return err("Cannot modify super_admin", 403)
 
     updates = {}
@@ -2734,13 +2631,14 @@ def reset_user_password(target_id):
     if len(new_pw) < 8:
         return err("Password must be at least 8 characters")
 
-    target = db.table("users").select("id,role,full_name").eq("clinic_id", cid).eq("id", target_id).single().execute()
+    target = db.table("users").select("id,role,full_name").eq("clinic_id", cid).eq("id", target_id).limit(1).execute()
     if not target.data:
         return err("User not found", 404)
-    if target.data["role"] == "super_admin":
+    target_row = target.data[0]
+    if target_row["role"] == "super_admin":
         return err("Cannot modify super_admin", 403)
     # Doctors can only reset receptionist passwords (not other doctors)
-    if session.get("role") == "doctor" and target.data["role"] not in ("receptionist",):
+    if session.get("role") == "doctor" and target_row["role"] not in ("receptionist",):
         return err("Doctors can only reset receptionist passwords", 403)
 
     hashed = bcrypt.hashpw(new_pw.encode(), bcrypt.gensalt()).decode()
@@ -2750,7 +2648,7 @@ def reset_user_password(target_id):
     }).eq("clinic_id", cid).eq("id", target_id).execute()
 
     _write_audit(cid, uid, "update", "user", target_id,
-                 new_value={"action": "password_reset", "target": target.data.get("full_name")})
+                 new_value={"action": "password_reset", "target": target_row.get("full_name")})
     return ok()
 
 
@@ -2763,10 +2661,10 @@ def delete_user(target_id):
     if target_id == uid:
         return err("Cannot delete yourself", 400)
 
-    target = db.table("users").select("role").eq("clinic_id", cid).eq("id", target_id).single().execute()
+    target = db.table("users").select("role").eq("clinic_id", cid).eq("id", target_id).limit(1).execute()
     if not target.data:
         return err("User not found", 404)
-    if target.data["role"] == "super_admin":
+    if target.data[0]["role"] == "super_admin":
         return err("Cannot delete super_admin", 403)
 
     db.table("users").delete().eq("clinic_id", cid).eq("id", target_id).execute()
@@ -2971,13 +2869,14 @@ def admin_clinic_stats(cid):
 @_require_super
 def admin_impersonate(target_clinic_id):
     """Let super_admin act as a clinic (sets clinic_id in session, role stays super_admin)."""
-    c = db.table("clinics").select("id,name").eq("id", target_clinic_id).single().execute()
+    c = db.table("clinics").select("id,name").eq("id", target_clinic_id).limit(1).execute()
     if not c.data:
         return err("Clinic not found", 404)
+    clinic_row = c.data[0]
     session["clinic_id"]         = target_clinic_id
     session["impersonating"]     = True
-    session["impersonating_name"] = c.data["name"]
-    return ok({"clinic": c.data})
+    session["impersonating_name"] = clinic_row["name"]
+    return ok({"clinic": clinic_row})
 
 
 @app.route("/api/admin/impersonate/stop", methods=["POST"])
@@ -3064,7 +2963,7 @@ def admin_update_license(target_clinic_id):
 @_auth()
 @_require_super
 def admin_backup_clinic(cid):
-    clinic = db.table("clinics").select("*").eq("id", cid).single().execute()
+    clinic = db.table("clinics").select("*").eq("id", cid).limit(1).execute()
     if not clinic.data:
         return err("Clinic not found", 404)
 
@@ -3077,7 +2976,7 @@ def admin_backup_clinic(cid):
             "created_by": session.get("user_id"),
             "source": "admin",
         },
-        "clinic": clinic.data,
+        "clinic": clinic.data[0],
     }
     for table in ["patients", "visits", "frames", "lenses", "clinic_lens_catalog", "retail_sales", "operating_expenses", "users", "clinic_settings", "licenses"]:
         payload[table] = db.table(table).select("*").eq("clinic_id", cid).execute().data or []
@@ -3127,8 +3026,6 @@ def method_not_allowed(e):
 def internal_error(e):
     tb = traceback.format_exc()
     logging.error(tb)
-    if request.path.startswith("/api/patients") and _looks_like_duplicate_db_error(e):
-        return _duplicate_patient_response_from_request()
     if app.debug:
         return jsonify({"error": "Internal server error", "detail": str(e), "traceback": tb}), 500
     return jsonify({"error": "Internal server error"}), 500
@@ -3137,8 +3034,6 @@ def internal_error(e):
 def unhandled_exception(e):
     tb = traceback.format_exc()
     logging.error(tb)
-    if request.path.startswith("/api/patients") and _looks_like_duplicate_db_error(e):
-        return _duplicate_patient_response_from_request()
     if app.debug:
         return jsonify({"error": str(e), "traceback": tb}), 500
     return jsonify({"error": "Internal server error"}), 500

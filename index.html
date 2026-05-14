@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نور — Noor Optical Clinic</title>
-<link rel="manifest" href="/manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cairo:wght@300;400;600;700&family=DM+Mono:wght@400;500&family=Figtree:wght@400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -12,8 +11,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<!-- Bug fix #19: Load the local-first layer so NoorLF is available before any writes -->
-<script src="/localFirst.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 <style>
 /* ── Collapsible low-stock banner ── */
@@ -401,12 +398,6 @@
           <div class="user-name" id="user-name">Admin</div>
           <div class="user-role" id="user-role">Doctor</div>
         </div>
-        <!-- Bug fix #19: sync pending badge — shown/hidden automatically by NoorLF.bindBadge() -->
-        <span
-          id="sync-pending-badge"
-          title=""
-          style="display:none;background:var(--warning,#d4820a);color:#fff;font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:99px;min-width:18px;text-align:center;margin-inline-start:4px;vertical-align:middle"
-        ></span>
         <button class="logout-btn" onclick="doLogout()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
         </button>

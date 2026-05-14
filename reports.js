@@ -16,25 +16,12 @@ async function loadReports() {
   const from = document.getElementById('report-from').value;
   const to   = document.getElementById('report-to').value;
   const reportPath = `/api/reports/summary?from=${from}&to=${to}`;
-  const cached = getCachedApiData(reportPath);
-  if (cached?.data) {
-    const s = cached.data;
-    document.getElementById('rep-revenue').textContent     = fmtNum(s.total_revenue);
-    document.getElementById('rep-outstanding').textContent = fmtNum(s.total_outstanding);
-    document.getElementById('rep-expenses').textContent    = fmtNum(s.operating_costs || 0);
-    document.getElementById('rep-profit').textContent      = fmtNum(s.gross_profit || 0);
-    document.getElementById('rep-patients').textContent    = s.patients_seen;
-    document.getElementById('rep-new-patients').textContent= s.new_patients;
-    NOOR.reportChartItems = s.chart_items || [];
-    renderReportDonut();
-  } else {
     ['rep-revenue','rep-outstanding','rep-expenses','rep-profit','rep-patients','rep-new-patients'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = '<span class="skeleton-line short" style="display:inline-block;width:70px"></span>';
     });
     const tbody = document.getElementById('reports-tbody');
     if (tbody) tbody.innerHTML = skeletonRows(7, 6);
-  }
   try {
     const data = await get(reportPath);
     const s = data.data;
