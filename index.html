@@ -16,13 +16,6 @@
 <script src="/localFirst.js"></script>
 <link rel="stylesheet" href="/static/style.css">
 <style>
-/* ── No-frame mode: dim frame fields when toggled ── */
-#ptab-frame.no-frame-mode #frame-fields {
-  opacity: 0.35;
-  pointer-events: none;
-  user-select: none;
-}
-
 /* ── Collapsible low-stock banner ── */
 .low-stock-toggle {
   display: flex;
@@ -1310,7 +1303,7 @@
           <div class="form-group"><label class="form-label">IPD</label><input type="number" class="form-input" id="rx-ipd" step=".5" placeholder="62.0"></div>
           <div class="form-group"><label class="form-label" data-i18n="lensType">نوع العدسة</label><select class="form-select" id="rx-lens-type" onchange="onLensTypeChange()"><option value="single_vision">Single Vision</option><option value="bifocal">Bifocal</option><option value="trifocal">Trifocal</option><option value="progressive">Progressive</option><option value="reading">Reading</option><option value="plano">Plano</option><option value="prism">Prism</option><option value="occupational">Occupational</option></select></div>
           <div class="form-group"><label class="form-label" data-i18n="material">المادة</label><select class="form-select" id="rx-material" onchange="onRxChange()"><option value="plastic">Plastic (CR-39)</option><option value="polycarbonate">Polycarbonate</option><option value="high_index_16">High-Index 1.6</option><option value="high_index_167">High-Index 1.67</option><option value="high_index_174">High-Index 1.74</option><option value="trivex">Trivex</option><option value="glass">Glass</option><option value="contact">Contact</option></select></div>
-          <div class="form-group"><label class="form-label" data-i18n="lensCount">عدد العيون</label><select class="form-select" id="rx-lens-count" onchange="onRxChange()"><option value="2" data-i18n="bothEyes">كلا العينين</option><option value="1" data-i18n="oneEye">عين واحدة</option></select></div>
+          <div class="form-group"><label class="form-label" data-i18n="lensCount">عدد العيون</label><select class="form-select" id="rx-lens-count" onchange="onEyeCountChange()"><option value="2" data-i18n="bothEyes">كلا العينين</option><option value="1" data-i18n="oneEye">عين واحدة</option></select></div>
         </div>
         <div class="form-group" style="margin-bottom:16px">
           <label class="form-label" data-i18n="coating">الطلاء</label>
@@ -1335,26 +1328,14 @@
           <div class="inv-match-title" data-i18n="inventoryMatch">مطابقة المخزون</div>
           <div class="inv-match-items" id="inv-match-items"><span class="inv-match-empty" data-i18n="enterRxFirst">أدخل قيم الوصفة أولاً</span></div>
         </div>
-        <div id="checkup-toggle-row" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--cream-border);display:flex;align-items:center;gap:10px">
-          <label class="toggle-switch" style="margin:0"><input type="checkbox" id="f-checkup" onchange="onCheckupToggle()"><span class="toggle-slider"></span></label>
-          <span style="font-size:.88rem" data-i18n="didCheckup">تم إجراء الفحص</span>
-        </div>
-        <div id="followup-date-row" style="display:none;margin-top:10px;margin-bottom:4px" class="form-grid">
-          <div class="form-group"><label class="form-label" data-i18n="nextVisitDate">تاريخ الزيارة القادمة</label><input type="date" class="form-input" id="f-next-visit"></div>
-          <div class="form-group"><label class="form-label" data-i18n="followupMonths">أشهر المتابعة</label><input type="number" class="form-input" id="f-followup-months" min="1" max="24" value="3" oninput="updateNextVisitDate()"></div>
-        </div>
       </div>
       <div class="tab-panel" id="ptab-frame">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--cream-border)">
-          <label class="toggle-switch" style="margin:0"><input type="checkbox" id="no-frame-toggle" onchange="setNoFrame(this.checked)"><span class="toggle-slider"></span></label>
-          <span style="font-size:.88rem;color:var(--ink-mid)">No frame (lens-only order)</span>
-        </div>
-        <div class="form-grid" id="frame-fields">
+        <div class="form-grid">
           <div class="form-group"><label class="form-label" data-i18n="frameBrand">علامة الإطار</label><input type="text" class="form-input" id="p-frame-brand"></div>
           <div class="form-group"><label class="form-label" data-i18n="frameType">نوع الإطار</label><select class="form-select" id="p-frame-type"><option value="full_rim">Full Rim</option><option value="half_rim">Half Rim</option><option value="rimless">Rimless</option><option value="wrap">Wrap / Sport</option><option value="butterfly">Butterfly</option><option value="aviator">Aviator</option><option value="round">Round</option><option value="cat_eye">Cat Eye</option></select></div>
           <div class="form-group"><label class="form-label" data-i18n="frameMaterial">مادة الإطار</label><select class="form-select" id="p-frame-material"><option value="acetate">Acetate</option><option value="metal">Metal</option><option value="titanium">Titanium</option><option value="tr90">TR90</option><option value="wood">Wood</option><option value="carbon_fiber">Carbon Fiber</option><option value="nylon">Nylon</option><option value="stainless_steel">Stainless Steel</option></select></div>
           <div class="form-group"><label class="form-label" data-i18n="selectFromInventory">من المخزون</label><select class="form-select" id="p-frame-inv" onchange="onFrameInvSelect()"><option value="">اختر إطاراً...</option></select></div>
-        </div><!-- /frame-fields -->
+        </div>
       </div>
       <div class="tab-panel" id="ptab-financials">
         <div class="form-grid">
@@ -1366,7 +1347,14 @@
           <div class="form-group"><label class="form-label" data-i18n="amountPaid">المبلغ المدفوع (IQD)</label><input type="number" class="form-input" id="f-paid" min="0" step="1" inputmode="numeric" oninput="calcTotal()"></div>
           <div class="form-group full"><label class="form-label" data-i18n="visitNotes">ملاحظات الزيارة</label><textarea class="form-textarea" id="f-visit-notes" rows="3"></textarea></div>
         </div>
-
+        <div style="margin-top:12px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+          <label class="toggle-switch" style="margin:0"><input type="checkbox" id="f-checkup" onchange="onCheckupToggle()"><span class="toggle-slider"></span></label>
+          <span style="font-size:.88rem" data-i18n="didCheckup">تم إجراء الفحص</span>
+        </div>
+        <div id="followup-date-row" style="display:none;margin-bottom:16px" class="form-grid">
+          <div class="form-group"><label class="form-label" data-i18n="nextVisitDate">تاريخ الزيارة القادمة</label><input type="date" class="form-input" id="f-next-visit"></div>
+          <div class="form-group"><label class="form-label" data-i18n="followupMonths">أشهر المتابعة</label><input type="number" class="form-input" id="f-followup-months" min="1" max="24" value="3" oninput="updateNextVisitDate()"></div>
+        </div>
         <div class="fin-summary">
           <div class="fin-row"><span class="fin-row-label" data-i18n="framePrice">سعر الإطار</span><span class="fin-row-val" id="fs-frame">0 IQD</span></div>
           <div class="fin-row"><span class="fin-row-label" data-i18n="lensPrice">سعر العدسة</span><span class="fin-row-val" id="fs-lens">0 IQD</span></div>
