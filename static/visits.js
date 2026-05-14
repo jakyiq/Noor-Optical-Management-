@@ -140,10 +140,9 @@ function clearPatientForm() {
   NOOR._lastVisit = null;
   NOOR.editingVisitId = null;
   setNoFrame(false);
-  // Reset eye-count dropdown and re-enable OS row
+  // Reset eye-count dropdown (OS row always stays enabled)
   const lcEl = document.getElementById('rx-lens-count');
   if (lcEl) lcEl.value = '2';
-  _applyOsRowState(false);
   calcTotal();
   // Restore all tab buttons to visible (they may have been hidden by openEditVisit
   // or openEditPatient for specific modes)
@@ -181,75 +180,29 @@ function switchPatientTab(tab) {
 
 // ── Eye-count enforcement ─────────────────────────────────────────────────────
 // Called whenever the eye-count dropdown changes.
-// • One eye selected  → disables the OS row visually; clears OS if it has data and user confirms
-// • Two eyes selected → re-enables the OS row
+// Both OD and OS rows are always editable — "one eye" just means the user fills
+// whichever eye they need (OD or OS), and the save-time validation checks consistency.
 function onEyeCountChange() {
-  const count = parseInt(document.getElementById('rx-lens-count')?.value || '2');
-  const isAr  = NOOR.lang === 'ar';
-  const osInputIds = ['rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva'];
-  const odInputIds = ['rx-od-sph','rx-od-cyl','rx-od-axis','rx-od-add','rx-od-va','rx-od-bcva'];
-
-  if (count === 1) {
-    // Check if OS already has data
-    const osHasData = osInputIds.some(id => (document.getElementById(id)?.value || '') !== '');
-    if (osHasData) {
-      const confirmClear = confirm(isAr
-        ? 'لقد اخترت عين واحدة ولكن تم إدخال بيانات العين اليسرى (OS). هل تريد مسح بيانات OS؟'
-        : 'You selected one eye but OS data is already entered. Clear the OS fields?');
-      if (confirmClear) {
-        osInputIds.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) { el.value = ''; el.disabled = false; }
-        });
-        ['rx-os-sph','rx-os-cyl'].forEach(id => {
-          document.getElementById(id + '-sign')?.classList.remove('is-negative');
-        });
-        _applyOsRowState(true);
-      } else {
-        // Revert the dropdown back to 2
-        document.getElementById('rx-lens-count').value = '2';
-        return;
-      }
-    } else {
-      _applyOsRowState(true);
-    }
-  } else {
-    // Two eyes — re-enable OS row
-    _applyOsRowState(false);
-  }
   onRxChange();
 }
 
-// Visually dims / disables the OS row inputs
-function _applyOsRowState(disabled) {
-  const osInputIds = ['rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva'];
-  osInputIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.disabled = disabled;
-    el.style.opacity = disabled ? '0.38' : '';
-    el.style.background = disabled ? 'var(--cream)' : '';
-    el.style.cursor = disabled ? 'not-allowed' : '';
-  });
-  // Also dim the OS row label
-  const osRow = document.getElementById('rx-os-sph')?.closest('tr');
-  if (osRow) osRow.style.opacity = disabled ? '0.45' : '';
-}
+// No-op: both rows are always fully enabled regardless of eye count.
+function _applyOsRowState(_disabled) { /* intentionally empty */ }
 
 // ── Eye-count/data cross-validation (called just before save) ────────────────
-// Returns true if validation passes, false if the user needs to fix something.
+// Returns true if ok, false (with a toast) if the user's data contradicts their choice.
 function _validateEyeCount() {
   const count = parseInt(document.getElementById('rx-lens-count')?.value || '2');
   const isAr  = NOOR.lang === 'ar';
   const odHasData = ['rx-od-sph','rx-od-cyl'].some(id => (document.getElementById(id)?.value || '') !== '');
   const osHasData = ['rx-os-sph','rx-os-cyl'].some(id => (document.getElementById(id)?.value || '') !== '');
 
-  if (count === 1 && osHasData) {
-    // User chose one eye but OS has data
+  if (count === 1 && odHasData && osHasData) {
+    // Chose one eye but both OD and OS are filled
     toast(
       isAr
-        ? 'لقد اخترت عين واحدة ولكن تم إدخال بيانات العين اليسرى (OS). غيّر الاختيار إلى "كلا العينين" أو احذف بيانات OS.'
-        : 'You selected one eye but OS data is filled. Switch to "Both Eyes" or clear the OS row.',
+        ? 'لقد اخترت عين واحدة ولكن تم إدخال بيانات كلتا العينين. احذف بيانات العين غير المستخدمة أو غيّر الاختيار إلى "كلا العينين".'
+        : 'You selected one eye but both OD and OS are filled. Clear the unused eye or switch to "Both Eyes".',
       'error'
     );
     switchPatientTab('rx');
