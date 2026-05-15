@@ -127,7 +127,8 @@ function renderVisitHistory(visits) {
                 <tr><td style="padding:4px 8px;border:1px solid var(--cream-border);color:var(--burgundy);font-weight:700">OS</td>${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va].map(x=>`<td style="padding:4px 8px;border:1px solid var(--cream-border)">${esc(x ?? '—')}</td>`).join('')}</tr>
               </tbody>
             </table>
-            <div style="font-size:.8rem;color:var(--ink-light);margin-top:8px">Lens: ${esc([v.lens_type,v.lens_material,v.lens_coating].filter(x => x != null && x !== '').map(x=>String(x).replace(/_/g,' ')).join(' · ')) || '—'}<br>Frame: ${esc([v.frame_brand,v.frame_type,v.frame_material].filter(x => x != null && x !== '').map(x=>String(x).replace(/_/g,' ')).join(' · ')) || '—'}</div>
+            ${v.ipd != null && v.ipd !== '' ? `<div style="font-size:.78rem;color:var(--ink-mid);margin-top:6px;font-family:'Figtree','DM Sans',sans-serif"><span style="font-weight:600;color:var(--ink-light)">IPD:</span> ${esc(v.ipd)}</div>` : ''}
+            <div style="font-size:.8rem;color:var(--ink-light);margin-top:6px">Lens: ${esc([v.lens_type,v.lens_material,v.lens_coating].filter(x => x != null && x !== '').map(x=>String(x).replace(/_/g,' ')).join(' · ')) || '—'}<br>Frame: ${esc([v.frame_brand,v.frame_type,v.frame_material].filter(x => x != null && x !== '').map(x=>String(x).replace(/_/g,' ')).join(' · ')) || '—'}</div>
           </div>
           <div>
             <div style="font-size:.72rem;font-weight:700;color:var(--ink-light);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">${t('financials')}</div>
