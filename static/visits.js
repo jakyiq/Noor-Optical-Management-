@@ -660,9 +660,10 @@ async function openEditVisit(visitId) {
   await ensureLensCatalog().catch(()=>{});
 
   NOOR.patientModalMode = 'edit';
-  NOOR.editingVisitId = visitId;
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm();
+  // IMPORTANT: set editingVisitId AFTER clearPatientForm() — clearPatientForm resets it to null.
+  NOOR.editingVisitId = visitId;
 
   // Hide the Info tab — only Rx/Frame/Financials are editable here.
   // Patient profile is edited via the dedicated Edit Patient Info button.
