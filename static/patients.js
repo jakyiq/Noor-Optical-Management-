@@ -78,7 +78,11 @@ function rxPart(v, eye) {
 function renderPatientSummary(p, visits) {
   const latest = visits[0] || {};
   const outstanding = visits.reduce((sum, v) => sum + (parseFloat(v.remaining) || 0), 0);
-  const latestRx = latest.id ? `OD ${rxPart(latest,'od')} | OS ${rxPart(latest,'os')}` : '—';
+  const hasRxData = latest.id && (
+    latest.od_sphere != null || latest.od_cylinder != null ||
+    latest.os_sphere != null || latest.os_cylinder != null
+  );
+  const latestRx = hasRxData ? `OD ${rxPart(latest,'od')} | OS ${rxPart(latest,'os')}` : '—';
   const latestLens = latest.id ? [latest.lens_type, latest.lens_material, latest.lens_coating].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
   const latestFrame = latest.id ? [latest.frame_brand, latest.frame_type].filter(Boolean).map(x=>String(x).replace(/_/g,' ')).join(' · ') || '—' : '—';
   const nextVisit = visits.find(v => v.next_visit_date)?.next_visit_date;
@@ -86,7 +90,7 @@ function renderPatientSummary(p, visits) {
     <div class="patient-summary-grid">
       <div class="patient-summary-card"><div class="patient-summary-label">${t('outstandingDebt')}</div><div class="patient-summary-value ${outstanding>0?'danger':''}">${fmtIQD(outstanding)}</div><div class="patient-summary-sub">${visits.length} ${t('visits')}</div></div>
       <div class="patient-summary-card"><div class="patient-summary-label">${t('latestVisit')}</div><div class="patient-summary-value">${latest.visit_date?fmtDate(latest.visit_date):'—'}</div><div class="patient-summary-sub">${nextVisit?`${t('nextVisit')}: ${fmtDate(nextVisit)}`:''}</div></div>
-      <div class="patient-summary-card"><div class="patient-summary-label">RX</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestRx)}</div><div class="patient-summary-sub">IPD: ${esc(latest.ipd||'—')}</div></div>
+      ${hasRxData ? `<div class="patient-summary-card"><div class="patient-summary-label">RX</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestRx)}</div><div class="patient-summary-sub">IPD: ${esc(latest.ipd||'—')}</div></div>` : ''}
       <div class="patient-summary-card"><div class="patient-summary-label">${t('lensType')} / ${t('frame')}</div><div class="patient-summary-value" style="font-size:.86rem">${esc(latestLens)}</div><div class="patient-summary-sub">${esc(latestFrame)}</div></div>
     </div>
     <div class="patient-detail-actions">
@@ -177,7 +181,6 @@ async function openEditPatient() {
   NOOR.editingVisitId = null;
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm();
-  // Show only the Info tab; hide Rx/Frame/Financials
   ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -378,11 +381,11 @@ async function savePatient() {
   // Validate eye count vs filled data (skip for info-only edits)
   if (NOOR.patientModalMode !== 'edit_info' && !_validateEyeCount()) return;
 
-  // Info-only edit: just update patient profile, no visit
   const saveBtn = document.getElementById('patient-save-btn');
   if (saveBtn) saveBtn.disabled = true;
   NOOR.savingPatient = true;
 
+  // Info-only edit: just update patient profile, no visit
   if (NOOR.patientModalMode === 'edit_info') {
     try {
       const pid = NOOR.editingPatientId;
