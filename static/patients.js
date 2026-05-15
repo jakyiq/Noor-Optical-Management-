@@ -409,10 +409,12 @@ async function savePatient() {
   let pid = NOOR.editingPatientId;
 
   try {
-    // 1. Create or update patient profile
-    pid = await savePatientProfile(pid, patientProfilePayload(), isNewPatient);
+    // 1. Create or update patient profile (skip entirely when editing a visit)
+    if (NOOR.patientModalMode !== 'edit') {
+      pid = await savePatientProfile(pid, patientProfilePayload(), isNewPatient);
+    }
 
-    // 2. Create visit if any data entered
+    // 2. Create or update visit
     const lp = parseFloat(document.getElementById('f-lens-price').value)||0;
     const fp = parseFloat(document.getElementById('f-frame-price').value)||0;
     const cf = parseFloat(document.getElementById('f-checkup-fee').value)||0;
