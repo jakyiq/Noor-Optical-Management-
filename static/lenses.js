@@ -2,7 +2,10 @@
 async function ensureLensCatalog(force=false) {
   if (!force && NOOR.lensCatalog?.type?.length) return NOOR.lensCatalog;
   const data = await get('/api/lens-catalog');
-  NOOR.lensCatalog = data.data || { type: [], material: [], coating: [] };
+  NOOR.lensCatalog = {
+    type: [], material: [], coating: [], frame_type: [], frame_material: [],
+    ...(data.data || {}),
+  };
   populateLensCatalogControls();
   return NOOR.lensCatalog;
 }
@@ -43,11 +46,17 @@ function setSelectValue(id, value, label) {
 function populateLensCatalogControls() {
   populateSelectPreserve('lens-type-filter', optionHTML(activeCatalog('type'), t('allTypes')));
   populateSelectPreserve('lens-material-filter', optionHTML(activeCatalog('material'), t('allMaterials')));
+  populateSelectPreserve('frames-type-filter', optionHTML(activeCatalog('frame_type'), t('allTypes')));
+  populateSelectPreserve('frames-material-filter', optionHTML(activeCatalog('frame_material'), t('allMaterials')));
   populateSelectPreserve('rx-lens-type', optionHTML(activeCatalog('type')));
   populateSelectPreserve('rx-material', optionHTML(activeCatalog('material')));
+  populateSelectPreserve('p-frame-type', optionHTML(activeCatalog('frame_type')));
+  populateSelectPreserve('p-frame-material', optionHTML(activeCatalog('frame_material')));
   populateSelectPreserve('l-type', optionHTML(activeCatalog('type')));
   populateSelectPreserve('l-material', optionHTML(activeCatalog('material')));
   populateSelectPreserve('l-coating', optionHTML(activeCatalog('coating')));
+  populateSelectPreserve('fr-type', optionHTML(activeCatalog('frame_type')));
+  populateSelectPreserve('fr-material', optionHTML(activeCatalog('frame_material')));
   renderCoatingChips();
 }
 
@@ -75,6 +84,8 @@ function fillWizardCatalogTextareas() {
   document.getElementById('wiz-cat-type').value = catalogTextarea('type');
   document.getElementById('wiz-cat-material').value = catalogTextarea('material');
   document.getElementById('wiz-cat-coating').value = catalogTextarea('coating');
+  document.getElementById('wiz-cat-frame-type').value = catalogTextarea('frame_type');
+  document.getElementById('wiz-cat-frame-material').value = catalogTextarea('frame_material');
 }
 
 function fillWizardMultiselects() {
@@ -105,9 +116,11 @@ async function saveLensWizardCatalog() {
     type: parseCatalogTextarea('wiz-cat-type'),
     material: parseCatalogTextarea('wiz-cat-material'),
     coating: parseCatalogTextarea('wiz-cat-coating'),
+    frame_type: parseCatalogTextarea('wiz-cat-frame-type'),
+    frame_material: parseCatalogTextarea('wiz-cat-frame-material'),
   };
   const data = await put('/api/lens-catalog', body);
-  NOOR.lensCatalog = data.data || body;
+  NOOR.lensCatalog = { type: [], material: [], coating: [], frame_type: [], frame_material: [], ...(data.data || body) };
   populateLensCatalogControls();
   fillWizardMultiselects();
   toast(t('successSaved'));

@@ -14,6 +14,7 @@ function toggleLowStockBanner(bannerId) {
 }
 
 async function renderFrames() {
+  await ensureLensCatalog().catch(()=>{});
     const tbody = document.getElementById('frames-tbody');
     const empty = document.getElementById('frames-empty');
     if (tbody) tbody.innerHTML = skeletonRows(8, 6);
@@ -60,8 +61,8 @@ function filterFrames() {
     const st = f.quantity===0?['danger',t('out')]:f.quantity<=f.min_stock?['warning',t('low')]:['success',t('ok')];
     return `<tr>
       <td data-label="${t('brand')}">${esc(f.brand)}</td>
-      <td data-label="${t('type')}">${esc((f.frame_type||'').replace(/_/g,' '))}</td>
-      <td data-label="${t('material')}">${esc(f.frame_material)}</td>
+      <td data-label="${t('type')}">${esc(catalogLabel('frame_type', f.frame_type))}</td>
+      <td data-label="${t('material')}">${esc(catalogLabel('frame_material', f.frame_material))}</td>
       <td data-label="${t('color')}">${esc(f.color)}</td>
       <td data-label="${t('qty')}" style="font-family:'Figtree','DM Sans',sans-serif">${f.quantity}</td>
       <td data-label="${t('status')}"><span class="badge badge-${st[0]}">${st[1]}</span></td>
@@ -77,7 +78,8 @@ function filterFrames() {
   }).join('');
 }
 
-function openAddFrame() {
+async function openAddFrame() {
+  await ensureLensCatalog().catch(()=>{});
   NOOR.editingFrameId = null;
   document.getElementById('modal-frame-title').textContent = t('addFrame');
   ['fr-brand','fr-color','fr-cost','fr-sell'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
@@ -87,6 +89,7 @@ function openAddFrame() {
 }
 
 function openEditFrame(id) {
+  populateLensCatalogControls();
   const f = NOOR.frames.find(x=>x.id===id); if(!f)return;
   NOOR.editingFrameId = id;
   document.getElementById('modal-frame-title').textContent = t('edit');
@@ -102,6 +105,7 @@ function openEditFrame(id) {
 }
 
 function duplicateFrame(id) {
+  populateLensCatalogControls();
   const f = NOOR.frames.find(x=>x.id===id); if(!f)return;
   NOOR.editingFrameId = null;
   document.getElementById('modal-frame-title').textContent = (NOOR.lang==='ar' ? 'نسخ إطار' : 'Duplicate Frame');

@@ -97,8 +97,8 @@ function fillVisitForm(v) {
   _applyOsRowState((v.lens_count || 2) === 1);
   renderCoatingChips((v.lens_coating||'').split(',').filter(Boolean));
   document.getElementById('p-frame-brand').value = v.frame_brand || '';
-  document.getElementById('p-frame-type').value = v.frame_type || 'full_rim';
-  document.getElementById('p-frame-material').value = v.frame_material || 'acetate';
+  setSelectValue('p-frame-type', v.frame_type || 'full_rim', catalogLabel('frame_type', v.frame_type));
+  setSelectValue('p-frame-material', v.frame_material || 'acetate', catalogLabel('frame_material', v.frame_material));
   document.getElementById('f-frame-cost').value = v.frame_cost || '';
   document.getElementById('f-frame-price').value = v.frame_price || '';
   document.getElementById('f-lens-cost').value = v.lens_cost || '';
@@ -708,8 +708,8 @@ async function openEditVisit(visitId) {
   if (visit.lens_material) setSelectValue('rx-material', visit.lens_material, catalogLabel('material', visit.lens_material));
   renderCoatingChips((visit.lens_coating || '').split(',').filter(Boolean));
   document.getElementById('p-frame-brand').value = visit.frame_brand || '';
-  if (visit.frame_type) document.getElementById('p-frame-type').value = visit.frame_type;
-  if (visit.frame_material) document.getElementById('p-frame-material').value = visit.frame_material;
+  if (visit.frame_type) setSelectValue('p-frame-type', visit.frame_type, catalogLabel('frame_type', visit.frame_type));
+  if (visit.frame_material) setSelectValue('p-frame-material', visit.frame_material, catalogLabel('frame_material', visit.frame_material));
   // Restore no-frame toggle based on saved visit data
   setNoFrame(!(visit.frame_brand || visit.frame_price));
 

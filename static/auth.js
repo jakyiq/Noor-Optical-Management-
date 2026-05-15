@@ -229,6 +229,7 @@ async function checkSession() {
     NOOR.role     = data.data.role;
     NOOR.clinicId = data.data.clinic_id;
     NOOR.csrfToken = data.data.csrf_token;
+    NOOR.license = data.data.license || null;
     // /api/me now always returns full_name; fallback to username if somehow missing
     if (!NOOR.user.full_name) NOOR.user.full_name = NOOR.user.username || '?';
     if (data.data.grace_warning) {

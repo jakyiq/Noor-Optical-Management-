@@ -91,7 +91,6 @@ function renderPatientSummary(p, visits) {
     </div>
     <div class="patient-detail-actions">
       ${outstanding>0?`<button class="btn btn-gold" onclick="topUpPatientRemaining()">${t('topUpRemaining')}: ${fmtIQD(outstanding)}</button>`:''}
-      ${latest.id?`<button class="btn btn-outline" onclick="showRxSlip('${escAttr(latest.id)}')">${t('printA5')}</button>`:''}
       ${latest.id && p.phone?`<button class="wa-btn" onclick="sendRxWhatsApp('${escAttr(latest.id)}','${escAttr(p.phone||'')}','${escAttr(p.full_name||'')}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg> Send Rx via WhatsApp</button>`:''}
     </div>
   `;
@@ -141,6 +140,7 @@ function renderVisitHistory(visits) {
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
             ${NOOR.lang==='ar'?'تسديد':'Pay'}
           </button>` : ''}
+          <button class="btn btn-outline btn-sm" onclick="showRxSlip('${escAttr(v.id)}')">${t('printA5')}</button>
           <button class="btn btn-outline btn-sm" onclick="openEditVisit('${escAttr(v.id)}')">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             ${NOOR.lang==='ar'?'تعديل':'Edit'}
@@ -160,11 +160,11 @@ function showPatientsListView() {
   NOOR.editingPatientId = null;
 }
 
-function openAddPatient() {
+async function openAddPatient() {
   NOOR.editingPatientId = null;
   NOOR.patientModalMode = 'create';
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
-  ensureLensCatalog().catch(()=>{});
+  await ensureLensCatalog().catch(()=>{});
   document.getElementById('modal-patient-title').textContent = t('addPatient');
   clearPatientForm(); switchPatientTab('info');
   populateFrameInventory(); openModal('modal-patient');
@@ -173,6 +173,7 @@ function openAddPatient() {
 
 async function openEditPatient() {
   if (!NOOR.editingPatientId) return;
+  await ensureLensCatalog().catch(()=>{});
   NOOR.patientModalMode = 'edit';
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm();

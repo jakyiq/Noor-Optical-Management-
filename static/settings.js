@@ -293,13 +293,18 @@ async function renderUsersTable() {
   } catch(_){}
 }
 
-function openAddUser() { openModal('modal-user'); }
+function openAddUser() {
+  ['u-name','u-username','u-password'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('u-role').value = 'receptionist';
+  openModal('modal-user');
+}
 
 async function saveUser() {
   const name  = document.getElementById('u-name').value;
   const uname = document.getElementById('u-username').value;
   const pass  = document.getElementById('u-password').value;
   if (!name||!uname||!pass) { toast(t('errorRequired'),'error'); return; }
+  if (pass.length < 8) { toast(NOOR.lang==='ar'?'كلمة المرور يجب أن تكون 8 أحرف على الأقل':'Min 8 characters', 'error'); return; }
   try {
     await post('/api/users', { full_name:name, username:uname, password:pass, role:document.getElementById('u-role').value });
     closeModal('modal-user'); toast(t('successSaved')); await renderUsersTable();
@@ -323,7 +328,7 @@ async function saveResetUserPassword() {
   const userId = document.getElementById('reset-user-pw').dataset.userId;
   const pw     = document.getElementById('reset-user-pw').value;
   const conf   = document.getElementById('reset-user-pw-confirm').value;
-  if (!pw || pw.length < 6) { toast(NOOR.lang==='ar'?'كلمة المرور يجب أن تكون 6 أحرف على الأقل':'Min 6 characters', 'error'); return; }
+  if (!pw || pw.length < 8) { toast(NOOR.lang==='ar'?'كلمة المرور يجب أن تكون 6 أحرف على الأقل':'Min 8 characters', 'error'); return; }
   if (pw !== conf)           { toast(NOOR.lang==='ar'?'كلمتا المرور غير متطابقتين':'Passwords do not match', 'error'); return; }
   try {
     await post(`/api/users/${userId}/reset-password`, { password: pw });
