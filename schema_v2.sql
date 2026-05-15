@@ -221,7 +221,7 @@ ALTER TABLE frames ALTER COLUMN frame_type TYPE TEXT USING frame_type::TEXT;
 CREATE TABLE IF NOT EXISTS clinic_lens_catalog (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clinic_id   UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
-  category    TEXT NOT NULL CHECK (category IN ('type','material','coating')),
+  category    TEXT NOT NULL CHECK (category IN ('type','material','coating','frame_type','frame_material')),
   value       TEXT NOT NULL,
   label       TEXT NOT NULL,
   is_active   BOOLEAN NOT NULL DEFAULT TRUE,
@@ -232,6 +232,11 @@ CREATE TABLE IF NOT EXISTS clinic_lens_catalog (
 );
 
 CREATE INDEX IF NOT EXISTS idx_clinic_lens_catalog_clinic ON clinic_lens_catalog(clinic_id, category, sort_order);
+
+ALTER TABLE clinic_lens_catalog DROP CONSTRAINT IF EXISTS clinic_lens_catalog_category_check;
+ALTER TABLE clinic_lens_catalog
+  ADD CONSTRAINT clinic_lens_catalog_category_check
+  CHECK (category IN ('type','material','coating','frame_type','frame_material'));
 
 -- ─────────────────────────────────────────────
 -- LENSES INVENTORY

@@ -225,7 +225,7 @@ const NOOR = {
   reportChartItems: [],
   lensRenderLimit: 250,
   settings: {},
-  lensCatalog: { type: [], material: [], coating: [] },
+  lensCatalog: { type: [], material: [], coating: [], frame_type: [], frame_material: [] },
   waTemplates: { wa_template_1:'', wa_template_2:'', wa_template_3:'' },
 };
 

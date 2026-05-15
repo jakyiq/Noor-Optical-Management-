@@ -154,7 +154,29 @@ DEFAULT_LENS_CATALOG = {
         ("oleophobic", "Oleophobic"),
         ("combo_ar_bc", "AR + Blue Cut Combo"),
     ],
+    "frame_type": [
+        ("full_rim", "Full Rim"),
+        ("half_rim", "Half Rim"),
+        ("rimless", "Rimless"),
+        ("wrap", "Wrap / Sport"),
+        ("butterfly", "Butterfly"),
+        ("aviator", "Aviator"),
+        ("round", "Round"),
+        ("cat_eye", "Cat Eye"),
+    ],
+    "frame_material": [
+        ("acetate", "Acetate"),
+        ("metal", "Metal"),
+        ("titanium", "Titanium"),
+        ("tr90", "TR90"),
+        ("wood", "Wood"),
+        ("carbon_fiber", "Carbon Fiber"),
+        ("nylon", "Nylon"),
+        ("stainless_steel", "Stainless Steel"),
+    ],
 }
+
+CATALOG_CATEGORIES = ("type", "material", "coating", "frame_type", "frame_material")
 
 
 def _slugify_lens_value(value):
@@ -176,6 +198,18 @@ def _num_or_zero(value):
         return float(value or 0)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _int_or_none(value):
+    try:
+        return int(value) if value not in (None, "", "null") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _gender_or_none(value):
+    value = (value or "").strip()
+    return value if value in {"male", "female"} else None
 
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -1075,15 +1109,19 @@ def create_patient():
         "clinic_id":  cid,
         "full_name":  full_name,
         "phone":      phone,
-        "age":        body.get("age"),
-        "gender":     body.get("gender"),
+        "age":        _int_or_none(body.get("age")),
+        "gender":     _gender_or_none(body.get("gender")),
         "address":    body.get("address"),
         "notes":      body.get("notes"),
         "created_at": now_iso(),
         "updated_at": now_iso(),
     }
 
-    res = db.table("patients").insert(row).execute()
+    try:
+        res = db.table("patients").insert(row).execute()
+    except Exception as exc:
+        logging.exception("create_patient failed")
+        return err(f"Failed to save patient: {str(exc)}", 400)
     patient = res.data[0]
 
     _write_audit(cid, uid, "create", "patient", patient["id"], new_value=patient)
@@ -1117,6 +1155,10 @@ def update_patient(pid):
 
     allowed = ["full_name","phone","age","gender","address","notes"]
     updates = {k: v for k, v in body.items() if k in allowed}
+    if "age" in updates:
+        updates["age"] = _int_or_none(updates["age"])
+    if "gender" in updates:
+        updates["gender"] = _gender_or_none(updates["gender"])
     if "full_name" in updates or "phone" in updates:
         new_name = updates.get("full_name", old.data.get("full_name"))
         new_phone = updates.get("phone", old.data.get("phone"))
@@ -1130,7 +1172,11 @@ def update_patient(pid):
             )
     updates["updated_at"] = now_iso()
 
-    res = db.table("patients").update(updates).eq("clinic_id", cid).eq("id", pid).execute()
+    try:
+        res = db.table("patients").update(updates).eq("clinic_id", cid).eq("id", pid).execute()
+    except Exception as exc:
+        logging.exception("update_patient failed for %s", pid)
+        return err(f"Failed to save patient: {str(exc)}", 400)
     _write_audit(cid, uid, "update", "patient", pid, old_value=old.data, new_value=res.data[0])
     return ok(res.data[0])
 
@@ -1193,15 +1239,6 @@ def create_visit():
         return err("Patient not found", 404)
 
     # ── Enum-safe helpers ──────────────────────────────────────
-    VALID_FRAME_TYPES = {
-        "full_rim", "half_rim", "rimless", "wrap", "butterfly",
-        "aviator", "round", "cat_eye",
-    }
-
-    def _enum_or_none(val, valid_set):
-        """Return val if it's a non-empty member of valid_set, else None."""
-        return val if (val and str(val).strip() in valid_set) else None
-
     def _float_or_none(val):
         try:    return float(val) if val not in (None, "", "null") else None
         except: return None
@@ -1223,7 +1260,7 @@ def create_visit():
     lens_coating = raw_coating.strip() if raw_coating.strip() else "clear"
 
     # ── Frame type: must be valid enum or None ──────────────────
-    frame_type = _enum_or_none((body.get("frame_type") or "").strip(), VALID_FRAME_TYPES)
+    frame_type = (body.get("frame_type") or "").strip() or None
 
     # ── Lens material: must be valid enum or None ───────────────
     lens_material = (body.get("lens_material") or "").strip() or None
@@ -1332,7 +1369,11 @@ def create_visit():
             if not updated.data:
                 return err("Frame stock changed while saving. Please try again.", 409)
 
-    res = db.table("visits").insert(row).execute()
+    try:
+        res = db.table("visits").insert(row).execute()
+    except Exception as exc:
+        logging.exception("create_visit failed")
+        return err(f"Failed to save visit: {str(exc)}", 400)
     visit = res.data[0]
 
     # Update patient updated_at
@@ -1415,11 +1456,6 @@ def update_visit(vid):
         updates.pop("remaining", None)
 
     # ── Enum-safe sanitisation ──────────────────────────────────
-    VALID_FRAME_TYPES = {
-        "full_rim", "half_rim", "rimless", "wrap", "butterfly",
-        "aviator", "round", "cat_eye",
-    }
-
     # visit_date: must be a valid ISO date string or we drop it
     if "visit_date" in updates:
         raw_vd = (updates["visit_date"] or "").strip()
@@ -1442,7 +1478,7 @@ def update_visit(vid):
         updates["lens_material"] = v or None
     if "frame_type" in updates:
         v = (updates["frame_type"] or "").strip()
-        updates["frame_type"] = v if v in VALID_FRAME_TYPES else None
+        updates["frame_type"] = v or None
     if "lens_coating" in updates:
         v = (updates["lens_coating"] or "").strip()
         updates["lens_coating"] = v or None
@@ -1452,7 +1488,11 @@ def update_visit(vid):
         for fld in ["od_sphere","od_cylinder","os_sphere","os_cylinder"]:
             updates[fld] = 0
 
-    res = db.table("visits").update(updates).eq("clinic_id", cid).eq("id", vid).execute()
+    try:
+        res = db.table("visits").update(updates).eq("clinic_id", cid).eq("id", vid).execute()
+    except Exception as exc:
+        logging.exception("update_visit failed for %s", vid)
+        return err(f"Failed to save visit: {str(exc)}", 400)
     _write_audit(cid, uid, "update", "visit", vid, old_value=old.data, new_value=res.data[0])
     return ok(res.data[0])
 
@@ -1520,16 +1560,33 @@ def _get_lens_catalog_rows(cid):
     res = db.table("clinic_lens_catalog").select("*").eq("clinic_id", cid) \
         .order("category").order("sort_order").execute()
     rows = res.data or []
-    if not rows:
-        _seed_lens_catalog(cid)
-        res = db.table("clinic_lens_catalog").select("*").eq("clinic_id", cid) \
-            .order("category").order("sort_order").execute()
-        rows = res.data or []
+    existing_categories = {row.get("category") for row in rows}
+    missing_categories = [category for category in CATALOG_CATEGORIES if category not in existing_categories]
+    if missing_categories:
+        seed_rows = []
+        for category in missing_categories:
+            for idx, (value, label) in enumerate(DEFAULT_LENS_CATALOG.get(category, [])):
+                seed_rows.append({
+                    "clinic_id": cid,
+                    "category": category,
+                    "value": value,
+                    "label": label,
+                    "is_active": True,
+                    "sort_order": idx,
+                })
+        if seed_rows:
+            try:
+                db.table("clinic_lens_catalog").insert(seed_rows).execute()
+                res = db.table("clinic_lens_catalog").select("*").eq("clinic_id", cid) \
+                    .order("category").order("sort_order").execute()
+                rows = res.data or []
+            except Exception:
+                logging.exception("Failed to seed missing catalog categories")
     return rows
 
 
 def _catalog_response(rows):
-    catalog = {"type": [], "material": [], "coating": []}
+    catalog = {category: [] for category in CATALOG_CATEGORIES}
     for row in rows:
         category = row.get("category")
         if category in catalog:
@@ -1539,6 +1596,12 @@ def _catalog_response(rows):
                 "is_active": row.get("is_active") is not False,
                 "sort_order": row.get("sort_order") or 0,
             })
+    for category, items in catalog.items():
+        if not items:
+            catalog[category] = [
+                {"value": value, "label": label, "is_active": True, "sort_order": idx}
+                for idx, (value, label) in enumerate(DEFAULT_LENS_CATALOG.get(category, []))
+            ]
     return catalog
 
 
@@ -1556,7 +1619,7 @@ def update_lens_catalog():
     uid = session["user_id"]
     body = request.get_json() or {}
     rows = []
-    for category in ["type", "material", "coating"]:
+    for category in CATALOG_CATEGORIES:
         for idx, item in enumerate(body.get(category) or []):
             label = (item.get("label") or item.get("value") or "").strip()
             value = _slugify_lens_value(item.get("value") or label)
@@ -1571,9 +1634,15 @@ def update_lens_catalog():
                 "sort_order": int(item.get("sort_order", idx) or idx),
             })
 
-    db.table("clinic_lens_catalog").delete().eq("clinic_id", cid).execute()
-    if rows:
-        db.table("clinic_lens_catalog").insert(rows).execute()
+    try:
+        if rows:
+            db.table("clinic_lens_catalog").upsert(rows, on_conflict="clinic_id,category,value").execute()
+        db.table("clinic_lens_catalog").delete().eq("clinic_id", cid).execute()
+        if rows:
+            db.table("clinic_lens_catalog").insert(rows).execute()
+    except Exception as exc:
+        logging.exception("update_lens_catalog failed")
+        return err(f"Failed to save catalog. Run the latest schema_v2.sql migration if this database was created before frame catalog support. Details: {str(exc)}", 400)
     _write_audit(cid, uid, "update", "lens_catalog", cid, new_value={"items": len(rows)})
     return ok(_catalog_response(rows))
 
@@ -1912,16 +1981,20 @@ def create_frame():
     row = {
         "clinic_id":      cid,
         "brand":          body.get("brand"),
-        "frame_type":     body.get("frame_type"),
-        "frame_material": body.get("frame_material"),
+        "frame_type":     (body.get("frame_type") or "").strip() or None,
+        "frame_material": (body.get("frame_material") or "").strip() or None,
         "color":          body.get("color"),
-        "quantity":       int(body.get("quantity", 0)),
-        "min_stock":      int(body.get("min_stock", 2)),
+        "quantity":       int(body.get("quantity", 0) or 0),
+        "min_stock":      int(body.get("min_stock", 2) or 2),
         "cost_price":     body.get("cost_price"),
         "sell_price":     body.get("sell_price"),
         "updated_at":     now_iso(),
     }
-    res = db.table("frames").insert(row).execute()
+    try:
+        res = db.table("frames").insert(row).execute()
+    except Exception as exc:
+        logging.exception("create_frame failed")
+        return err(f"Failed to save frame: {str(exc)}", 400)
     _write_audit(cid, uid, "create", "frame", res.data[0]["id"], new_value=res.data[0])
     return ok(res.data[0]), 201
 
@@ -1939,9 +2012,17 @@ def update_frame(fid):
 
     allowed = ["brand","frame_type","frame_material","color","quantity","min_stock","cost_price","sell_price"]
     updates = {k: v for k, v in body.items() if k in allowed}
+    if "frame_type" in updates:
+        updates["frame_type"] = (updates["frame_type"] or "").strip() or None
+    if "frame_material" in updates:
+        updates["frame_material"] = (updates["frame_material"] or "").strip() or None
     updates["updated_at"] = now_iso()
 
-    res = db.table("frames").update(updates).eq("clinic_id", cid).eq("id", fid).execute()
+    try:
+        res = db.table("frames").update(updates).eq("clinic_id", cid).eq("id", fid).execute()
+    except Exception as exc:
+        logging.exception("update_frame failed for %s", fid)
+        return err(f"Failed to save frame: {str(exc)}", 400)
     _write_audit(cid, uid, "update", "frame", fid, old_value=old.data, new_value=res.data[0])
     return ok(res.data[0])
 
