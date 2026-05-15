@@ -419,10 +419,10 @@ async function buildRxPdfFile(payload, filename) {
     'position:fixed',
     'left:-10000px',
     'top:0',
-    'width:148mm',
-    'min-height:210mm',
+    'width:130mm',
+    'min-height:194mm',
     'background:#fff',
-    'padding:8mm 9mm',
+    'padding:0',
     'z-index:-1',
     'direction:' + document.documentElement.dir,
     'font-family:Cairo, Noto Sans Arabic, DM Sans, sans-serif'
