@@ -332,20 +332,28 @@ function _renderRxSlip(payload) {
   </div>
 
   <!-- DIVIDER BAR -->
-  <div style="border-top:2px solid var(--burgundy);border-bottom:1px solid var(--cream-border);display:flex;justify-content:space-between;align-items:center;padding:3px 0;margin-bottom:9px">
-    <span style="font-size:.68rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--burgundy)">${t('prescriptionSlip')}</span>
-    <span style="font-family:'Figtree','DM Sans',sans-serif;font-size:.7rem;color:var(--ink-light)">${visitDateStr}</span>
+  <div style="background:var(--burgundy);display:flex;justify-content:space-between;align-items:center;padding:5px 9px;margin-bottom:10px;border-radius:3px">
+    <span style="font-size:.68rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:#fff">${t('prescriptionSlip')}</span>
+    <span style="font-family:'Figtree','DM Sans',sans-serif;font-size:.7rem;font-weight:600;color:rgba(255,255,255,.85)">${visitDateStr}</span>
   </div>
 
   <!-- PATIENT INFO -->
-  <div style="display:grid;grid-template-columns:1.6fr .7fr .7fr;gap:5px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
-    <div><div class="rx-slip-label">${t('name')}</div><div class="rx-slip-val" data-rx-patient style="font-size:.87rem;word-break:break-word;overflow-wrap:break-word">${esc(p.full_name)}</div></div>
-    <div><div class="rx-slip-label">${t('age')}</div><div class="rx-slip-val">${esc(p.age)}</div></div>
-    <div><div class="rx-slip-label">${t('gender')}</div><div class="rx-slip-val">${p.gender ? t(p.gender) : '—'}</div></div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
-    <div><div class="rx-slip-label">Visit Date</div><div class="rx-slip-val">${visitDateStr}</div></div>
-    <div><div class="rx-slip-label">Next Visit</div><div class="rx-slip-val">${nextVisitStr}</div></div>
+  <div style="background:var(--cream-bg);border:1px solid var(--cream-border);border-radius:4px;padding:8px 10px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+      <div style="flex:1;min-width:0">
+        <div class="rx-slip-label" style="margin-bottom:2px">${t('name')}</div>
+        <div data-rx-patient style="font-size:.98rem;font-weight:800;color:var(--ink-dark);word-break:break-word;overflow-wrap:break-word;font-family:'Amiri',serif;line-height:1.25">${esc(p.full_name)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div class="rx-slip-label" style="margin-bottom:2px">Visit Date</div>
+        <div style="font-size:.82rem;font-weight:700;color:var(--burgundy);font-family:'Figtree','DM Sans',sans-serif">${visitDateStr}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;padding-top:7px;border-top:1px dashed var(--cream-border)">
+      <div><div class="rx-slip-label">${t('age')}</div><div class="rx-slip-val">${esc(p.age) || '—'}</div></div>
+      <div><div class="rx-slip-label">${t('gender')}</div><div class="rx-slip-val">${p.gender ? t(p.gender) : '—'}</div></div>
+      <div><div class="rx-slip-label">Next Visit</div><div class="rx-slip-val" style="color:var(--burgundy)">${nextVisitStr}</div></div>
+    </div>
   </div>
 
   <!-- RX TABLE -->
@@ -441,21 +449,22 @@ function _buildRxPrintBlob() {
   const printCSS = `
     :root{--burgundy:${sc.primary};--burgundy-pale:${sc.paper};--cream:${sc.paper};--cream-dark:${sc.paper};--cream-border:${sc.border};--cream-bg:${sc.paper};--ink:${sc.text};--ink-mid:${sc.text};--ink-light:#8a8a7a;--ink-dark:${sc.text};--surface:${sc.bg};--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html{background:white;font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;}
-    body{background:white;width:130mm;margin:0 auto;overflow:visible;}
-    .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9pt;line-height:1.45;}
-    .rx-slip-label{font-size:6.5pt;text-transform:uppercase;letter-spacing:.07em;color:${sc.text}99}
-    .rx-slip-val{font-weight:600;font-size:9pt}
+    html{background:white;font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+    body{background:white;width:134mm;margin:0 auto;overflow:visible;}
+    .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9.5pt;line-height:1.5;}
+    .rx-slip-label{font-size:6pt;text-transform:uppercase;letter-spacing:.08em;color:${sc.text}80;font-weight:600}
+    .rx-slip-val{font-weight:700;font-size:9.5pt;color:${sc.text}}
     table{border-collapse:collapse;width:100%;font-size:8.5pt;table-layout:fixed}
-    th,td{border:1px solid ${sc.border};padding:3px 4px;word-break:break-word;overflow-wrap:break-word;white-space:normal}
-    th{text-align:center}
+    th,td{border:1px solid ${sc.border};padding:4px 5px;word-break:break-word;overflow-wrap:break-word;white-space:normal}
+    th{text-align:center;font-size:7.5pt;font-weight:700;letter-spacing:.04em}
     thead tr{background:${sc.primary};color:#fff}
-    td:first-child{font-weight:700;font-size:7.5pt;white-space:nowrap}
+    td:first-child{font-weight:800;font-size:7.5pt;white-space:nowrap;background:${sc.paper}}
     img{max-width:100%}
-    @page{size:A5 portrait;margin:8mm 9mm}
+    @page{size:A5 portrait;margin:9mm 10mm}
     @media print{
       *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
       html,body{background:white!important;overflow:visible!important;}
+      table{page-break-inside:avoid}
     }
   `;
 
