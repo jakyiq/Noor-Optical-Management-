@@ -319,7 +319,7 @@ function _renderRxSlip(payload) {
     </div>` : '';
 
   document.getElementById('rx-slip-content').innerHTML = `
-<div class="rx-slip" style="box-sizing:border-box;width:100%;padding:13px 15px;font-size:.842rem;line-height:1.45">
+<div class="rx-slip" style="box-sizing:border-box;width:100%;padding:10px 12px;font-size:.842rem;line-height:1.45">
 
   <!-- HEADER -->
   <div style="text-align:${headerTA};margin-bottom:9px">
@@ -338,51 +338,51 @@ function _renderRxSlip(payload) {
   </div>
 
   <!-- PATIENT INFO -->
-  <div style="display:grid;grid-template-columns:1.6fr .7fr .7fr;gap:5px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
+  <div style="display:grid;grid-template-columns:1.6fr .7fr .7fr;gap:5px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--cream-border)">
     <div><div class="rx-slip-label">${t('name')}</div><div class="rx-slip-val" data-rx-patient style="font-size:.87rem">${esc(p.full_name)}</div></div>
     <div><div class="rx-slip-label">${t('age')}</div><div class="rx-slip-val">${esc(p.age)}</div></div>
     <div><div class="rx-slip-label">${t('gender')}</div><div class="rx-slip-val">${p.gender ? t(p.gender) : '—'}</div></div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--cream-border)">
     <div><div class="rx-slip-label">Visit Date</div><div class="rx-slip-val">${visitDateStr}</div></div>
     <div><div class="rx-slip-label">Next Visit</div><div class="rx-slip-val">${nextVisitStr}</div></div>
   </div>
 
   <!-- RX TABLE -->
-  <table style="width:100%;margin-bottom:8px;border-collapse:collapse;font-size:.76rem">
+  <table style="width:100%;margin-bottom:8px;border-collapse:collapse;font-size:.72rem;table-layout:fixed">
     <thead><tr style="background:var(--burgundy);color:white">
-      <th style="padding:4px 5px;text-align:left">Eye</th>
-      <th style="padding:4px 5px;text-align:center">SPH</th>
-      <th style="padding:4px 5px;text-align:center">CYL</th>
-      <th style="padding:4px 5px;text-align:center">AXIS</th>
-      <th style="padding:4px 5px;text-align:center">ADD</th>
-      <th style="padding:4px 5px;text-align:center">VA</th>
-      <th style="padding:4px 5px;text-align:center">BCVA</th>
+      <th style="padding:3px 4px;text-align:left;width:14%">Eye</th>
+      <th style="padding:3px 2px;text-align:center">SPH</th>
+      <th style="padding:3px 2px;text-align:center">CYL</th>
+      <th style="padding:3px 2px;text-align:center">AXIS</th>
+      <th style="padding:3px 2px;text-align:center">ADD</th>
+      <th style="padding:3px 2px;text-align:center">VA</th>
+      <th style="padding:3px 2px;text-align:center">BCVA</th>
     </tr></thead>
     <tbody>
       <tr style="background:var(--cream-bg)">
-        <td style="padding:4px 5px;font-weight:700;font-size:.73rem;border:1px solid var(--cream-border)">OD (R)</td>
-        ${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va,v.od_bcva].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
+        <td style="padding:3px 4px;font-weight:700;font-size:.68rem;border:1px solid var(--cream-border)">OD (R)</td>
+        ${[v.od_sphere,v.od_cylinder,v.od_axis,v.od_addition,v.od_va,v.od_bcva].map(x=>`<td style="text-align:center;padding:3px 2px;border:1px solid var(--cream-border);overflow:hidden;white-space:nowrap">${esc(x??'—')}</td>`).join('')}
       </tr>
       <tr>
-        <td style="padding:4px 5px;font-weight:700;font-size:.73rem;border:1px solid var(--cream-border)">OS (L)</td>
-        ${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va,v.os_bcva].map(x=>`<td style="text-align:center;padding:4px 5px;border:1px solid var(--cream-border)">${esc(x??'—')}</td>`).join('')}
+        <td style="padding:3px 4px;font-weight:700;font-size:.68rem;border:1px solid var(--cream-border)">OS (L)</td>
+        ${[v.os_sphere,v.os_cylinder,v.os_axis,v.os_addition,v.os_va,v.os_bcva].map(x=>`<td style="text-align:center;padding:3px 2px;border:1px solid var(--cream-border);overflow:hidden;white-space:nowrap">${esc(x??'—')}</td>`).join('')}
       </tr>
     </tbody>
   </table>
 
   <!-- IPD -->
-  ${v.ipd != null ? `<div style="font-size:.76rem;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)"><span class="rx-slip-label">IPD</span> <strong style="font-family:'Figtree','DM Sans',sans-serif">${esc(v.ipd)} mm</strong></div>` : ''}
+  ${v.ipd != null ? `<div style="font-size:.76rem;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--cream-border)"><span class="rx-slip-label">IPD</span> <strong style="font-family:'Figtree','DM Sans',sans-serif">${esc(v.ipd)} mm</strong></div>` : ''}
 
   <!-- LENS / FRAME -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:.76rem;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--cream-border)">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:.76rem;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--cream-border)">
     <div><span class="rx-slip-label">Lens Type</span><br>${esc(lensDesc||'—')}</div>
     <div><span class="rx-slip-label">Frame</span><br>${esc(frameDesc||'—')}</div>
   </div>
 
   <!-- FINANCIALS -->
   ${showFinancials ? `
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;font-size:.74rem;margin-bottom:8px;padding-bottom:8px;border-bottom:1px dashed var(--cream-border)">
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;font-size:.74rem;margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed var(--cream-border)">
     <div><span class="rx-slip-label">${t('total')}</span><br>${fmtIQD(v.total_amount)}</div>
     <div><span class="rx-slip-label">${t('paid')}</span><br>${fmtIQD(v.amount_paid)}</div>
     <div><span class="rx-slip-label">${t('remaining')}</span><br>${fmtIQD(v.remaining)}</div>
@@ -432,17 +432,18 @@ function _buildRxPrintBlob() {
   const printCSS = `
     :root{--burgundy:${sc.primary};--burgundy-pale:${sc.paper};--cream:${sc.paper};--cream-dark:${sc.paper};--cream-border:${sc.border};--cream-bg:${sc.paper};--ink:${sc.text};--ink-mid:${sc.text};--ink-light:#8a8a7a;--ink-dark:${sc.text};--surface:${sc.bg};--danger:#c0392b;--success:#1e7e5a;--radius-md:14px;--radius-sm:8px;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{background:white;font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;width:148mm;height:210mm;overflow:hidden;}
-    .rx-slip{background:white;border:none;padding:0;width:100%;font-size:9.4pt;line-height:1.5;}
-    .rx-slip-label{font-size:6.8pt;text-transform:uppercase;letter-spacing:.08em;color:${sc.text}99}
-    .rx-slip-val{font-weight:600;font-size:9.4pt}
-    table{border-collapse:collapse;width:100%;font-size:8.85pt}
-    th,td{border:1px solid ${sc.border};padding:3px 5px}
+    html,body{background:white;font-family:'Cairo','Noto Sans Arabic','DM Sans',sans-serif;width:148mm;}
+    .rx-slip{background:white;border:none;padding:0;width:100%;font-size:8.6pt;line-height:1.4;}
+    .rx-slip-label{font-size:6pt;text-transform:uppercase;letter-spacing:.07em;color:${sc.text}99}
+    .rx-slip-val{font-weight:600;font-size:8.6pt}
+    table{border-collapse:collapse;width:100%;font-size:7.6pt;table-layout:fixed}
+    th,td{border:1px solid ${sc.border};padding:2.5px 3px;text-align:center;overflow:hidden;white-space:nowrap}
+    th:first-child,td:first-child{text-align:left;padding-left:4px;width:14%}
     thead tr{background:${sc.primary};color:#fff}
-    @page{size:148mm 210mm;margin:8mm 9mm}
+    @page{size:A5 portrait;margin:7mm 8mm}
     @media print{
       *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
-      html,body{background:white!important;overflow:hidden!important;width:148mm!important;height:210mm!important;}
+      html,body{background:white!important;width:148mm!important;}
     }
   `;
 
