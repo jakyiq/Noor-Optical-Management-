@@ -267,6 +267,49 @@ def _auth_rest(path, payload, query=""):
         raise RuntimeError(detail or str(exc)) from exc
 
 
+def _clinic_ban_and_license(clinic_id):
+    """
+    Single query that returns both the ban state and the active license for a
+    clinic.  Replaces the two separate calls to _clinic_is_banned() and
+    _license_state() that were previously issued on every authenticated request.
+
+    Returns (is_banned: bool, license_state: dict).
+    """
+    if not clinic_id:
+        return False, {"status": "blocked", "plan": None, "days_left": None}
+
+    clinic_res = db.table("clinics").select("is_banned") \
+        .eq("id", clinic_id).limit(1).execute()
+    row = clinic_res.data[0] if clinic_res.data else None
+    is_banned = bool(row and row.get("is_banned"))
+
+    lic_res = db.table("licenses") \
+        .select("plan,expires_at") \
+        .eq("clinic_id", clinic_id) \
+        .eq("is_active", True) \
+        .order("created_at", desc=True) \
+        .limit(1) \
+        .execute()
+
+    if not lic_res.data:
+        return is_banned, {"status": "blocked", "plan": None, "days_left": None}
+
+    lic  = lic_res.data[0]
+    plan = lic.get("plan")
+
+    if plan == "lifetime" or lic.get("expires_at") is None:
+        return is_banned, {"status": "active", "plan": plan, "days_left": None}
+
+    expires = date.fromisoformat(lic["expires_at"])
+    delta   = (expires - date.today()).days
+
+    if delta >= 0:
+        status = "trial" if plan == "trial" else "active"
+        return is_banned, {"status": status, "plan": plan, "days_left": delta}
+
+    return is_banned, {"status": "expired_read_only", "plan": plan, "days_left": delta}
+
+
 def _clinic_is_banned(clinic_id):
     if not clinic_id:
         return False
@@ -396,12 +439,12 @@ def _auth(roles=None, setting=None, export=False, allow_readonly_write=False):
             if role == "super_admin":
                 return f(*args, **kwargs)
 
-            if _clinic_is_banned(clinic_id):
+            # Combined ban + license check (single DB round-trip instead of two)
+            is_banned, license_state = _clinic_ban_and_license(clinic_id)
+            if is_banned:
                 session.clear()
                 return err("Clinic account is banned. Please contact support.", 403)
 
-            # 2. License check
-            license_state = _license_state(clinic_id)
             status = license_state["status"]
             if status == "blocked":
                 return err("License blocked. Please contact support.", 403)
@@ -493,14 +536,13 @@ def login():
     role = user["role"]
     clinic_id = user["clinic_id"]
 
-    if role != "super_admin" and _clinic_is_banned(clinic_id):
-        return err("Clinic account is banned. Please contact support.", 403)
-
-    # License check (skip for super_admin)
+    # Ban + license check — single DB round-trip for non-super_admin
     grace_warning = None
     license_summary = None
     if role != "super_admin":
-        license_state = _license_state(clinic_id)
+        is_banned, license_state = _clinic_ban_and_license(clinic_id)
+        if is_banned:
+            return err("Clinic account is banned. Please contact support.", 403)
         if license_state["status"] == "blocked":
             return err("License expired. Please contact support.", 403)
         if license_state["status"] == "expired_read_only":
@@ -808,8 +850,8 @@ def me():
     grace_warning = None
     license_summary = None
     if role != "super_admin":
-        license_state = _license_state(clinic_id)
-        if license_state["status"] == "blocked":
+        _is_banned, license_state = _clinic_ban_and_license(clinic_id)
+        if _is_banned or license_state["status"] == "blocked":
             session.clear()
             return err("License expired", 403)
         if license_state["status"] == "expired_read_only":
@@ -885,60 +927,67 @@ def dashboard_stats():
 
     today = today_str()
     month_start = date.today().replace(day=1).isoformat()
+    seven_ago   = (date.today() - timedelta(days=6)).isoformat()
 
-    # Today's visits
+    # ── Single visit query covers today / monthly / 7-day chart ──────────────
+    # We fetch visit_date + amount_paid + remaining from month_start onward.
+    # That covers the current month (monthly_revenue), today's slice, and the
+    # 7-day chart window.  Outstanding debt still requires a full-history scan
+    # but we scope it to (remaining > 0) so Postgres can filter server-side.
     try:
-        today_v = db.table("visits").select("amount_paid,remaining") \
-            .eq("clinic_id", cid).eq("visit_date", today).execute()
-        today_visits = today_v.data or []
+        month_v = db.table("visits") \
+            .select("visit_date,amount_paid,remaining") \
+            .eq("clinic_id", cid) \
+            .gte("visit_date", month_start) \
+            .execute()
+        month_rows = month_v.data or []
     except Exception:
-        today_visits = []
-    today_patients = len(today_visits)
-    today_earnings = sum(v.get("amount_paid", 0) or 0 for v in today_visits)
+        month_rows = []
 
-    # Total outstanding debt
+    today_rows     = [v for v in month_rows if v.get("visit_date") == today]
+    today_patients = len(today_rows)
+    today_earnings = sum(v.get("amount_paid", 0) or 0 for v in today_rows)
+    monthly_revenue = sum(v.get("amount_paid", 0) or 0 for v in month_rows)
+
+    # 7-day chart (subset of month_rows — no extra query needed)
+    chart = {
+        (date.today() - timedelta(days=6 - i)).isoformat(): 0
+        for i in range(7)
+    }
+    for v in month_rows:
+        d = v.get("visit_date")
+        if d in chart:
+            chart[d] += v.get("amount_paid", 0) or 0
+
+    # Outstanding debt — fetch only the `remaining` column, filter > 0 server-side
     try:
-        debt_r = db.table("visits").select("remaining").eq("clinic_id", cid).execute()
+        debt_r    = db.table("visits") \
+            .select("remaining") \
+            .eq("clinic_id", cid) \
+            .gt("remaining", 0) \
+            .execute()
         outstanding = sum(v.get("remaining", 0) or 0 for v in (debt_r.data or []))
     except Exception:
         outstanding = 0
 
-    # Monthly revenue
+    # Low-stock count — use the DB helper functions (single RPC each, returns INTEGER)
     try:
-        month_v = db.table("visits").select("amount_paid") \
-            .eq("clinic_id", cid).gte("visit_date", month_start).execute()
-        monthly_revenue = sum(v.get("amount_paid", 0) or 0 for v in (month_v.data or []))
+        ll_r = db.rpc("count_low_stock_lenses", {"p_clinic_id": cid}).execute()
+        lf_r = db.rpc("count_low_stock_frames", {"p_clinic_id": cid}).execute()
+        low_count = int(ll_r.data or 0) + int(lf_r.data or 0)
     except Exception:
-        monthly_revenue = 0
+        # Fallback: pull only quantity+min_stock columns (no SELECT *)
+        try:
+            ll = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).execute()
+            lf = db.table("frames").select("quantity,min_stock").eq("clinic_id", cid).execute()
+            low_count = (
+                sum(1 for l in (ll.data or []) if (l.get("quantity") or 0) <= (l.get("min_stock") or 0)) +
+                sum(1 for f in (lf.data or []) if (f.get("quantity") or 0) <= (f.get("min_stock") or 0))
+            )
+        except Exception:
+            low_count = 0
 
-    # Low stock count
-    try:
-        ll = db.table("lenses").select("quantity,min_stock").eq("clinic_id", cid).execute()
-        lf = db.table("frames").select("quantity,min_stock").eq("clinic_id", cid).execute()
-        low_count = (
-            sum(1 for l in (ll.data or []) if (l.get("quantity") or 0) <= (l.get("min_stock") or 0)) +
-            sum(1 for f in (lf.data or []) if (f.get("quantity") or 0) <= (f.get("min_stock") or 0))
-        )
-    except Exception:
-        low_count = 0
-
-    # Last 7 days revenue
-    chart = {}
-    for i in range(7):
-        d = (date.today() - timedelta(days=6-i)).isoformat()
-        chart[d] = 0
-    try:
-        seven_ago = (date.today() - timedelta(days=6)).isoformat()
-        week_v = db.table("visits").select("visit_date,amount_paid") \
-            .eq("clinic_id", cid).gte("visit_date", seven_ago).execute()
-        for v in (week_v.data or []):
-            d = v.get("visit_date")
-            if d in chart:
-                chart[d] += v.get("amount_paid", 0) or 0
-    except Exception:
-        pass
-
-    # Recent 5 visits
+    # Recent 5 visits — minimal projection (no SELECT *)
     try:
         recent_v = db.table("visits").select(
             "id,visit_date,total_amount,amount_paid,remaining,patient_id,lens_type"
@@ -972,7 +1021,9 @@ def list_patients():
     limit  = min(500, int(request.args.get("limit", 50)))
     offset = (page - 1) * limit
 
-    query = db.table("patients").select("*").eq("clinic_id", cid)
+    query = db.table("patients").select(
+        "id,full_name,phone,age,gender,created_at,updated_at"
+    ).eq("clinic_id", cid)
 
     if gender:
         query = query.eq("gender", gender)
@@ -1042,11 +1093,19 @@ def _patient_duplicate_matches(cid, full_name, phone, exclude_id=None):
             if row.get("id") != exclude_id and _norm_phone(row.get("phone")) == phone_key:
                 matches[row["id"]] = row
         if not matches:
-            broad_phone_res = db.table("patients").select("id,full_name,phone") \
-                .eq("clinic_id", cid).limit(1000).execute()
-            for row in (broad_phone_res.data or []):
-                if row.get("id") != exclude_id and _norm_phone(row.get("phone")) == phone_key:
-                    matches[row["id"]] = row
+            # Targeted fallback: use ilike on the phone column variants instead
+            # of a 1 000-row table scan.  We search for the normalised digits
+            # (without leading 0/country prefix) as a substring.
+            if phone_key:
+                fallback_res = db.table("patients") \
+                    .select("id,full_name,phone") \
+                    .eq("clinic_id", cid) \
+                    .ilike("phone", f"%{phone_key}%") \
+                    .limit(20) \
+                    .execute()
+                for row in (fallback_res.data or []):
+                    if row.get("id") != exclude_id and _norm_phone(row.get("phone")) == phone_key:
+                        matches[row["id"]] = row
 
     return list(matches.values())
 
@@ -1703,12 +1762,14 @@ def bulk_generate_lenses():
     existing_rows = db.table("lenses").select("*").eq("clinic_id", cid).execute()
     existing = {_lens_inventory_key(row): row for row in (existing_rows.data or [])}
     to_insert = []
+    to_update_ids = []
     updated = 0
     skipped = 0
     quantity = int(defaults.get("quantity") or 0)
     min_stock = int(defaults.get("min_stock") or 2)
     cost_price = defaults.get("cost_price") or 0
     sell_price = defaults.get("sell_price") or 0
+    _now = now_iso()
 
     for lens_type in lens_types:
         for material in materials:
@@ -1726,23 +1787,31 @@ def bulk_generate_lenses():
                             "min_stock": min_stock,
                             "cost_price": cost_price,
                             "sell_price": sell_price,
-                            "updated_at": now_iso(),
+                            "updated_at": _now,
                         }
                         key = _lens_inventory_key(row)
                         if key in existing:
                             if existing_mode == "update":
-                                db.table("lenses").update({
-                                    "quantity": quantity,
-                                    "min_stock": min_stock,
-                                    "cost_price": cost_price,
-                                    "sell_price": sell_price,
-                                    "updated_at": now_iso(),
-                                }).eq("clinic_id", cid).eq("id", existing[key]["id"]).execute()
-                                updated += 1
+                                to_update_ids.append(existing[key]["id"])
                             else:
                                 skipped += 1
                         else:
                             to_insert.append(row)
+
+    # Batch-update existing rows (single upsert instead of N individual UPDATEs)
+    if to_update_ids:
+        update_payload = {
+            "quantity":   quantity,
+            "min_stock":  min_stock,
+            "cost_price": cost_price,
+            "sell_price": sell_price,
+            "updated_at": _now,
+        }
+        for i in range(0, len(to_update_ids), 500):
+            chunk_ids = to_update_ids[i:i + 500]
+            db.table("lenses").update(update_payload) \
+                .eq("clinic_id", cid).in_("id", chunk_ids).execute()
+        updated = len(to_update_ids)
 
     inserted = 0
     for i in range(0, len(to_insert), 500):
@@ -2437,30 +2506,27 @@ def update_settings():
     ]
     settings_upd = {k: v for k, v in body.items() if k in settings_fields}
     if settings_upd:
-        # Upsert — if the row is missing (e.g. older clinic), insert with safe defaults
-        existing = db.table("clinic_settings").select("clinic_id").eq("clinic_id", cid).execute()
-        if existing.data:
-            db.table("clinic_settings").update(settings_upd).eq("clinic_id", cid).execute()
-        else:
-            defaults = {
-                "clinic_id":               cid,
-                "recept_view_patients":    True,
-                "recept_edit_patients":    False,
-                "recept_view_financials":  False,
-                "recept_edit_financials":  False,
-                "recept_access_inventory": False,
-                "recept_export_reports":   False,
-                "recept_view_audit":       False,
-                "followup_months_default": 3,
-                "default_checkup_fee":     0,
-                "print_show_financials":   True,
-                "print_logo_align":        "center",
-                "print_logo_width":        120,
-                "print_logo_height":       60,
-                "language":                "ar",
-            }
-            defaults.update(settings_upd)
-            db.table("clinic_settings").insert(defaults).execute()
+        # Upsert — works whether the row already exists or is missing.
+        defaults = {
+            "clinic_id":               cid,
+            "recept_view_patients":    True,
+            "recept_edit_patients":    False,
+            "recept_view_financials":  False,
+            "recept_edit_financials":  False,
+            "recept_access_inventory": False,
+            "recept_export_reports":   False,
+            "recept_view_audit":       False,
+            "followup_months_default": 3,
+            "default_checkup_fee":     0,
+            "print_show_financials":   True,
+            "print_logo_align":        "center",
+            "print_logo_width":        120,
+            "print_logo_height":       60,
+            "language":                "ar",
+        }
+        defaults.update(settings_upd)
+        defaults["clinic_id"] = cid
+        db.table("clinic_settings").upsert(defaults, on_conflict="clinic_id").execute()
 
     _write_audit(cid, uid, "update", "settings", cid, new_value=body)
     return ok()
@@ -2596,11 +2662,12 @@ def backup_history():
 @app.route("/api/backup/<backup_id>/download", methods=["GET"])
 @_auth(roles=["doctor", "super_admin"])
 def download_backup(backup_id):
-    """Return the full backup payload for a specific backup_id."""
+    """Return the backup metadata (and storage_path) for a specific backup_id.
+    The actual payload is fetched from Supabase Storage via the storage_path."""
     cid = session["clinic_id"]
     res = (
         db.table("backup_log")
-        .select("*")
+        .select("id,clinic_id,created_by,kind,row_counts,storage_path,created_at")
         .eq("id", backup_id)
         .eq("clinic_id", cid)
         .single()
@@ -2608,7 +2675,29 @@ def download_backup(backup_id):
     )
     if not res.data:
         return err("Backup not found", 404)
-    return ok(res.data)
+
+    row = res.data
+    storage_path = row.get("storage_path") or ""
+
+    # Attempt to fetch the payload from Supabase Storage
+    backup_data = None
+    if storage_path:
+        try:
+            url = f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{BACKUP_BUCKET}/{storage_path}"
+            req = urllib.request.Request(
+                url,
+                headers={
+                    "apikey":        SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                },
+                method="GET",
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                backup_data = json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            logging.exception("download_backup: storage fetch failed for path=%s", storage_path)
+
+    return ok({**row, "backup_data": backup_data})
 
 
 @app.route("/api/restore", methods=["POST"])
@@ -2920,13 +3009,37 @@ def admin_list_clinics():
     clinics = db.table("clinics").select("*").order("created_at", desc=True).execute()
     clinic_list = clinics.data or []
 
+    if not clinic_list:
+        return ok([])
+
+    clinic_ids = [c["id"] for c in clinic_list]
+
+    # Bulk-fetch all active licenses for these clinics (1 query instead of N)
+    lic_res = db.table("licenses") \
+        .select("clinic_id,plan,expires_at,is_active,created_at") \
+        .in_("clinic_id", clinic_ids) \
+        .eq("is_active", True) \
+        .order("created_at", desc=True) \
+        .execute()
+    # Keep only the most-recent active license per clinic
+    licenses_map: dict = {}
+    for row in (lic_res.data or []):
+        cid_k = row["clinic_id"]
+        if cid_k not in licenses_map:
+            licenses_map[cid_k] = row
+
+    # Bulk-fetch all users for these clinics (1 query instead of N)
+    users_res = db.table("users") \
+        .select("id,clinic_id,email,username,full_name,role,is_active,last_login,created_at") \
+        .in_("clinic_id", clinic_ids) \
+        .execute()
+    users_by_clinic: dict = {}
+    for u in (users_res.data or []):
+        users_by_clinic.setdefault(u["clinic_id"], []).append(u)
+
     for c in clinic_list:
-        lic = db.table("licenses").select("plan,expires_at,is_active") \
-            .eq("clinic_id", c["id"]).eq("is_active", True).order("created_at", desc=True).limit(1).execute()
-        c["license"] = lic.data[0] if lic.data else None
-        users = db.table("users").select("id,email,username,full_name,role,is_active,last_login,created_at") \
-            .eq("clinic_id", c["id"]).execute()
-        c["users"] = users.data or []
+        c["license"] = licenses_map.get(c["id"])
+        c["users"]   = users_by_clinic.get(c["id"], [])
 
     return ok(clinic_list)
 
@@ -3028,6 +3141,12 @@ def admin_update_clinic(cid):
 def admin_delete_clinic(cid):
     if cid == session.get("clinic_id"):
         return err("Cannot delete the clinic you are currently using", 400)
+
+    # Clean up storage objects for this clinic before deleting DB rows
+    storage_paths = _list_storage_objects(f"{cid}/")
+    for path in storage_paths:
+        _delete_storage_object(path)
+
     db.table("clinics").delete().eq("id", cid).execute()
     return ok()
 
@@ -3184,7 +3303,92 @@ def admin_backup_clinic(cid):
     })
 
 
-@app.route("/api/admin/audit", methods=["GET"])
+def _delete_storage_object(path: str) -> bool:
+    """Delete a single object from Supabase Storage. Returns True on success."""
+    try:
+        url = f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/{BACKUP_BUCKET}/{path}"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "apikey":        SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+            },
+            method="DELETE",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            resp.read()
+        return True
+    except Exception:
+        logging.warning("_delete_storage_object failed for path=%s", path, exc_info=True)
+        return False
+
+
+def _list_storage_objects(prefix: str) -> list:
+    """List all object paths in BACKUP_BUCKET under the given prefix."""
+    try:
+        url = f"{SUPABASE_URL.rstrip('/')}/storage/v1/object/list/{BACKUP_BUCKET}"
+        payload = json.dumps({"prefix": prefix, "limit": 1000}).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                "apikey":        SUPABASE_SERVICE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                "Content-Type":  "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            items = json.loads(resp.read().decode("utf-8"))
+        return [f"{prefix}{item['name']}" for item in (items or []) if item.get("name")]
+    except Exception:
+        logging.warning("_list_storage_objects failed for prefix=%s", prefix, exc_info=True)
+        return []
+
+
+@app.route("/api/admin/storage/orphans", methods=["GET"])
+@_auth()
+@_require_super
+def admin_list_storage_orphans():
+    """
+    List storage objects that have no matching backup_log row.
+    These are blobs left behind by failed/deleted backup runs.
+    """
+    # Fetch all known storage_paths from backup_log
+    known_res = db.table("backup_log").select("storage_path").execute()
+    known_paths = {r["storage_path"] for r in (known_res.data or []) if r.get("storage_path")}
+
+    # List all objects in storage (all clinic prefixes)
+    all_objects = _list_storage_objects("")
+    orphans = [p for p in all_objects if p not in known_paths]
+    return ok({"orphans": orphans, "total_objects": len(all_objects), "orphan_count": len(orphans)})
+
+
+@app.route("/api/admin/storage/orphans", methods=["DELETE"])
+@_auth()
+@_require_super
+def admin_delete_storage_orphans():
+    """
+    Delete all storage objects that have no matching backup_log row.
+    Returns a count of deleted and failed paths.
+    """
+    known_res = db.table("backup_log").select("storage_path").execute()
+    known_paths = {r["storage_path"] for r in (known_res.data or []) if r.get("storage_path")}
+
+    all_objects = _list_storage_objects("")
+    orphans = [p for p in all_objects if p not in known_paths]
+
+    deleted, failed = [], []
+    for path in orphans:
+        if _delete_storage_object(path):
+            deleted.append(path)
+        else:
+            failed.append(path)
+
+    return ok({"deleted": len(deleted), "failed": len(failed), "paths": deleted})
+
+
+
 @_auth()
 @_require_super
 def admin_global_audit():
