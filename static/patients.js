@@ -420,7 +420,7 @@ async function savePatient() {
     const total = lp+fp+cf;
     const rxIds = ['rx-od-sph','rx-od-cyl','rx-od-axis','rx-od-add','rx-od-va','rx-od-bcva','rx-os-sph','rx-os-cyl','rx-os-axis','rx-os-add','rx-os-va','rx-os-bcva','rx-ipd'];
     const hasRx = rxIds.some(id => document.getElementById(id).value !== '');
-    const hasFrame = NOOR.patientModalMode !== 'old_rx' && ['p-frame-brand','p-frame-type','p-frame-material','p-frame-inv'].some(id => document.getElementById(id).value !== '');
+    const hasFrame = NOOR.patientModalMode !== 'old_rx' && ['p-frame-brand','p-frame-inv'].some(id => (document.getElementById(id)?.value || '') !== '');
     const hasCheckup = NOOR.patientModalMode !== 'old_rx' && (document.getElementById('f-checkup').checked || document.getElementById('f-next-visit').value !== '');
     const hasVisitNotes = (document.getElementById('f-visit-notes').value || '').trim() !== '';
 
