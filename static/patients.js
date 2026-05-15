@@ -379,10 +379,11 @@ async function savePatient() {
   if (NOOR.patientModalMode !== 'edit_info' && !_validateEyeCount()) return;
 
   // Info-only edit: just update patient profile, no visit
+  const saveBtn = document.getElementById('patient-save-btn');
+  if (saveBtn) saveBtn.disabled = true;
+  NOOR.savingPatient = true;
+
   if (NOOR.patientModalMode === 'edit_info') {
-    const saveBtn = document.getElementById('patient-save-btn');
-    if (saveBtn) saveBtn.disabled = true;
-    NOOR.savingPatient = true;
     try {
       const pid = NOOR.editingPatientId;
       await savePatientProfile(pid, patientProfilePayload(), false);
@@ -403,9 +404,6 @@ async function savePatient() {
 
   const isNewPatient = !NOOR.editingPatientId;
   let pid = NOOR.editingPatientId;
-  NOOR.savingPatient = true;
-  const saveBtn = document.getElementById('patient-save-btn');
-  if (saveBtn) saveBtn.disabled = true;
 
   try {
     // 1. Create or update patient profile
