@@ -202,7 +202,7 @@ function _validateEyeCount() {
     toast(
       isAr
         ? 'لقد اخترت عين واحدة ولكن تم إدخال بيانات كلتا العينين. يجب حذف بيانات إحدى العينين (OD أو OS) أو تغيير الاختيار إلى "كلا العينين".'
-        : 'You selected one eye but both OD and OS are filled. Please clear one eye's data (OD or OS), or switch to "Both Eyes".',
+        : "You selected one eye but both OD and OS are filled. Please clear one eye's data (OD or OS), or switch to \"Both Eyes\".",
       'error'
     );
     switchPatientTab('rx');
