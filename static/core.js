@@ -22,7 +22,7 @@ function ensureApiBase() {
   return API_BASE;
 }
 
-async function api(method, path, body) {
+async function api(method, path, body, _isRetry) {
   const base = ensureApiBase();
   const opts = {
     method,
@@ -36,12 +36,28 @@ async function api(method, path, body) {
 
   const res = await fetch(base + path, opts);
   const data = await res.json().catch(() => ({}));
+
   if (!res.ok) {
+    // CSRF token missing/invalid: refresh token from /api/me and retry once.
+    // This handles page-reload scenarios where the token wasn't yet fetched,
+    // and stale-token cases after long idle sessions.
+    if (res.status === 403 && data.error && data.error.toLowerCase().includes('csrf') && !_isRetry) {
+      try {
+        const me = await fetch(base + '/api/me', { method: 'GET', credentials: 'include' });
+        const meData = await me.json().catch(() => ({}));
+        if (meData.data?.csrf_token) {
+          NOOR.csrfToken = meData.data.csrf_token;
+          return api(method, path, body, true); // retry with fresh token
+        }
+      } catch (_) { /* fall through to original error */ }
+    }
     const error = new Error(data.error || `HTTP ${res.status}`);
     error.status = res.status;
     error.data = data;
     throw error;
   }
+
+  // Cache the CSRF token whenever the server sends it back (login, /api/me, etc.)
   if (data.data?.csrf_token) NOOR.csrfToken = data.data.csrf_token;
   return data;
 }
