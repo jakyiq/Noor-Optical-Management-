@@ -173,20 +173,21 @@ async function openAddPatient() {
 
 async function openEditPatient() {
   if (!NOOR.editingPatientId) return;
-  await ensureLensCatalog().catch(()=>{});
-  NOOR.patientModalMode = 'edit';
+  NOOR.patientModalMode = 'edit_info';
+  NOOR.editingVisitId = null;
   document.getElementById('modal-patient').classList.remove('old-rx-mode');
   clearPatientForm();
-  switchPatientTab('rx');
-  document.getElementById('visit-date-group').style.display = 'block';
-  document.getElementById('modal-patient-title').textContent = t('edit');
+  // Show only the Info tab; hide Rx/Frame/Financials
+  ['ptab-rx-btn','ptab-frame-btn','ptab-fin-btn'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  document.getElementById('ptab-info-btn').style.display = '';
+  switchPatientTab('info');
+  document.getElementById('visit-date-group').style.display = 'none';
+  document.getElementById('modal-patient-title').textContent = NOOR.lang === 'ar' ? 'تعديل بيانات المراجع' : 'Edit Patient Info';
   try {
     const data = await get(`/api/patients/${NOOR.editingPatientId}`);
-    const patient = data.data || {};
-    fillPatientForm(patient);
-    const latest = (patient.visits || [])[0];
-    NOOR.editingVisitId = latest?.id || null;
-    if (latest) fillVisitForm(latest);
+    fillPatientForm(data.data || {});
     openModal('modal-patient');
   } catch(e) { toast(e.message,'error'); }
 }
@@ -372,6 +373,32 @@ async function savePatient() {
       document.getElementById(id).focus();
       return;
     }
+  }
+
+  // Validate eye count vs filled data (skip for info-only edits)
+  if (NOOR.patientModalMode !== 'edit_info' && !_validateEyeCount()) return;
+
+  // Info-only edit: just update patient profile, no visit
+  if (NOOR.patientModalMode === 'edit_info') {
+    const saveBtn = document.getElementById('patient-save-btn');
+    if (saveBtn) saveBtn.disabled = true;
+    NOOR.savingPatient = true;
+    try {
+      const pid = NOOR.editingPatientId;
+      await savePatientProfile(pid, patientProfilePayload(), false);
+      markPatientFormClean();
+      closeModal('modal-patient');
+      toast(t('successSaved'));
+      await renderPatients();
+      NOOR.editingPatientId = pid;
+      await openPatientDetail(pid);
+    } catch(e) {
+      if (!e.silent) toast(e.message, 'error');
+    } finally {
+      NOOR.savingPatient = false;
+      if (saveBtn) saveBtn.disabled = false;
+    }
+    return;
   }
 
   const isNewPatient = !NOOR.editingPatientId;

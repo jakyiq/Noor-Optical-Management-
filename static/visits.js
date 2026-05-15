@@ -198,14 +198,15 @@ function _validateEyeCount() {
   const osHasData = ['rx-os-sph','rx-os-cyl'].some(id => (document.getElementById(id)?.value || '') !== '');
 
   if (count === 1 && odHasData && osHasData) {
-    // Chose one eye but both OD and OS are filled
+    // Chose one eye but both OD and OS are filled — must pick which eye
     toast(
       isAr
-        ? 'لقد اخترت عين واحدة ولكن تم إدخال بيانات كلتا العينين. احذف بيانات العين غير المستخدمة أو غيّر الاختيار إلى "كلا العينين".'
-        : 'You selected one eye but both OD and OS are filled. Clear the unused eye or switch to "Both Eyes".',
+        ? 'لقد اخترت عين واحدة ولكن تم إدخال بيانات كلتا العينين. يجب حذف بيانات إحدى العينين (OD أو OS) أو تغيير الاختيار إلى "كلا العينين".'
+        : 'You selected one eye but both OD and OS are filled. Please clear one eye's data (OD or OS), or switch to "Both Eyes".',
       'error'
     );
     switchPatientTab('rx');
+    document.getElementById('rx-lens-count')?.focus();
     return false;
   }
 
