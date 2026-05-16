@@ -26,7 +26,7 @@ async function renderFrames() {
     const banner = document.getElementById('frames-low-banner');
     if (low.length) {
       banner.classList.add('show');
-      document.getElementById('frames-low-items').innerHTML = low.map(f=>`<div class="low-stock-item">${esc(f.brand||'Frame')} — ${esc(f.quantity)} ${t('qty')}</div>`).join('');
+      document.getElementById('frames-low-items').innerHTML = low.map(f=>`<div class="low-stock-item low-stock-item--clickable" onclick="openRestockModal('frame','${escAttr(f.id)}')" title="${NOOR.lang==='ar'?'انقر لإعادة التخزين':'Click to restock'}">${esc(f.brand||'Frame')} — ${esc(f.quantity)} ${t('qty')} <span class="low-stock-restock-hint">+</span></div>`).join('');
       // Collapse by default; preserve open state if user already expanded
       const body = document.getElementById('frames-low-body');
       const btn  = banner.querySelector('.low-stock-toggle');
