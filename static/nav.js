@@ -135,8 +135,7 @@ function renderChart(chart7) {
   bars.innerHTML = days.map((day, i) => {
     const h = Math.max(4, (revs[i]/mx)*96);
     const di = new Date(day).getDay();
-    const valLabel = revs[i] > 0 ? fmtNum(revs[i]) : '';
-    return `<div class="chart-bar-wrap"><div class="chart-bar" style="height:${h}px"><div class="chart-bar-tooltip">${fmtNum(revs[i])} IQD</div></div><div class="chart-bar-val">${valLabel}</div><div class="chart-bar-day">${dl[di]}</div></div>`;
+    return `<div class="chart-bar-wrap"><div class="chart-bar" style="height:${h}px"><div class="chart-bar-tooltip">${fmtNum(revs[i])} IQD</div></div><div class="chart-bar-day">${dl[di]}</div></div>`;
   }).join('');
 }
 
@@ -166,20 +165,22 @@ function onGlobalSearch(q) {
 }
 
 function goToPatient(pid) {
-  document.getElementById('search-results').classList.remove('show');
-  document.getElementById('global-search').value = '';
-  if (NOOR.currentSection !== 'patients') {
-    // Switch section without triggering renderPatients (we only need the detail view)
-    closeMoreMenu();
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.querySelectorAll('.bnav-item').forEach(b => b.classList.toggle('active', b.dataset.section === 'patients'));
-    document.getElementById('section-patients')?.classList.add('active');
-    document.querySelector('.nav-item[data-section="patients"]')?.classList.add('active');
-    NOOR.currentSection = 'patients';
-    document.getElementById('topbar-title').textContent = t('patients');
-    if (isMobile()) closeSidebar();
-  }
+  document.getElementById('search-results')?.classList.remove('show');
+  const gs = document.getElementById('global-search');
+  if (gs) gs.value = '';
+
+  // Always switch UI to patients section regardless of where we came from
+  closeMoreMenu();
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  // FIX 3: unconditional bnav highlight — covers followups→patient and any other source
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.toggle('active', b.dataset.section === 'patients'));
+  document.getElementById('section-patients')?.classList.add('active');
+  document.querySelector('.nav-item[data-section="patients"]')?.classList.add('active');
+  NOOR.currentSection = 'patients';
+  document.getElementById('topbar-title').textContent = t('patients');
+  if (isMobile()) closeSidebar();
+
   openPatientDetail(pid);
 }
 
