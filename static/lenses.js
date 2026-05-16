@@ -217,7 +217,7 @@ async function renderLenses() {
     const banner = document.getElementById('lenses-low-banner');
     if (low.length) {
       banner.classList.add('show');
-      document.getElementById('lenses-low-items').innerHTML = low.map(l=>`<div class="low-stock-item">SPH ${esc(l.sphere)} CYL ${esc(l.cylinder||0)} — ${esc(l.quantity)} ${t('qty')}</div>`).join('');
+      document.getElementById('lenses-low-items').innerHTML = low.map(l=>`<div class="low-stock-item low-stock-item--clickable" onclick="openRestockModal('lens','${escAttr(l.id)}')" title="${NOOR.lang==='ar'?'انقر لإعادة التخزين':'Click to restock'}">SPH ${esc(l.sphere)} CYL ${esc(l.cylinder||0)} — ${esc(l.quantity)} ${t('qty')} <span class="low-stock-restock-hint">+</span></div>`).join('');
       // Collapse by default; preserve open state if user already expanded
       const body = document.getElementById('lenses-low-body');
       const btn  = banner.querySelector('.low-stock-toggle');
