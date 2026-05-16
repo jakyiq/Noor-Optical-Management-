@@ -301,7 +301,7 @@ async function savePatientProfile(pid, payload, isNewPatient) {
       const res = await post('/api/patients', payload);
       return res.data.id;
     }
-    if (NOOR.patientModalMode === 'edit') {
+    if (NOOR.patientModalMode === 'edit' || NOOR.patientModalMode === 'edit_info') {
       await put(`/api/patients/${pid}`, payload);
     }
     return pid;
@@ -316,7 +316,7 @@ async function savePatientProfile(pid, payload, isNewPatient) {
         const res = await post('/api/patients', retryPayload);
         return res.data.id;
       }
-      if (NOOR.patientModalMode === 'edit') {
+      if (NOOR.patientModalMode === 'edit' || NOOR.patientModalMode === 'edit_info') {
         await put(`/api/patients/${pid}`, retryPayload);
       }
       return pid;
