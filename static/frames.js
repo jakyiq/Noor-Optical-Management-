@@ -26,7 +26,7 @@ async function renderFrames() {
     const banner = document.getElementById('frames-low-banner');
     if (low.length) {
       banner.classList.add('show');
-      document.getElementById('frames-low-items').innerHTML = low.map(f=>`<div class="low-stock-item low-stock-item--clickable" onclick="openRestockModal('frame','${escAttr(f.id)}')" title="${NOOR.lang==='ar'?'انقر لإعادة التخزين':'Click to restock'}">${esc(f.brand||'Frame')} — ${esc(f.quantity)} ${t('qty')} <span class="low-stock-restock-hint">+</span></div>`).join('');
+      document.getElementById('frames-low-items').innerHTML = low.map(f=>`<div class="low-stock-item">${esc(f.brand||'Frame')} — ${esc(f.quantity)} ${t('qty')}</div>`).join('');
       // Collapse by default; preserve open state if user already expanded
       const body = document.getElementById('frames-low-body');
       const btn  = banner.querySelector('.low-stock-toggle');
@@ -121,6 +121,10 @@ function duplicateFrame(id) {
 }
 
 async function saveFrame() {
+  if (NOOR._savingFrame) return;
+  NOOR._savingFrame = true;
+  const _frameSaveBtn = document.getElementById('btn-save-frame') || document.querySelector('#modal-frame .btn-burgundy');
+  if (_frameSaveBtn) _frameSaveBtn.disabled = true;
   const body = {
     brand:          document.getElementById('fr-brand').value,
     frame_type:     document.getElementById('fr-type').value,
@@ -136,6 +140,10 @@ async function saveFrame() {
     else await post('/api/frames', body);
     closeModal('modal-frame'); toast(t('successSaved')); await renderFrames();
   } catch(e) { toast(e.message,'error'); }
+  finally {
+    NOOR._savingFrame = false;
+    if (_frameSaveBtn) _frameSaveBtn.disabled = false;
+  }
 }
 
 async function deleteFrame(id) {
@@ -155,6 +163,10 @@ function openRestockModal(type, id) {
 
 async function confirmRestock() {
   if (!NOOR.restockTarget) return;
+  if (NOOR._savingRestock) return;
+  NOOR._savingRestock = true;
+  const _restockBtn = document.querySelector('#modal-restock .btn-burgundy');
+  if (_restockBtn) _restockBtn.disabled = true;
   const qty = parseInt(document.getElementById('restock-qty').value)||0;
   const {type, id} = NOOR.restockTarget;
   try {
@@ -163,6 +175,10 @@ async function confirmRestock() {
     closeModal('modal-restock'); toast(t('successSaved'));
     if (type==='lens') await renderLenses(); else await renderFrames();
   } catch(e) { toast(e.message,'error'); }
+  finally {
+    NOOR._savingRestock = false;
+    if (_restockBtn) _restockBtn.disabled = false;
+  }
 }
 
 // ══════════════════════════════════════════════════════════
