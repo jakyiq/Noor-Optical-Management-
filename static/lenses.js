@@ -217,7 +217,7 @@ async function renderLenses() {
     const banner = document.getElementById('lenses-low-banner');
     if (low.length) {
       banner.classList.add('show');
-      document.getElementById('lenses-low-items').innerHTML = low.map(l=>`<div class="low-stock-item low-stock-item--clickable" onclick="openRestockModal('lens','${escAttr(l.id)}')" title="${NOOR.lang==='ar'?'انقر لإعادة التخزين':'Click to restock'}">SPH ${esc(l.sphere)} CYL ${esc(l.cylinder||0)} — ${esc(l.quantity)} ${t('qty')} <span class="low-stock-restock-hint">+</span></div>`).join('');
+      document.getElementById('lenses-low-items').innerHTML = low.map(l=>`<div class="low-stock-item">SPH ${esc(l.sphere)} CYL ${esc(l.cylinder||0)} — ${esc(l.quantity)} ${t('qty')}</div>`).join('');
       // Collapse by default; preserve open state if user already expanded
       const body = document.getElementById('lenses-low-body');
       const btn  = banner.querySelector('.low-stock-toggle');
@@ -345,8 +345,12 @@ function openEditLens(id) {
 }
 
 async function saveLens() {
+  if (NOOR._savingLens) return;
   const sph = parseFloat(document.getElementById('l-sph').value);
   if (isNaN(sph)) { toast(t('errorRequired'),'error'); return; }
+  NOOR._savingLens = true;
+  const _lensSaveBtn = document.querySelector('#modal-lens .btn-burgundy');
+  if (_lensSaveBtn) _lensSaveBtn.disabled = true;
   const body = {
     lens_type:  document.getElementById('l-type').value,
     material:   document.getElementById('l-material').value,
@@ -363,6 +367,10 @@ async function saveLens() {
     else await post('/api/lenses', body);
     closeModal('modal-lens'); toast(t('successSaved')); await renderLenses();
   } catch(e) { toast(e.message,'error'); }
+  finally {
+    NOOR._savingLens = false;
+    if (_lensSaveBtn) _lensSaveBtn.disabled = false;
+  }
 }
 
 async function deleteLens(id) {
