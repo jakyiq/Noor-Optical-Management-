@@ -54,16 +54,21 @@ async function openPatientDetail(pid) {
   }
   document.getElementById('patients-list-view').style.display = 'none';
   document.getElementById('patients-detail-view').style.display = 'block';
-  document.getElementById('patient-detail-name').textContent  = p.full_name || '—';
-  document.getElementById('patient-detail-name2').textContent = p.full_name || '—';
+  // Use ?. so removal of the breadcrumb span doesn't throw a TypeError
+  const _setName = (name) => {
+    const el1 = document.getElementById('patient-detail-name');
+    const el2 = document.getElementById('patient-detail-name2');
+    if (el1) el1.textContent = name;
+    if (el2) el2.textContent = name;
+  };
+  _setName(p.full_name || '—');
   document.getElementById('patient-detail-info').textContent  = `${p.phone||''} • ${p.age?p.age+(NOOR.lang==='ar'?' سنة':' yrs'):''}`;
   try {
     const data = await get(`/api/patients/${pid}`);
     const patient = data.data || {};
     const visits = data.data?.visits || [];
     NOOR._currentPatientDetail = patient;
-    document.getElementById('patient-detail-name').textContent  = patient.full_name || '—';
-    document.getElementById('patient-detail-name2').textContent = patient.full_name || '—';
+    _setName(patient.full_name || '—');
     document.getElementById('patient-detail-info').textContent  = `${patient.phone||''} • ${patient.age?patient.age+(NOOR.lang==='ar'?' سنة':' yrs'):''}`;
     renderPatientSummary(patient, visits);
     renderVisitHistory(visits);
