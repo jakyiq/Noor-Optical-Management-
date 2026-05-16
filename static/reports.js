@@ -142,6 +142,10 @@ function renderExpensesList(rows) {
 }
 
 async function saveRetailSale() {
+  if (NOOR._savingRetailSale) return;
+  NOOR._savingRetailSale = true;
+  const _saleBtn = document.querySelector('#sale-form .btn-burgundy') || document.querySelector('[onclick="saveRetailSale()"]');
+  if (_saleBtn) _saleBtn.disabled = true;
   const itemType = document.getElementById('sale-item-type').value;
   const name = document.getElementById('sale-item-name').value.trim() || itemType.replace(/_/g,' ');
   try {
@@ -158,9 +162,14 @@ async function saveRetailSale() {
     toast(t('successSaved'));
     await loadReports();
   } catch(e) { toast(e.message,'error'); }
+  finally { NOOR._savingRetailSale = false; if (_saleBtn) _saleBtn.disabled = false; }
 }
 
 async function saveOperatingExpense() {
+  if (NOOR._savingExpense) return;
+  NOOR._savingExpense = true;
+  const _expBtn = document.querySelector('[onclick="saveOperatingExpense()"]');
+  if (_expBtn) _expBtn.disabled = true;
   const type = document.getElementById('expense-type').value;
   const name = document.getElementById('expense-name').value.trim() || type;
   try {
@@ -175,6 +184,7 @@ async function saveOperatingExpense() {
     toast(t('successSaved'));
     await loadReports();
   } catch(e) { toast(e.message,'error'); }
+  finally { NOOR._savingExpense = false; if (_expBtn) _expBtn.disabled = false; }
 }
 
 // ── Trial paywall guard for export features ──────────────────
