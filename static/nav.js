@@ -135,7 +135,8 @@ function renderChart(chart7) {
   bars.innerHTML = days.map((day, i) => {
     const h = Math.max(4, (revs[i]/mx)*96);
     const di = new Date(day).getDay();
-    return `<div class="chart-bar-wrap"><div class="chart-bar" style="height:${h}px"><div class="chart-bar-tooltip">${fmtNum(revs[i])} IQD</div></div><div class="chart-bar-day">${dl[di]}</div></div>`;
+    const valLabel = revs[i] > 0 ? fmtNum(revs[i]) : '';
+    return `<div class="chart-bar-wrap"><div class="chart-bar" style="height:${h}px"><div class="chart-bar-tooltip">${fmtNum(revs[i])} IQD</div></div><div class="chart-bar-val">${valLabel}</div><div class="chart-bar-day">${dl[di]}</div></div>`;
   }).join('');
 }
 
