@@ -670,6 +670,10 @@ html[dir=ltr] .modal-title{font-family:'Playfair Display',serif}
 .low-stock-body[hidden]{display:none!important}
 .low-stock-items{display:flex;flex-wrap:wrap;gap:6px}
 .low-stock-item{padding:4px 10px;background:white;border:1px solid #f4c87a;border-radius:var(--radius-sm);font-size:.76rem;color:#7a5200}
+.low-stock-item--clickable{cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s,border-color .15s}
+.low-stock-item--clickable:hover{background:#fff7ed;border-color:#e8952a}
+.low-stock-restock-hint{font-size:.8rem;font-weight:700;color:#e8952a;margin-inline-start:2px;opacity:.8}
+.low-stock-toggle{cursor:pointer;background:none;border:none;padding:0 4px;font-size:1rem;color:inherit;line-height:1}
 
 /* AUDIT */
 .audit-action{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--radius-sm);font-size:.72rem;font-weight:600}
